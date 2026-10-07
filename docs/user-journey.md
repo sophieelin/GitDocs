@@ -1,0 +1,11 @@
+## User Journey
+
+A developer is working on a codebase after a set of commits restructures the user and service layers. The changes introduce a new separation of responsibilities, but the documentation still reflects the previous organization. An AI agent monitoring the repository detects that the code changes may have implications for the documentation and opens an investigation in GitDocs. The developer receives a notification and opens the Documentation Map to understand what changed.
+
+**1. Investigate the change.** In the Documentation Map, the developer selects the investigation and sees the code structure alongside the documentation structure. GitDocs highlights potentially affected documentation and shows evidence connecting those documents to the commits, code references, and repository discussions. The developer can also ask the Documentation Copilot for help investigating the change. Copilot traces the relevant code and documentation and explains why particular documents may need reconsideration, while leaving the decision about how the documentation should change to the developer.
+
+**2. Construct a proposal.** The developer opens the Restructuring Proposal and compares the current documentation structure with an alternative proposed structure. With the investigation and Copilot's findings as context, they reorganize the documentation around the concepts and responsibilities developers need to understand rather than simply copying the new code structure. They record their rationale and submit the proposal for review.
+
+**3. Review the proposal.** A reviewer opens the Documentation Review screen and evaluates the proposed structure. They leave comments and alternative suggestions about how the documentation could better represent the system. If changes are needed, the reviewer requests changes and the developer revises the proposal. Once the reviewer approves it, the proposal becomes ready to apply.
+
+**4. Apply the approved change.** GitDocs preserves the approved structure, the review discussion, and the rationale behind the decision. The approved proposal can then be applied through a pull request so that the documentation change follows the team's normal development workflow. The final result is documentation that reflects the evolved system.
