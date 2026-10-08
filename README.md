@@ -1,5 +1,4 @@
-# GitTrace
-Visualizing Code History and Software Evolution
+# GitDocs
 
 ## Project Documentation
 - [Problem framing and stakeholders](docs/problem-framing.md)
