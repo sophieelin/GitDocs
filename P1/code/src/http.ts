@@ -22,6 +22,9 @@ export const publicErrors = {
   INVALID_CREDENTIALS: "UNAUTHORIZED",
   // Sessioning
   UNKNOWN_SESSION: "UNAUTHORIZED",
+  // InvestigatingChanges
+  INVALID_REPOSITORY: "INVALID_REQUEST",
+  INVALID_COMMIT: "INVALID_REQUEST",
 } as const satisfies Record<string, HttpPublicErrorCategory>;
 
 /** Every endpoint and route is served under this path, e.g. `/api/auth/register`. */

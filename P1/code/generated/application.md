@@ -27,7 +27,27 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 
 #### Instances
 
-- `Authenticating` — instance of `Authenticating` — [GitDocs Application Types](../design/types.md), line 9.
+- `Authenticating` — instance of `Authenticating` — [GitDocs Application Types](../design/types.md), line 11.
+
+### InvestigatingChanges
+
+Defined in [InvestigatingChanges](../design/concepts/InvestigatingChanges.md), line 1.
+
+#### Actions
+
+- `open(investigator: User, owner: String, name: String, commit: String, at: DateTime) : returns (investigation: Investigation)`
+  - Refuses `INVALID_REPOSITORY`: A repository needs an owner and a name.
+  - Refuses `INVALID_COMMIT`: An investigation needs a full commit SHA.
+
+#### Queries
+
+- `_get(investigation: Investigation) : optional (investigation: Investigation, owner: String, name: String, commit: String, investigator: User, openedAt: DateTime)`
+- `_forRepository(owner: String, name: String) : many (investigation: Investigation, commit: String, investigator: User, openedAt: DateTime)`
+
+#### Instances
+
+- `InvestigatingChanges` — instance of `InvestigatingChanges` — [GitDocs Application Types](../design/types.md), line 16.
+  - `User` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 17.
 
 ### Sessioning
 
@@ -47,8 +67,8 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 
 #### Instances
 
-- `Sessioning` — instance of `Sessioning` — [GitDocs Application Types](../design/types.md), line 11.
-  - `Subject` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 12.
+- `Sessioning` — instance of `Sessioning` — [GitDocs Application Types](../design/types.md), line 13.
+  - `Subject` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 14.
 
 ## Reactions
 
