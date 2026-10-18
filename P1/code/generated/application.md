@@ -27,7 +27,7 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 
 #### Instances
 
-- `Authenticating` — instance of `Authenticating` — [GitDocs Application Types](../design/types.md), line 11.
+- `Authenticating` — instance of `Authenticating` — [GitDocs Application Types](../design/types.md), line 12.
 
 ### InvestigatingChanges
 
@@ -52,8 +52,45 @@ Defined in [InvestigatingChanges](../design/concepts/InvestigatingChanges.md), l
 
 #### Instances
 
-- `InvestigatingChanges` — instance of `InvestigatingChanges` — [GitDocs Application Types](../design/types.md), line 16.
-  - `User` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 17.
+- `InvestigatingChanges` — instance of `InvestigatingChanges` — [GitDocs Application Types](../design/types.md), line 17.
+  - `User` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 18.
+
+### RestructuringDocumentation
+
+Defined in [RestructuringDocumentation](../design/concepts/RestructuringDocumentation.md), line 1.
+
+#### Actions
+
+- `create(author: User, investigation: Investigation, owner: String, name: String, commit: String, title: String, currentStructure: DocumentationTree, at: DateTime) : returns (restructuring: Restructuring)`
+  - Refuses `INVALID_PROPOSAL_SOURCE`: A proposal needs a repository and a full commit SHA.
+  - Refuses `INVALID_PROPOSAL_TITLE`: A proposal needs a title of at most 120 characters.
+  - Refuses `INVALID_STRUCTURE`: That is not a documentation structure.
+- `modify(restructuring: Restructuring, author: User, title: String, proposedStructure: DocumentationTree, rationale: String, at: DateTime) : returns ()`
+  - Refuses `PROPOSAL_NOT_FOUND`: There is no such proposal.
+  - Refuses `NOT_PROPOSAL_AUTHOR`: Only the proposal's author can change it.
+  - Refuses `NOT_DRAFT`: Only a draft proposal can be changed.
+  - Refuses `INVALID_PROPOSAL_TITLE`: A proposal needs a title of at most 120 characters.
+  - Refuses `INVALID_STRUCTURE`: That is not a documentation structure.
+- `submit(restructuring: Restructuring, author: User, at: DateTime) : returns ()`
+  - Refuses `PROPOSAL_NOT_FOUND`: There is no such proposal.
+  - Refuses `NOT_PROPOSAL_AUTHOR`: Only the proposal's author can change it.
+  - Refuses `NOT_DRAFT`: Only a draft proposal can be changed.
+  - Refuses `RATIONALE_MISSING`: Explain the proposed structure before submitting it.
+- `discard(restructuring: Restructuring, author: User) : returns ()`
+  - Refuses `PROPOSAL_NOT_FOUND`: There is no such proposal.
+  - Refuses `NOT_PROPOSAL_AUTHOR`: Only the proposal's author can change it.
+  - Refuses `NOT_DRAFT`: Only a draft proposal can be changed.
+
+#### Queries
+
+- `_get(restructuring: Restructuring) : optional (restructuring: Restructuring, author: User, investigation: Investigation, owner: String, name: String, commit: String, title: String, rationale: String, status: Status, currentStructure: DocumentationTree, proposedStructure: DocumentationTree, createdAt: DateTime, updatedAt: DateTime)`
+- `_forRepository(owner: String, name: String) : many (restructuring: Restructuring, author: User, investigation: Investigation, commit: String, title: String, status: Status, updatedAt: DateTime)`
+
+#### Instances
+
+- `RestructuringDocumentation` — instance of `RestructuringDocumentation` — [GitDocs Application Types](../design/types.md), line 20.
+  - `Investigation` is `InvestigatingChanges.Investigation` — [GitDocs Application Types](../design/types.md), line 22.
+  - `User` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 21.
 
 ### Sessioning
 
@@ -73,8 +110,8 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 
 #### Instances
 
-- `Sessioning` — instance of `Sessioning` — [GitDocs Application Types](../design/types.md), line 13.
-  - `Subject` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 14.
+- `Sessioning` — instance of `Sessioning` — [GitDocs Application Types](../design/types.md), line 14.
+  - `Subject` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 15.
 
 ## Formers
 

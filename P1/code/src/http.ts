@@ -28,6 +28,15 @@ export const publicErrors = {
   INVALID_TITLE: "INVALID_REQUEST",
   INVALID_AFFECTED_DOCUMENTATION: "INVALID_REQUEST",
   INVALID_EVIDENCE: "INVALID_REQUEST",
+  // RestructuringDocumentation
+  INVALID_PROPOSAL_SOURCE: "INVALID_REQUEST",
+  INVALID_PROPOSAL_TITLE: "INVALID_REQUEST",
+  INVALID_STRUCTURE: "INVALID_REQUEST",
+  PROPOSAL_NOT_FOUND: "NOT_FOUND",
+  NOT_PROPOSAL_AUTHOR: "FORBIDDEN",
+  NOT_DRAFT: "CONFLICT",
+  // The request is well formed; the saved draft just has no rationale yet.
+  RATIONALE_MISSING: "CONFLICT",
   // Investigations composition
   INVESTIGATION_NOT_FOUND: "NOT_FOUND",
 } as const satisfies Record<string, HttpPublicErrorCategory>;
