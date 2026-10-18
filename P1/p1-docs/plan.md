@@ -1,8 +1,8 @@
-# GitTrace Backend MVP: TypeScript, MongoDB, and GitHub API
+# GitTrace MVP: TypeScript, MongoDB, GitHub API, and Vue
 
 ## Goal
 
-Build the GitTrace backend incrementally using TypeScript, MongoDB, the GitHub REST API, and sync-engine.
+Build GitTrace incrementally using TypeScript, MongoDB, the GitHub REST API, sync-engine, and Vue.
 
 The MVP supports this workflow:
 
@@ -14,7 +14,7 @@ The MVP supports this workflow:
 6. The reviewer approves it or requests changes.
 7. The proposal's status reflects the decision.
 
-The first priority is to get the backend working end to end. The frontend, investigation agent, and automatic pull request creation are out of scope for this round.
+From Phase 3 on, the plan is built in **thin slices**. Each phase adds one part of the workflow all the way through: concept, endpoints, and screen. Each phase ends with a **Try it** check that you do by hand in the browser. The investigation agent and automatic pull request creation are out of scope.
 
 ## Working rules
 
@@ -24,15 +24,37 @@ The first priority is to get the backend working end to end. The frontend, inves
 - Run the design checker after specification changes and the TypeScript checker after implementation changes.
 - Add tests as each action is implemented.
 - Use the real GitHub API from the beginning. Keep the API adapter separate from the concepts so it can be tested independently.
+- Concept and endpoint tests use `StubGitHubFetcher` (`tests/github/StubGitHubFetcher.ts`) so they run offline. Only the integration tests and the Try it checks use real GitHub.
 - Use MongoDB for persistent state and `mongodb-memory-server` for isolated tests.
 - Follow the existing sync-engine examples for concept classes, registries, floors, compositions, and reactions.
 - Do not implement features merely because they might be useful later.
+- Do not start a phase until the previous phase's Try it check passes.
 
-# Phase 1: GitHub API integration
+## Related plans
+
+The detailed steps for views and reactions, endpoints, and screens are in their own plans. This plan says **when** each of their steps happens:
+
+- `plan-reactions.md`: steps R1–R5
+- `plan-endpoints.md`: steps E1–E6
+- `plan-vue.md`: steps V1–V8
+
+## Try it setup
+
+For every Try it check:
+
+1. Start MongoDB: `bun run db:up`
+2. Start the backend and frontend: `bun run dev`
+3. Open the frontend URL that `bun run dev` prints.
+
+Use `sophieelin/PaperNet` as the real repository. Commit `6d4a4c6` ("clean codebase") deletes `csail_hack/README.md`, so it is a real example of a code change that changed the documentation structure.
+
+For two users, use one normal browser window and one private window.
+
+# Phase 1: GitHub API integration ✅ Done
 
 Start with the part of the product that retrieves real repository data. Keep it independent of MongoDB and sync-engine until the API behavior is understood.
 
-## 1.1 Add GitHub configuration
+## 1.1 Add GitHub configuration ✅
 
 **Diff:** `.env.example`
 
@@ -42,7 +64,7 @@ Start with the part of the product that retrieves real repository data. Keep it 
 
 **Verify:** The application can start without a token when using a public repository.
 
-## 1.2 Define the GitHub fetcher interface
+## 1.2 Define the GitHub fetcher interface ✅
 
 **Diff:** `src/github/GitHubFetcher.ts`
 
@@ -55,7 +77,7 @@ Keep the interface independent of HTTP, MongoDB, and sync-engine.
 
 **Verify:** TypeScript compiles.
 
-## 1.3 Define the application-level types
+## 1.3 Define the application-level types ✅
 
 **Diff:** `src/github/types.ts`
 
@@ -69,7 +91,7 @@ Use application-level types rather than passing complete GitHub API responses th
 
 **Verify:** TypeScript compiles.
 
-## 1.4 Implement the GitHub REST API adapter
+## 1.4 Implement the GitHub REST API adapter ✅
 
 **Diff:** `src/github/GitHubApi.ts`
 
@@ -81,9 +103,9 @@ Use application-level types rather than passing complete GitHub API responses th
 
 **Verify:** TypeScript compiles.
 
-## 1.5 Test commit listing against GitHub
+## 1.5 Test commit listing against GitHub ✅
 
-**Diff:** `tests/github/test-list-commits.ts`
+**Diff:** `tests/github/list-commits.integration.test.ts`
 
 - Use a known public repository.
 - Confirm that real commit SHAs and messages are returned.
@@ -91,9 +113,9 @@ Use application-level types rather than passing complete GitHub API responses th
 
 **Verify:** Run the integration test against GitHub.
 
-## 1.6 Test retrieving a commit tree
+## 1.6 Test retrieving a commit tree ✅
 
-**Diff:** `tests/github/test-get-tree.ts`
+**Diff:** `tests/github/get-tree.integration.test.ts`
 
 - Retrieve a tree for a known commit SHA.
 - Confirm that file paths are returned.
@@ -101,7 +123,7 @@ Use application-level types rather than passing complete GitHub API responses th
 
 **Verify:** Run the integration test.
 
-## 1.7 Convert repository paths into a documentation tree
+## 1.7 Convert repository paths into a documentation tree ✅
 
 **Diff:** `src/github/documentationTree.ts`
 
@@ -112,7 +134,7 @@ Use application-level types rather than passing complete GitHub API responses th
 
 **Verify:** Add unit tests for root files, nested folders, and an empty result.
 
-## 1.8 Add a manual GitHub integration script
+## 1.8 Add a manual GitHub integration script ✅
 
 **Diff:** `scripts/test-github.ts`
 
@@ -125,19 +147,19 @@ Create a small script that:
 
 **Verify:** Run it against a real repository.
 
-## 1.9 Add a fake fetcher for deterministic tests
+## 1.9 Add a stub fetcher for deterministic tests ✅
 
-**Diff:** `tests/github/FakeGitHubFetcher.ts`
+**Diff:** `tests/github/StubGitHubFetcher.ts`
 
-Implement the same interface with fixed test data. Use it for concept tests so that most tests do not require a network connection.
+Implement the same interface with fixed test data: the `sophieelin/my-repo` repository from the UI sketches, at two commits. Use it for concept and endpoint tests so that they do not require a network connection.
 
 **Verify:** The unit tests work offline, and the real integration tests work separately.
 
 **Phase completion:** GitTrace can retrieve real commits and a documentation tree for a selected commit.
 
-# Phase 2: Shared backend scaffolding
+# Phase 2: Shared backend scaffolding ✅ Done (2.4 moved to 3.4 and 4.2)
 
-## 2.1 Add the MongoDB connection helper
+## 2.1 Add the MongoDB connection helper ✅
 
 **Diff:** `src/db.ts`
 
@@ -146,7 +168,7 @@ Implement the same interface with fixed test data. Use it for concept tests so t
 
 **Verify:** Connect to the development database.
 
-## 2.2 Add the database test helper
+## 2.2 Add the database test helper ✅
 
 **Diff:** `tests/test-db.ts`
 
@@ -156,7 +178,7 @@ Implement the same interface with fixed test data. Use it for concept tests so t
 
 **Verify:** Run a small insert-and-read test.
 
-## 2.3 Add the HTTP handler
+## 2.3 Add the HTTP handler ✅
 
 **Diff:** `src/http.ts`
 
@@ -166,19 +188,11 @@ Do not add application endpoints yet.
 
 **Verify:** TypeScript compiles.
 
-## 2.4 Add application assembly
+## 2.4 Add application assembly (moved)
 
-**Diff:** `src/assembly.ts`
+Moved to 3.4 (`{ db }`) and 4.2 (`{ github }`). No concepts existed yet, so there was nothing to assemble.
 
-- Assemble the application with the registered concepts and MongoDB floor.
-- Inject the GitHub adapter where required.
-- Avoid requiring a live MongoDB connection merely to assemble the application, if supported by the framework.
-
-**Verify:** Application assembly succeeds.
-
-**Deferred to 3.4.** No concepts exist yet, and nothing uses the GitHub adapter until Phase 4, so there is nothing to assemble. Keep the assembly that `sync-engine setup` wrote, do 2.5 first, and make this change in 3.4, when the first concept is registered: `assembleApplication` then takes `{ db }`, and `{ github }` is added in 4.3.
-
-## 2.5 Add the backend entry point
+## 2.5 Add the backend entry point ✅
 
 **Diff:** `src/main.ts`
 
@@ -188,371 +202,322 @@ Do not add application endpoints yet.
 
 **Verify:** Start the backend and confirm it listens successfully.
 
-# Phase 3: Authentication and sessions
+# Phase 3: Slice 1 — Sign in
 
-Use the existing sync-engine message-board example as the reference.
+**At the end:** you can open GitTrace in a browser, register, sign in, reload, and stay signed in.
 
-## 3.1 Add the authentication specification
+## 3.1 Copy the specifications
 
-**Diff:** `design/concepts/Authenticating.md`
+**Diff:** `design/concepts/Authenticating.md`, `design/concepts/Sessioning.md`
 
-Copy the existing example's specification and retain its actions, queries, and refusal behavior.
-
-**Verify:** `bun run check:design`
-
-## 3.2 Add the session specification
-
-**Diff:** `design/concepts/Sessioning.md`
-
-Copy the session specification from the same example.
+Copy both from the sync-engine message-board example, keeping their actions, queries, and refusals.
 
 **Verify:** `bun run check:design`
 
-## 3.3 Implement authentication in TypeScript
+## 3.2 Implement authentication
 
-**Diff:** `src/concepts/Authenticating.ts`
+**Diff:** `src/concepts/Authenticating.ts`, `tests/concepts/Authenticating.test.ts`
 
-- Implement the required actions using MongoDB.
-- Preserve the specification's API.
-- Follow the example's password-handling conventions.
+Implement the actions on MongoDB, following the example's password handling.
 
-**Verify:** Test account creation and authentication.
+**Verify:** `bun run test:memory` covers registering, signing in, a wrong password, and a duplicate username.
 
-## 3.4 Register authentication
+## 3.3 Implement sessions
 
-**Diff:** `src/concepts/Authenticating.registry.ts`
+**Diff:** `src/concepts/Sessioning.ts`, `tests/concepts/Sessioning.test.ts`
 
-Register the concept with its specification, refusals, and floors.
+Implement session creation, current-user lookup, and sign-out.
 
-**Diff:** `src/assembly.ts` (deferred from 2.4)
+**Verify:** `bun run test:memory` covers starting a session, looking it up, and using it after sign-out.
 
-Make `assembleApplication` take `{ db }` and assemble the MongoDB floor, so the first concept gets the shared database.
+## 3.4 Register both concepts
 
-**Verify:** `bun run generate && bun run check`
+**Diff:** `src/concepts/Authenticating.registry.ts`, `src/concepts/Sessioning.registry.ts`, `src/concepts.ts`, `src/assembly.ts`, `design/types.md`, `generated.config.ts`
 
-## 3.5 Implement sessions in TypeScript
-
-**Diff:** `src/concepts/Sessioning.ts`
-
-- Implement session creation and lookup.
-- Implement sign-out according to the specification.
-- Bind each session to an authenticated account.
-
-**Verify:** Test session creation, current-user lookup, and sign-out.
-
-## 3.6 Register sessions
-
-**Diff:** `src/concepts/Sessioning.registry.ts`
-
-Register the session concept and add it to the concept set.
+- Register both concepts with a `"mongo"` floor.
+- Make `assembleApplication` take `{ db }` (moved from 2.4).
+- Create `design/types.md` with `Sessioning.Subject` bound to `Authenticating.Account`, and register it.
 
 **Verify:** `bun run generate && bun run check`
 
-## 3.7 Add type instantiations
+## 3.5 Shared HTTP setup
 
-**Diff:** `design/types.md`
+**Diff:** see `plan-endpoints.md` E1.1–E1.3.
 
-Instantiate `Authenticating` and `Sessioning`, with `Sessioning.Subject` bound to `Authenticating.Account`.
+**Verify:** As in E1.
 
-Register the file in `generated.config.ts`.
+## 3.6 Session endpoints
 
-**Verify:** Run the design checker and generated checks.
+**Diff:** see `plan-endpoints.md` E2: `/auth/register`, `/auth/sign-in`, `/auth/sign-out`, `/auth/current`.
 
-## 3.8 Add session endpoints
+**Verify:** Endpoint tests pass. Then, with `bun run start` running, register and sign in with `curl`.
 
-**Diff:** `src/compositions/Sessions.ts`
+## 3.7 Frontend scaffold
 
-Add:
+**Diff:** see `plan-vue.md` V1.1–V1.2.
 
-- `/auth/register`
-- `/auth/sign-in`
-- `/auth/sign-out`
+**Verify:** `bun run dev` shows a "GitTrace" page, and each route shows a placeholder.
 
-**Diff:** `design/compositions/Sessions.md`
+## 3.8 API client, session, and errors
 
-Document the endpoints, reactions, and request/response contracts.
+**Diff:** see `plan-vue.md` V2.1–V2.3.
 
-**Verify:** Run the checks, start the backend, and test each endpoint with `curl`.
+**Verify:** As in V2.
 
-# Phase 4: ConnectingRepositories concept
+## 3.9 Sign-in screen
 
-Wrap the GitHub adapter in a sync-engine concept. Keep API retrieval in the adapter and repository-connection state in MongoDB.
+**Diff:** see `plan-vue.md` V3.1.
 
-## 4.1 Write the concept specification
+**Verify:** As in V3.1.
+
+## ✋ Try it: Phase 3
+
+1. Register account A and sign in.
+2. Reload the page. You are still signed in.
+3. Sign out. Protected pages send you to sign-in.
+4. Sign in with a wrong password. You see an error message, not a blank page.
+5. Register account B in a private window.
+
+# Phase 4: Slice 2 — Connect a repository and see its documentation
+
+**At the end:** you can connect a real repository, pick a commit, and see its documentation tree.
+
+## 4.1 Write the specification
 
 **Diff:** `design/concepts/ConnectingRepositories.md`
 
-Define the required operations:
-
-- Connect a user to a repository.
-- Disconnect a repository.
-- List a user's connected repositories.
-- List commits for a repository.
-- Retrieve the documentation tree at a selected commit.
-
-Define refusal cases for unknown repositories and insufficient access.
+Connect and disconnect a repository for a user; list a user's repositories; list a repository's commits; get the documentation tree at a commit. Refuse unknown repositories.
 
 **Verify:** `bun run check:design`
 
-## 4.2 Add the TypeScript skeleton
+## 4.2 Skeleton and registration
 
-**Diff:** `src/concepts/ConnectingRepositories.ts`
+**Diff:** `src/concepts/ConnectingRepositories.ts`, `src/concepts/ConnectingRepositories.registry.ts`, `src/concepts.ts`, `src/assembly.ts`, `design/types.md`
 
-- Declare the class and action/query signatures.
-- Inject the `GitHubFetcher`.
-- Add one error subclass per refusal code.
-- Leave the action bodies unimplemented temporarily.
-
-**Verify:** `bun run check`
-
-## 4.3 Register the concept
-
-**Diff:** `src/concepts/ConnectingRepositories.registry.ts`
-
-Register the concept and its required dependencies.
-
-Add its type instantiation to `design/types.md` and include it in the concept set.
-
-**Diff:** `src/assembly.ts` (deferred from 2.4)
-
-Add `{ github }` to `assembleApplication`'s inputs and inject it into this concept: `gitHubApiFromEnv()` for the server, `StubGitHubFetcher` in tests.
+- Declare every action and query, and one error class per refusal. Bodies throw `TODO`.
+- Inject a `GitHubFetcher`. Make `assembleApplication` take `{ github }` (moved from 2.4): `gitHubApiFromEnv()` for the server and `StubGitHubFetcher` in tests.
 
 **Verify:** `bun run generate && bun run check`
 
-## 4.4 Implement repository connections
+## 4.3 Connections
 
-**Diff:** `src/concepts/ConnectingRepositories.ts`
+**Diff:** `src/concepts/ConnectingRepositories.ts`, `tests/concepts/ConnectingRepositories.test.ts`
 
-- Store connected repositories in MongoDB.
-- Associate each connection with the authenticated user.
-- Implement connect, disconnect, and list operations.
+Connect, disconnect, and list, stored in MongoDB.
 
-**Verify:** Test connecting, listing, and disconnecting a repository.
+**Verify:** `bun run test:memory`, using `StubGitHubFetcher`, covers connecting, listing, disconnecting, and an unknown repository.
 
-## 4.5 Implement commit listing
+## 4.4 Commits and documentation tree
 
-**Diff:** `src/concepts/ConnectingRepositories.ts`
+**Diff:** `src/concepts/ConnectingRepositories.ts`, `tests/concepts/ConnectingRepositories.test.ts`
 
-Implement the operation that retrieves commits through the injected GitHub fetcher.
+List commits and get the documentation tree at a commit, through the injected fetcher and `documentationTree.ts`.
 
-**Verify:** Test a successful result and an inaccessible repository.
+**Verify:** `bun run test:memory`: the stub's two commits come back newest first, and each commit's tree matches the stub data.
 
-## 4.6 Implement documentation tree retrieval
+## 4.5 View: the user has connected the repository
 
-**Diff:** `src/concepts/ConnectingRepositories.ts`
+**Diff:** see `plan-reactions.md` R1.1 and R2.1.
 
-Implement retrieval of the documentation tree for a specific commit SHA.
+**Verify:** As in R2.1.
 
-**Verify:** Confirm that the returned tree corresponds to the selected commit.
+## 4.6 Repository endpoints
 
-## 4.7 Add repository endpoints
+**Diff:** see `plan-endpoints.md` E3.
 
-**Diff:** `src/compositions/Repositories.ts`
+**Verify:** Endpoint tests pass. Then use `curl` to connect `sophieelin/PaperNet` and list its commits.
 
-Add:
+## 4.7 Repository, commit, and tree screens
 
-- `/repositories/connect`
-- `/repositories/list`
-- `/repositories/commits`
-- `/repositories/tree`
+**Diff:** see `plan-vue.md` V4.1, then V4.2, then V4.3, one screen per diff.
 
-**Diff:** `design/compositions/Repositories.md`
+**Verify:** After each screen, open it in the browser and check it as in that V step.
 
-Document the endpoints and their reactions. Require an authenticated session for every endpoint.
+## ✋ Try it: Phase 4
 
-**Verify:** Test each endpoint with `curl` using a real public repository.
+1. As A, connect `sophieelin/PaperNet`.
+2. Connect `sophieelin/PaperNett`, which is misspelled. You see "repository not found."
+3. Open PaperNet's commits. They match GitHub's commit list.
+4. Open commit `d8ab205`. The tree includes `csail_hack/README.md`.
+5. Open commit `6d4a4c6`. `csail_hack/README.md` is gone, and `README.md` at the root and the four `lib/agents` READMEs are still there.
 
-# Phase 5: RestructuringDocumentation concept
+# Phase 5: Slice 3 — Create, save, and submit a proposal
 
-This concept owns the proposal lifecycle. Keep it focused on creating, editing, submitting, revising, and retrieving proposals.
+**At the end:** you can write a proposal from a commit's tree, save it, and submit it. It shows *Pending Approval*.
 
 ## 5.1 Update the specification
 
 **Diff:** `design/concepts/RestructuringDocumentation.md`
 
-- Add a repository reference to proposals.
-- Add a commit reference so each proposal records its source snapshot.
-- Add a query for retrieving a proposal.
-- Add a query for listing proposals awaiting review.
-- Define the allowed status transitions and refusal cases.
+- Add the author, repository, and commit to each proposal.
+- Add queries to get one proposal and to list an author's proposals.
+- Decide whether author-only actions check the author themselves (see `history.md`, 2026-10-17, "Plans for reactions and views").
 
 **Verify:** `bun run check:design`
 
-## 5.2 Add the TypeScript skeleton
+## 5.2 Skeleton and registration
 
-**Diff:** `src/concepts/RestructuringDocumentation.ts`
-
-- Declare the class.
-- Add action and query signatures.
-- Add the required error subclasses.
-- Leave method bodies as `throw new Error("TODO")`.
-
-**Verify:** `bun run check`
-
-## 5.3 Register the proposal concept
-
-**Diff:** `src/concepts/RestructuringDocumentation.registry.ts`
-
-Register the concept and add its instantiation to `design/types.md`.
+**Diff:** `src/concepts/RestructuringDocumentation.ts`, `src/concepts/RestructuringDocumentation.registry.ts`, `src/concepts.ts`, `design/types.md`
 
 Bind its repository type to `ConnectingRepositories.Repository`.
 
 **Verify:** `bun run generate && bun run check`
 
-## 5.4 Implement proposal creation
+## 5.3 Create, modify, and get
 
-**Diff:** `src/concepts/RestructuringDocumentation.ts`
+**Diff:** `src/concepts/RestructuringDocumentation.ts`, `tests/concepts/RestructuringDocumentation.test.ts`
 
-Create a proposal in MongoDB with its owner, repository, commit, initial structure, and initial status.
+**Verify:** `bun run test:memory` covers creating, editing a draft, getting it back, and a missing proposal.
 
-**Verify:** Test creation and retrieval.
+## 5.4 Submit
 
-## 5.5 Implement draft modification
+**Diff:** `src/concepts/RestructuringDocumentation.ts`, `tests/concepts/RestructuringDocumentation.test.ts`
 
-**Diff:** `src/concepts/RestructuringDocumentation.ts`
+Draft to pending approval, in one atomic conditional update.
 
-Implement editing of a draft proposal. Refuse modifications that are not permitted in its current status.
+**Verify:** `bun run test:memory`: submitting works once, a second submit is refused, and editing after submitting is refused.
 
-**Verify:** Test valid edits and edits after submission.
+## 5.5 View: the user owns the proposal
 
-## 5.6 Implement proposal retrieval
+**Diff:** see `plan-reactions.md` R3.1.
 
-**Diff:** `src/concepts/RestructuringDocumentation.ts`
+**Verify:** As in R3.1.
 
-Implement retrieval of one proposal and listing proposals awaiting review.
+## 5.6 Proposal endpoints
 
-**Verify:** Test missing proposals and the review queue.
+**Diff:** see `plan-endpoints.md` E4, except the review queue (E4.3), which moves to Phase 6.
 
-## 5.7 Implement submission
+**Verify:** Endpoint tests pass, including that user B cannot edit A's proposal. Then create and submit a proposal with `curl`.
 
-**Diff:** `src/concepts/RestructuringDocumentation.ts`
+## 5.7 Proposal editor
 
-- Implement the transition from draft to pending approval.
-- Use an atomic conditional update.
-- Refuse invalid or repeated transitions.
+**Diff:** see `plan-vue.md` V5.1, then V5.2.
 
-**Verify:** Test successful submission and repeated submission.
+**Verify:** As in V5.
 
-## 5.8 Implement revision and discard
+## 5.8 My proposals and proposal page
 
-**Diff:** `src/concepts/RestructuringDocumentation.ts`
+**Diff:** see `plan-vue.md` V6.1, then V6.2.
 
-Implement the revision path after a reviewer requests changes. Implement discard only if required by the specification.
+**Verify:** As in V6.
 
-**Verify:** Test revision, discard, and invalid transitions.
+## ✋ Try it: Phase 5
 
-## 5.9 Add proposal endpoints
+1. As A, open PaperNet at commit `6d4a4c6` and start a proposal.
+2. Move `csail_hack/lib/agents/README.md` to the root and write a rationale.
+3. Save and reload. Your changes are still there.
+4. Submit. The status is *Pending Approval*, and you can no longer edit it.
+5. As B, open A's proposal. You can see it but not edit it.
 
-**Diff:** `src/compositions/Proposals.ts`
+# Phase 6: Slice 4 — Review and approve
 
-Add:
+**At the end:** the full MVP journey works with two users. B approves A's proposal, and A sees *Approved*.
 
-- `/proposals/create`
-- `/proposals/modify`
-- `/proposals/submit`
-- `/proposals/get`
-- `/proposals/under-review`
+## 6.1 Approve and the review queue in RestructuringDocumentation
 
-**Diff:** `design/compositions/Proposals.md`
+**Diff:** `src/concepts/RestructuringDocumentation.ts`, `tests/concepts/RestructuringDocumentation.test.ts`, and the spec if needed
 
-Document endpoint contracts and reactions. Derive the current user from `Sessioning.current({ session })`.
+Add `approve` and the query that lists proposals under review.
 
-**Verify:** Test each endpoint over HTTP.
+**Verify:** `bun run test:memory`: only a pending proposal can be approved, and the queue lists only pending proposals.
 
-# Phase 6: ReviewingDocumentation concept
-
-Implement only the review operations needed for the MVP. Defer comments and suggestions until the core workflow works.
-
-## 6.1 Update the review specification
+## 6.2 Review specification
 
 **Diff:** `design/concepts/ReviewingDocumentation.md`
 
-Define:
-
-- Creating a review for a submitted proposal.
-- Retrieving a review for a proposal.
-- Retrieving one review.
-- Approving a proposal.
-- Requesting changes.
-
-Specify whether one review is reused when a proposal is resubmitted.
+Only what the MVP needs: open a review, get a review, get a proposal's review, and approve. Keep one review per proposal, reopened on resubmission (Phase 7).
 
 **Verify:** `bun run check:design`
 
-## 6.2 Add the TypeScript skeleton
+## 6.3 Skeleton and registration
 
-**Diff:** `src/concepts/ReviewingDocumentation.ts`
+**Diff:** `src/concepts/ReviewingDocumentation.ts`, `src/concepts/ReviewingDocumentation.registry.ts`, `src/concepts.ts`, `design/types.md`
 
-Add the class, method signatures, and refusal classes. Leave method bodies unimplemented.
-
-**Verify:** `bun run check`
-
-## 6.3 Register the review concept
-
-**Diff:** `src/concepts/ReviewingDocumentation.registry.ts`
-
-Register the concept and instantiate it in `design/types.md`.
-
-Bind the proposal reference to `RestructuringDocumentation.Restructuring`.
+Bind its proposal type to `RestructuringDocumentation.Restructuring`.
 
 **Verify:** `bun run generate && bun run check`
 
-## 6.4 Implement review creation
+## 6.4 Open and approve a review
 
-**Diff:** `src/concepts/ReviewingDocumentation.ts`
+**Diff:** `src/concepts/ReviewingDocumentation.ts`, `tests/concepts/ReviewingDocumentation.test.ts`
 
-- Create a review for a submitted proposal.
-- Add a unique index if the specification requires one review per proposal.
-- Translate duplicate-key errors into the declared refusal.
+Opening a review uses a unique index, and the duplicate-key error becomes the declared refusal.
 
-**Verify:** Test review creation and duplicate creation.
+**Verify:** `bun run test:memory` covers opening, opening twice, and approving.
 
-## 6.5 Implement approval
+## 6.5 Review views and the approval reaction
 
-**Diff:** `src/concepts/ReviewingDocumentation.ts`
+**Diff:** see `plan-reactions.md` R4.1–R4.4.
 
-- Implement approval.
-- Check the review and proposal states.
-- Use the declared reaction to transition the proposal to approved.
+**Verify:** As in R4.4: approving the review makes the proposal `APPROVED`.
 
-Keep the proposal's status transition authoritative in `RestructuringDocumentation`.
+## 6.6 Review endpoints and the review queue
 
-**Verify:** Test successful approval and invalid approval attempts.
+**Diff:** see `plan-endpoints.md` E4.3, then E5 without request-changes.
 
-## 6.6 Implement request changes and resubmission
+**Verify:** A two-account endpoint test: A submits, B opens the review and approves, and A's proposal is `APPROVED`.
 
-**Diff:** `src/concepts/ReviewingDocumentation.ts`
+## 6.7 Review screens
 
-- Implement request changes.
-- Connect the decision to the proposal's revision workflow.
-- Reuse or reopen the existing review according to the specification.
+**Diff:** see `plan-vue.md` V7.1, then V7.2, then V7.3 with only the Approve button.
 
-**Verify:** Test the complete revision and resubmission cycle.
+**Verify:** As in V7.
 
-## 6.7 Add review endpoints
+## ✋ Try it: Phase 6 (MVP complete)
 
-**Diff:** `src/compositions/Reviews.ts`
+1. As B, open the review queue. A's proposal is there. As A, your own proposal is not in your queue.
+2. As B, open it. You see the current and proposed structures side by side, with the changes marked.
+3. As B, approve.
+4. As A, open *My proposals*. The status is *Approved*.
 
-Add:
+# Phase 7: Slice 5 — Request changes and resubmit
 
-- `/reviews/open`
-- `/reviews/approve`
-- `/reviews/request-changes`
-- `/reviews/get`
+**At the end:** a reviewer can send a proposal back, and the author can fix it and resubmit.
 
-**Diff:** `design/compositions/Reviews.md`
+## 7.1 Revise in RestructuringDocumentation
 
-Document the endpoint contracts and reactions. Require authenticated sessions and enforce reviewer authorization.
+**Diff:** `src/concepts/RestructuringDocumentation.ts`, `tests/concepts/RestructuringDocumentation.test.ts`
 
-**Verify:** Test the endpoints with two separate accounts.
+Add `revise`, which moves a pending proposal back to draft. Add `discard` only if the spec requires it.
 
-# Phase 7: End-to-end verification
+**Verify:** `bun run test:memory` covers revising and the refused cases.
 
-## 7.1 Verify individual concepts
+## 7.2 Request changes and reopen in ReviewingDocumentation
 
-Run the relevant MongoDB tests for authentication, sessions, repository connections, proposals, and reviews.
+**Diff:** `src/concepts/ReviewingDocumentation.ts`, `tests/concepts/ReviewingDocumentation.test.ts`
 
-Check the following:
+**Verify:** `bun run test:memory` covers requesting changes and reopening.
+
+## 7.3 Reactions
+
+**Diff:** see `plan-reactions.md` R4.5–R4.6.
+
+**Verify:** As in R4.6: the full cycle in one test.
+
+## 7.4 Request-changes endpoint
+
+**Diff:** the rest of `plan-endpoints.md` E5.
+
+**Verify:** As in E5: the two-account full cycle over HTTP.
+
+## 7.5 Request Changes button
+
+**Diff:** `plan-vue.md` V7.3, the rest of it.
+
+**Verify:** As in V7.3.
+
+## ✋ Try it: Phase 7
+
+1. As A, submit a new proposal.
+2. As B, request changes. A sees *Changes Requested* and can edit again.
+3. As A, edit and resubmit. B sees it pending again.
+4. As B, approve. A sees *Approved*.
+
+# Phase 8: Final checks
+
+## 8.1 Concept checks
+
+Run every concept's tests and check that:
 
 - Invalid state transitions are refused.
 - Duplicate records are rejected where required.
@@ -561,30 +526,26 @@ Check the following:
 - Reviewer authorization is enforced.
 - Concurrent status updates cannot both succeed when only one transition is valid.
 
-## 7.2 Verify the complete HTTP workflow
+## 8.2 Contract and composition checks
 
-Run the backend and execute the following flow with `curl`:
+See `plan-endpoints.md` E6 and `plan-reactions.md` R5.
 
-1. Register the first developer.
-2. Sign in and retain the session.
-3. Connect a real GitHub repository.
-4. List commits.
-5. Retrieve the documentation tree at a selected commit.
-6. Create and modify a proposal.
-7. Submit it for review.
-8. Sign in as a second developer.
-9. Retrieve the proposal and open its review.
-10. Approve the proposal.
-11. Retrieve the proposal again and verify that its status is `APPROVED`.
+## 8.3 Walkthrough
 
-Run the request-changes workflow separately.
+Do `plan-vue.md` V8.1: the full journey in two browsers, from a fresh `bun run db:reset`.
 
-## 7.3 Final checks
+## 8.4 Final commands
 
 - `bun run check:design`
 - `bun run generate && bun run check`
 - `bun test`
 - `bun run test:memory`
-- Manual HTTP verification of the complete workflow
 
 Use the project's existing script names where possible. If a required script is missing, add it in a separate diff.
+
+# Out of scope
+
+- Comments and suggestions on reviews.
+- Applying an approved proposal (`apply`) and opening a pull request on GitHub.
+- InvestigatingChanges and the investigation agent.
+- Private repositories and signing in with GitHub.

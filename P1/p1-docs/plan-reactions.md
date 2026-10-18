@@ -7,7 +7,7 @@ Plan the composition layer that connects GitTrace's concepts:
 - **Reactions** state one application decision each: when one concept's action happens, ask another concept to act.
 - **Views** are named, read-only lookups over concept queries. Endpoints and reactions use them for authorization and policy, such as "this user owns this proposal."
 
-This plan goes with `plan-backend.md`. It does not add a separate round. Each step below names the backend step it belongs to, so reactions and views are built right after the concepts they connect, together with that concept's endpoints (`plan-endpoints.md`).
+This plan goes with `plan.md`, which decides when each step happens: R1–R2 in Phase 4, R3 in Phase 5, R4.1–R4.4 in Phase 6, and R4.5–R4.6 in Phase 7. Backend step numbers below are from an older version of the plan. It does not add a separate round. Each step below names the backend step it belongs to, so reactions and views are built right after the concepts they connect, together with that concept's endpoints (`plan-endpoints.md`).
 
 ## Working rules
 

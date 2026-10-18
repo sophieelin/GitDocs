@@ -7,7 +7,7 @@ Plan the HTTP layer of the backend:
 - **Endpoints** connect an HTTP request to concept actions: receive the input, resolve the session, check policy views, call actions, and respond.
 - **Formers** build the response for read requests. They join concept queries and views into one result, such as a proposal together with its review.
 
-This plan goes with `plan-backend.md`. Endpoints are still added right after each concept, in backend steps 3.8, 4.7, 5.9, and 6.7. This plan gives the details for those steps and adds one shared setup phase before them. Views come from `plan-reactions.md`.
+This plan goes with `plan.md`, which decides when each step happens: E1–E2 in Phase 3, E3 in Phase 4, E4 in Phase 5 (except E4.3), E4.3 and E5 in Phases 6 and 7. Backend step numbers in this file are from an older version of the plan. Views come from `plan-reactions.md`.
 
 ## Working rules
 

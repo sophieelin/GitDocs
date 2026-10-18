@@ -12,7 +12,7 @@ Build a Vue 3 frontend that uses the backend endpoints in `plan-endpoints.md` to
 6. As a second developer, compare the current and proposed structures.
 7. Approve the proposal, or request changes, and see the *Approved* status.
 
-`plan-backend.md` puts the frontend out of scope for the backend round. Start this plan once backend phase 7 passes. Phases V1–V3 can start earlier, as soon as the session endpoints (backend step 3.8) work.
+**Order:** `plan.md` decides when each step happens. The screens are built in thin slices, right after the endpoints they use: V1–V3 in Phase 3, V4 in Phase 4, V5–V6 in Phase 5, and V7 in Phases 6 and 7. Backend step numbers in this file are from an older version of the plan.
 
 ## Working rules
 
