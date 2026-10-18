@@ -1,5 +1,6 @@
 import { assemble } from "@mit-sdg/sync-engine/assembly";
 import type { Db } from "mongodb";
+import { composition as sessionsComposition } from "./compositions/Sessions.ts";
 import { applicationConceptSet } from "./concepts.ts";
 
 export interface AssemblyInputs {
@@ -11,6 +12,8 @@ export function assembleApplication({ db }: AssemblyInputs) {
   return assemble({
     conceptSet: applicationConceptSet,
     instances: applicationConceptSet.implementations("mongo", { db }),
-    composition: {},
+    composition: {
+      Sessions: sessionsComposition,
+    },
   });
 }

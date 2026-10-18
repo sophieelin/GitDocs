@@ -6,6 +6,7 @@ export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   plugins: [vue()],
   server: {
+    host: "127.0.0.1",
     port: 5173,
     strictPort: true,
     // The backend listens on 127.0.0.1:3000 (src/main.ts). Proxying /api keeps

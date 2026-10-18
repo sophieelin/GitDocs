@@ -6,5 +6,11 @@ export default {
   // first query, so checking never needs a running MongoDB.
   assemble: () => assembleApplication({ db }),
   title: "Application",
-  design: { version: 1, documents: [new URL("./design/types.md", import.meta.url)] },
+  design: {
+    version: 1,
+    documents: [
+      new URL("./design/types.md", import.meta.url),
+      new URL("./design/compositions/Sessions.md", import.meta.url),
+    ],
+  },
 };

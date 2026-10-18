@@ -42,6 +42,16 @@ export const sessionOnlyInput = validator(
   "session must be a non-empty string",
 );
 
+export const usernameOutput = validator(
+  (value) => hasOnly(value, ["username"]) && typeof value.username === "string",
+  "response must contain a username",
+);
+
+export const signedOutOutput = validator(
+  (value) => hasOnly(value, ["signedOut"]) && value.signedOut === true,
+  "response must confirm sign-out",
+);
+
 export const issuedSessionOutput = validator(
   (value) =>
     hasOnly(value, ["account", "session", "expiresAt"]) &&
