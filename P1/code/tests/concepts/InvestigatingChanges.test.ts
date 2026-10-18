@@ -1,5 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import { InvalidCommit, InvalidRepository, InvestigatingChangesConcept } from "../../src/concepts/InvestigatingChanges.ts";
+import {
+  InvalidAffectedDocumentation,
+  InvalidCommit,
+  InvalidEvidence,
+  InvalidRepository,
+  InvalidTitle,
+  InvestigatingChangesConcept,
+} from "../../src/concepts/InvestigatingChanges.ts";
 import { openTestDb, type TestDb } from "../test-db.ts";
 
 let testDb: TestDb;
@@ -23,84 +30,126 @@ function ids(...values: string[]) {
 
 const paperNet = { owner: "sophieelin", name: "PaperNet" };
 const d8ab205 = "d8ab205" + "a".repeat(33);
-const c6d4a4c6 = "6d4a4c6" + "b".repeat(33);
 const morning = new Date("2026-10-18T09:00:00.000Z");
 const noon = new Date("2026-10-18T12:00:00.000Z");
 
+const valid = {
+  ...paperNet,
+  commit: d8ab205,
+  title: "Agents moved under lib/",
+  affected: [{ path: "csail_hack/README.md", reason: "Still describes the old layout." }],
+  evidence: ["lib/agents/ gained its own README in this commit"],
+};
+
 describe("InvestigatingChanges", () => {
-  test("its principle: one shared investigation per commit, newest first", async () => {
-    const investigating = new InvestigatingChangesConcept(testDb.db, ids("inv-1", "inv-2", "unused"));
+  test("its principle: submit, read back, and list many per commit, newest first", async () => {
+    const investigating = new InvestigatingChangesConcept(testDb.db, ids("inv-1", "inv-2"));
 
-    expect(await investigating.open({ investigator: "ari", ...paperNet, commit: d8ab205, at: morning })).toEqual({
-      investigation: "inv-1",
-    });
-    // The same commit again, by Ari or by Bo, is the same investigation.
-    expect(await investigating.open({ investigator: "ari", ...paperNet, commit: d8ab205, at: noon })).toEqual({
-      investigation: "inv-1",
-    });
-    expect(await investigating.open({ investigator: "bob", ...paperNet, commit: d8ab205, at: noon })).toEqual({
-      investigation: "inv-1",
-    });
+    expect(await investigating.submit({ investigator: "ari", ...valid, at: morning })).toEqual({ investigation: "inv-1" });
     expect(await investigating._get({ investigation: "inv-1" })).toEqual([
-      { investigation: "inv-1", ...paperNet, commit: d8ab205, investigator: "ari", openedAt: morning },
+      { investigation: "inv-1", ...paperNet, commit: d8ab205, investigator: "ari", title: "Agents moved under lib/", submittedAt: morning },
     ]);
+    expect(await investigating._affected({ investigation: "inv-1" })).toEqual(valid.affected);
+    expect(await investigating._evidence({ investigation: "inv-1" })).toEqual([{ text: valid.evidence[0] }]);
 
-    await investigating.open({ investigator: "bob", ...paperNet, commit: c6d4a4c6, at: noon });
-    expect(await investigating._forRepository(paperNet)).toEqual([
-      { investigation: "inv-2", commit: c6d4a4c6, investigator: "bob", openedAt: noon },
-      { investigation: "inv-1", commit: d8ab205, investigator: "ari", openedAt: morning },
+    await investigating.submit({ investigator: "bob", ...valid, title: "A second reading", at: noon });
+    expect(await investigating._forCommit({ ...paperNet, commit: d8ab205 })).toEqual([
+      { investigation: "inv-2", investigator: "bob", title: "A second reading", submittedAt: noon },
+      { investigation: "inv-1", investigator: "ari", title: "Agents moved under lib/", submittedAt: morning },
     ]);
+    expect((await investigating._forRepository(paperNet)).map((i) => i.investigation)).toEqual(["inv-2", "inv-1"]);
   });
 
-  test("another repository's list does not include them", async () => {
+  test("another repository's lists do not include them", async () => {
     const investigating = new InvestigatingChangesConcept(testDb.db, ids("inv-1"));
-    await investigating.open({ investigator: "ari", ...paperNet, commit: d8ab205, at: morning });
+    await investigating.submit({ investigator: "ari", ...valid, at: morning });
 
     expect(await investigating._forRepository({ owner: "octocat", name: "Hello-World" })).toEqual([]);
+    expect(await investigating._forCommit({ owner: "octocat", name: "Hello-World", commit: d8ab205 })).toEqual([]);
   });
 
   test("the repository and commit are compared without regard to letter case", async () => {
-    const investigating = new InvestigatingChangesConcept(testDb.db, ids("inv-1", "unused"));
-    await investigating.open({ investigator: "ari", ...paperNet, commit: d8ab205, at: morning });
+    const investigating = new InvestigatingChangesConcept(testDb.db, ids("inv-1"));
+    await investigating.submit({ investigator: "ari", ...valid, owner: "SophieeLin", commit: d8ab205.toUpperCase(), at: morning });
 
-    expect(
-      await investigating.open({ investigator: "bob", owner: "SophieeLin", name: "papernet", commit: d8ab205.toUpperCase(), at: noon }),
-    ).toEqual({ investigation: "inv-1" });
-    expect((await investigating._forRepository({ owner: "SOPHIEELIN", name: "PAPERNET" })).length).toBe(1);
+    expect((await investigating._forCommit({ owner: "sophieelin", name: "papernet", commit: d8ab205 })).length).toBe(1);
   });
 
-  test("refuses an empty owner or name", async () => {
-    const investigating = new InvestigatingChangesConcept(testDb.db);
+  test("keeps affected documentation and evidence in the order given, trimmed", async () => {
+    const investigating = new InvestigatingChangesConcept(testDb.db, ids("inv-1"));
+    await investigating.submit({
+      investigator: "ari",
+      ...valid,
+      affected: [
+        { path: "b.md", reason: "  second  " },
+        { path: "a.md", reason: "first" },
+      ],
+      evidence: ["one", "  two  ", "https://github.com/sophieelin/PaperNet/pull/1"],
+      at: morning,
+    });
 
-    await expect(investigating.open({ investigator: "ari", owner: "", name: "PaperNet", commit: d8ab205, at: morning })).rejects.toThrow(
-      InvalidRepository,
-    );
-    await expect(investigating.open({ investigator: "ari", owner: "sophieelin", name: " ", commit: d8ab205, at: morning })).rejects.toThrow(
-      "A repository needs an owner and a name.",
-    );
+    expect(await investigating._affected({ investigation: "inv-1" })).toEqual([
+      { path: "b.md", reason: "second" },
+      { path: "a.md", reason: "first" },
+    ]);
+    expect((await investigating._evidence({ investigation: "inv-1" })).map((e) => e.text)).toEqual([
+      "one",
+      "two",
+      "https://github.com/sophieelin/PaperNet/pull/1",
+    ]);
   });
 
-  test("refuses anything but a full commit SHA, and stores nothing", async () => {
+  test("refuses each invalid part, and records nothing", async () => {
     const investigating = new InvestigatingChangesConcept(testDb.db);
-
-    for (const commit of ["d8ab205", "not-a-sha", "g".repeat(40), ""]) {
-      await expect(investigating.open({ investigator: "ari", ...paperNet, commit, at: morning })).rejects.toThrow(InvalidCommit);
+    const cases: [Partial<typeof valid>, new (message: string) => Error][] = [
+      [{ owner: "" }, InvalidRepository],
+      [{ commit: "d8ab205" }, InvalidCommit],
+      [{ title: "  " }, InvalidTitle],
+      [{ title: "x".repeat(121) }, InvalidTitle],
+      [{ affected: [] }, InvalidAffectedDocumentation],
+      [{ affected: [{ path: "a.md", reason: "" }] }, InvalidAffectedDocumentation],
+      [{ affected: [{ path: "", reason: "why" }] }, InvalidAffectedDocumentation],
+      [
+        {
+          affected: [
+            { path: "a.md", reason: "one" },
+            { path: "a.md", reason: "two" },
+          ],
+        },
+        InvalidAffectedDocumentation,
+      ],
+      [{ evidence: [] }, InvalidEvidence],
+      [{ evidence: ["fine", " "] }, InvalidEvidence],
+    ];
+    for (const [change, refusal] of cases) {
+      await expect(investigating.submit({ investigator: "ari", ...valid, ...change, at: morning })).rejects.toThrow(refusal);
     }
     expect(await investigating._forRepository(paperNet)).toEqual([]);
   });
 
-  test("an unknown investigation answers no row", async () => {
-    expect(await new InvestigatingChangesConcept(testDb.db)._get({ investigation: "missing" })).toEqual([]);
+  test("an unknown investigation answers no rows", async () => {
+    const investigating = new InvestigatingChangesConcept(testDb.db);
+
+    expect(await investigating._get({ investigation: "missing" })).toEqual([]);
+    expect(await investigating._affected({ investigation: "missing" })).toEqual([]);
+    expect(await investigating._evidence({ investigation: "missing" })).toEqual([]);
   });
 
-  test("two people opening the same commit at once get one investigation", async () => {
-    const investigating = new InvestigatingChangesConcept(testDb.db, ids("inv-1", "inv-2"));
-    const [a, b] = await Promise.all([
-      investigating.open({ investigator: "ari", ...paperNet, commit: d8ab205, at: morning }),
-      investigating.open({ investigator: "bob", ...paperNet, commit: d8ab205, at: morning }),
-    ]);
+  test("an investigation saved by the earlier open action reads as untitled", async () => {
+    await testDb.db.collection("InvestigatingChanges.investigations").insertOne({
+      _id: "old-1" as never,
+      owner: "sophieelin",
+      name: "PaperNet",
+      repository: "sophieelin/papernet",
+      commit: d8ab205,
+      investigator: "ari",
+      openedAt: morning,
+    });
+    const investigating = new InvestigatingChangesConcept(testDb.db);
 
-    expect(a).toEqual(b);
-    expect((await investigating._forRepository(paperNet)).length).toBe(1);
+    expect(await investigating._get({ investigation: "old-1" })).toEqual([
+      { investigation: "old-1", ...paperNet, commit: d8ab205, investigator: "ari", title: "Untitled investigation", submittedAt: morning },
+    ]);
+    expect(await investigating._affected({ investigation: "old-1" })).toEqual([]);
   });
 });

@@ -25,6 +25,9 @@ export const publicErrors = {
   // InvestigatingChanges
   INVALID_REPOSITORY: "INVALID_REQUEST",
   INVALID_COMMIT: "INVALID_REQUEST",
+  INVALID_TITLE: "INVALID_REQUEST",
+  INVALID_AFFECTED_DOCUMENTATION: "INVALID_REQUEST",
+  INVALID_EVIDENCE: "INVALID_REQUEST",
   // Investigations composition
   INVESTIGATION_NOT_FOUND: "NOT_FOUND",
 } as const satisfies Record<string, HttpPublicErrorCategory>;

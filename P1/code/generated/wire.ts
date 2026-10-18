@@ -5,6 +5,7 @@ import type { applicationConceptSet as ApplicationConceptSet } from "../src/conc
 
 type AtPath<T, P extends readonly string[]> = P extends readonly [infer H extends string, ...infer R extends string[]] ? H extends keyof T ? AtPath<T[H], R> : H extends `${number}` ? T extends readonly (infer Item)[] ? AtPath<Item, R> : never : never : T;
 type QueryRow<T> = T extends readonly (infer Row)[] ? Row : T;
+type AllOf<T extends readonly unknown[]> = T extends readonly [infer Head, ...infer Rest] ? Head & AllOf<Rest> : unknown;
 type Jsonify<T> = T extends Date ? string : T extends null | boolean | number | string ? T : T extends (...args: never[]) => unknown ? never : T extends readonly (infer Item)[] ? Jsonify<Item>[] : T extends object ? { [K in keyof T]: Jsonify<T[K]> } : never;
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -54,18 +55,47 @@ export type ApplicationWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
+  "/investigations/for-commit": {
+    input: {
+      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>[0], ["commit"]>>;
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>[0], ["name"]>>;
+      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>[0], ["owner"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "commit": {
+        "investigations": {
+          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigation"]>>;
+          "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigator"]>>;
+          "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["submittedAt"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["title"]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
   "/investigations/get": {
     input: {
       "investigation": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
-      "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
-      "investigation": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>>;
-      "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
-      "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
-      "openedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["openedAt"]>>;
-      "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+      "investigation": {
+        "affected": {
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_affected"]>>>, ["path"]>>;
+          "reason": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_affected"]>>>, ["reason"]>>;
+        }[];
+        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+        "evidence": {
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_evidence"]>>>, ["text"]>>;
+        }[];
+        "investigation": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigation"]>]>>;
+        "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+        "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["submittedAt"]>>;
+        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+      };
     };
     error: { error: AppWideError | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "UNKNOWN_SESSION" };
   };
@@ -81,23 +111,27 @@ export type ApplicationWire = {
           "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["commit"]>>;
           "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigation"]>>;
           "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigator"]>>;
-          "openedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["openedAt"]>>;
+          "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["submittedAt"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["title"]>>;
         }[];
       };
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
-  "/investigations/open": {
+  "/investigations/submit": {
     input: {
-      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["open"]>[0], ["commit"]>>;
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["open"]>[0], ["name"]>>;
-      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["open"]>[0], ["owner"]>>;
+      "affected": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["affected"]>>;
+      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["commit"]>>;
+      "evidence": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["evidence"]>>;
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["name"]>>;
+      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["owner"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["title"]>>;
     };
     output: {
-      "investigation": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["open"]>>, ["investigation"]>>;
+      "investigation": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>>, ["investigation"]>>;
     };
-    error: { error: AppWideError | "INVALID_COMMIT" | "INVALID_INPUT" | "INVALID_REPOSITORY" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_AFFECTED_DOCUMENTATION" | "INVALID_COMMIT" | "INVALID_EVIDENCE" | "INVALID_INPUT" | "INVALID_REPOSITORY" | "INVALID_TITLE" | "UNKNOWN_SESSION" };
   };
 };
 
@@ -146,18 +180,47 @@ export type ApplicationWireHttp = {
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
+  "/investigations/for-commit": {
+    input: {
+      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>[0], ["commit"]>>;
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>[0], ["name"]>>;
+      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>[0], ["owner"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "commit": {
+        "investigations": {
+          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigation"]>>;
+          "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigator"]>>;
+          "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["submittedAt"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["title"]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
   "/investigations/get": {
     input: {
       "investigation": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
-      "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
-      "investigation": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>>;
-      "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
-      "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
-      "openedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["openedAt"]>>;
-      "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+      "investigation": {
+        "affected": {
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_affected"]>>>, ["path"]>>;
+          "reason": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_affected"]>>>, ["reason"]>>;
+        }[];
+        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+        "evidence": {
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_evidence"]>>>, ["text"]>>;
+        }[];
+        "investigation": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigation"]>]>>;
+        "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+        "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["submittedAt"]>>;
+        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+      };
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
@@ -173,21 +236,25 @@ export type ApplicationWireHttp = {
           "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["commit"]>>;
           "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigation"]>>;
           "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigator"]>>;
-          "openedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["openedAt"]>>;
+          "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["submittedAt"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["title"]>>;
         }[];
       };
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
-  "/investigations/open": {
+  "/investigations/submit": {
     input: {
-      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["open"]>[0], ["commit"]>>;
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["open"]>[0], ["name"]>>;
-      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["open"]>[0], ["owner"]>>;
+      "affected": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["affected"]>>;
+      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["commit"]>>;
+      "evidence": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["evidence"]>>;
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["name"]>>;
+      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["owner"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["title"]>>;
     };
     output: {
-      "investigation": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["open"]>>, ["investigation"]>>;
+      "investigation": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>>, ["investigation"]>>;
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };

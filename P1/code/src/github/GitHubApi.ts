@@ -1,5 +1,13 @@
 import type { GitHubFetcher } from "./GitHubFetcher.ts";
-import type { Commit, RepositoryRef, RepositoryTree, TreeEntry } from "./types.ts";
+import type {
+  ChangedFile,
+  ChangeStatus,
+  Commit,
+  CommitDetails,
+  RepositoryRef,
+  RepositoryTree,
+  TreeEntry,
+} from "./types.ts";
 
 /** Base class for every error the adapter throws. */
 export class GitHubError extends Error {}
@@ -31,6 +39,28 @@ const NAME = /^[A-Za-z0-9._-]{1,100}$/;
 const SHA = /^[0-9a-f]{7,40}$/i;
 
 type GitHubCommit = { sha: string; commit: { message: string } };
+type GitHubCommitDetails = {
+  sha: string;
+  commit: { message: string; author: { name: string; date: string } | null };
+  author: { login: string } | null;
+  files?: {
+    filename: string;
+    previous_filename?: string;
+    status: string;
+    additions: number;
+    deletions: number;
+    patch?: string;
+  }[];
+};
+
+/** GitHub lists at most this many changed files in one answer. */
+const MAX_LISTED_FILES = 300;
+
+function changeStatus(status: string): ChangeStatus {
+  if (status === "added" || status === "removed" || status === "renamed" || status === "copied") return status;
+  // GitHub also says "changed" (for example, only the file mode) or "unchanged"; both read as modified.
+  return "modified";
+}
 type GitHubTree = { tree: { path: string; type: "blob" | "tree" | "commit" }[]; truncated: boolean };
 
 export interface GitHubApiOptions {
@@ -72,6 +102,29 @@ export class GitHubApi implements GitHubFetcher {
       else if (type === "tree") entries.push({ path, type: "directory" });
     }
     return { sha, entries, truncated: tree.truncated };
+  }
+
+  async getCommit(repository: RepositoryRef, sha: string): Promise<CommitDetails> {
+    if (!SHA.test(sha)) throw new InvalidCommitSha(`"${sha}" is not a commit SHA.`);
+    const response = await this.request(`${repoPath(repository)}/commits/${sha}?per_page=${MAX_LISTED_FILES}`);
+    if (response.status === 422) throw new CommitNotFound(`Commit ${sha} does not exist in this repository.`);
+    const commit = await this.parse<GitHubCommitDetails>(response);
+    const files = (commit.files ?? []).map((file): ChangedFile => ({
+      path: file.filename,
+      ...(file.previous_filename ? { previousPath: file.previous_filename } : {}),
+      status: changeStatus(file.status),
+      additions: file.additions,
+      deletions: file.deletions,
+      ...(file.patch !== undefined ? { patch: file.patch } : {}),
+    }));
+    return {
+      sha: commit.sha,
+      message: commit.commit.message,
+      author: commit.author?.login ?? commit.commit.author?.name ?? "unknown",
+      date: commit.commit.author?.date ?? "",
+      files,
+      truncated: files.length >= MAX_LISTED_FILES,
+    };
   }
 
   private async request(path: string): Promise<Response> {

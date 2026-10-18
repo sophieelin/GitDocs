@@ -1,4 +1,4 @@
-import type { Commit, RepositoryRef, RepositoryTree } from "./types.ts";
+import type { Commit, CommitDetails, RepositoryRef, RepositoryTree } from "./types.ts";
 
 /**
  * Reads public repository data from GitHub. It knows nothing about HTTP routes,
@@ -10,4 +10,7 @@ export interface GitHubFetcher {
 
   /** The repository's complete file tree at `sha`. */
   getTree(repository: RepositoryRef, sha: string): Promise<RepositoryTree>;
+
+  /** The commit `sha`: its message, author, date, and every file it changed. */
+  getCommit(repository: RepositoryRef, sha: string): Promise<CommitDetails>;
 }

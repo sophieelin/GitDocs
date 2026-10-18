@@ -71,9 +71,34 @@ function hasRepository(value: Record<string, unknown>): boolean {
   return text(value.owner, 100) && text(value.name, 100);
 }
 
-export const openInvestigationInput = validator(
-  (value) => hasOnly(value, ["session", "owner", "name", "commit"]) && hasSession(value) && hasRepository(value) && text(value.commit, 64),
-  "session, owner, name, and commit must be bounded strings",
+/**
+ * The shape of a submission. The concept checks the rules (a title, at least one
+ * affected file with a reason, at least one evidence item); this only rejects
+ * values a real request should never carry.
+ */
+export const submitInvestigationInput = validator(
+  (value) =>
+    hasOnly(value, ["session", "owner", "name", "commit", "title", "affected", "evidence"]) &&
+    hasSession(value) &&
+    hasRepository(value) &&
+    text(value.commit, 64) &&
+    typeof value.title === "string" &&
+    value.title.length <= 200 &&
+    Array.isArray(value.affected) &&
+    value.affected.length <= 100 &&
+    value.affected.every(
+      (item) =>
+        record(item) &&
+        hasOnly(item, ["path", "reason"]) &&
+        typeof item.path === "string" &&
+        item.path.length <= 500 &&
+        typeof item.reason === "string" &&
+        item.reason.length <= 2000,
+    ) &&
+    Array.isArray(value.evidence) &&
+    value.evidence.length <= 100 &&
+    value.evidence.every((item) => typeof item === "string" && item.length <= 2000),
+  "an investigation needs bounded strings, an affected list of paths with reasons, and an evidence list of texts",
 );
 
 export const investigationIdInput = validator(
@@ -86,37 +111,56 @@ export const repositoryInput = validator(
   "session, owner, and name must be bounded strings",
 );
 
-export const openedInvestigationOutput = validator(
+export const commitInput = validator(
+  (value) => hasOnly(value, ["session", "owner", "name", "commit"]) && hasSession(value) && hasRepository(value) && text(value.commit, 64),
+  "session, owner, name, and commit must be bounded strings",
+);
+
+export const submittedInvestigationOutput = validator(
   (value) => hasOnly(value, ["investigation"]) && typeof value.investigation === "string",
   "response must contain an investigation identity",
 );
 
 export const investigationOutput = validator(
-  (value) =>
-    hasOnly(value, ["investigation", "owner", "name", "commit", "investigator", "openedAt"]) &&
-    ["investigation", "owner", "name", "commit", "investigator"].every((key) => typeof value[key] === "string") &&
-    value.openedAt instanceof Date,
-  "response must contain an investigation's repository, commit, investigator, and Date opened",
-);
-
-export const repositoryInvestigationsOutput = validator(
   (value) => {
-    const repository = value.repository;
+    const detail = value.investigation;
     return (
-      hasOnly(value, ["repository"]) &&
-      record(repository) &&
-      hasOnly(repository, ["investigations"]) &&
-      Array.isArray(repository.investigations) &&
-      repository.investigations.every(
-        (item) =>
-          record(item) &&
-          hasOnly(item, ["investigation", "commit", "investigator", "openedAt"]) &&
-          typeof item.investigation === "string" &&
-          typeof item.commit === "string" &&
-          typeof item.investigator === "string" &&
-          item.openedAt instanceof Date,
-      )
+      hasOnly(value, ["investigation"]) &&
+      record(detail) &&
+      hasOnly(detail, ["investigation", "owner", "name", "commit", "investigator", "title", "submittedAt", "affected", "evidence"]) &&
+      ["investigation", "owner", "name", "commit", "investigator", "title"].every((key) => typeof detail[key] === "string") &&
+      detail.submittedAt instanceof Date &&
+      Array.isArray(detail.affected) &&
+      detail.affected.every((item) => record(item) && typeof item.path === "string" && typeof item.reason === "string") &&
+      Array.isArray(detail.evidence) &&
+      detail.evidence.every((item) => record(item) && typeof item.text === "string")
     );
   },
-  "response must contain the repository's investigations",
+  "response must contain an investigation with its affected documentation and evidence",
 );
+
+/** A list of investigation summaries under `key`, each with the given fields plus title and Date submitted. */
+function summaries(key: string, fields: readonly string[]) {
+  return validator(
+    (value) => {
+      const holder = value[key];
+      return (
+        hasOnly(value, [key]) &&
+        record(holder) &&
+        hasOnly(holder, ["investigations"]) &&
+        Array.isArray(holder.investigations) &&
+        holder.investigations.every(
+          (item) =>
+            record(item) &&
+            hasOnly(item, [...fields, "title", "submittedAt"]) &&
+            [...fields, "title"].every((field) => typeof item[field] === "string") &&
+            item.submittedAt instanceof Date,
+        )
+      );
+    },
+    `response must contain the ${key}'s investigations`,
+  );
+}
+
+export const repositoryInvestigationsOutput = summaries("repository", ["investigation", "commit", "investigator"]);
+export const commitInvestigationsOutput = summaries("commit", ["investigation", "investigator"]);

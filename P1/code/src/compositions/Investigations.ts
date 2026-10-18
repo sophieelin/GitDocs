@@ -1,6 +1,6 @@
 /**
- * Investigations of a repository's commits: opening one, reading one, and
- * listing a repository's investigations.
+ * Investigations of a repository's commits: submitting one, reading one with its
+ * affected documentation and evidence, and listing a repository's or a commit's.
  *
  * Every endpoint resolves the session first, so the investigator is always the
  * signed-in account, never a name the request supplies. The repository is a
@@ -10,53 +10,91 @@ import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { each, form, former, no, now, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 import {
+  commitInput,
+  commitInvestigationsOutput,
   investigationIdInput,
   investigationOutput,
-  openInvestigationInput,
-  openedInvestigationOutput,
   repositoryInput,
   repositoryInvestigationsOutput,
+  submitInvestigationInput,
+  submittedInvestigationOutput,
 } from "./validators.ts";
 
 const { InvestigatingChanges, Sessioning } = concepts;
 
-/** The repository's investigations, the most recently opened first. */
-const RepositoryInvestigations = former(
-  "the investigations of a repository",
-  ({ owner, name }, { investigation, commit, investigator, openedAt }) =>
-    form({
-      investigations: each(
-        InvestigatingChanges._forRepository({ owner, name }).is({ investigation, commit, investigator, openedAt }),
-      )
-        .arranged(openedAt, "descending")
-        .form({ investigation, commit, investigator, openedAt }),
+/** One investigation, with its affected documentation and evidence in the order given. */
+const InvestigationDetail = former(
+  "an investigation with its affected documentation and evidence",
+  ({ investigation }, { owner, name, commit, investigator, title, submittedAt, path, reason, text }) =>
+    where(
+      InvestigatingChanges._get({ investigation }).is({ investigation, owner, name, commit, investigator, title, submittedAt }),
+    ).form({
+      investigation,
+      owner,
+      name,
+      commit,
+      investigator,
+      title,
+      submittedAt,
+      affected: each(InvestigatingChanges._affected({ investigation }).is({ path, reason })).form({ path, reason }),
+      evidence: each(InvestigatingChanges._evidence({ investigation }).is({ text })).form({ text }),
     }),
 );
 
-const OpenInvestigation = endpoint(
-  "/investigations/open",
-  ({ session, user, owner, name, commit, at, investigation }) =>
-    receive({ session, owner, name, commit })
+/** The repository's investigations, the most recently submitted first. */
+const RepositoryInvestigations = former(
+  "the investigations of a repository",
+  ({ owner, name }, { investigation, commit, investigator, title, submittedAt }) =>
+    form({
+      investigations: each(
+        InvestigatingChanges._forRepository({ owner, name }).is({ investigation, commit, investigator, title, submittedAt }),
+      )
+        .arranged(submittedAt, "descending")
+        .form({ investigation, commit, investigator, title, submittedAt }),
+    }),
+);
+
+/** One commit's investigations, the most recently submitted first. */
+const CommitInvestigations = former(
+  "the investigations of a commit",
+  ({ owner, name, commit }, { investigation, investigator, title, submittedAt }) =>
+    form({
+      investigations: each(
+        InvestigatingChanges._forCommit({ owner, name, commit }).is({ investigation, investigator, title, submittedAt }),
+      )
+        .arranged(submittedAt, "descending")
+        .form({ investigation, investigator, title, submittedAt }),
+    }),
+);
+
+const SubmitInvestigation = endpoint(
+  "/investigations/submit",
+  ({ session, user, owner, name, commit, title, affected, evidence, at, investigation }) =>
+    receive({ session, owner, name, commit, title, affected, evidence })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
         where(now(at))
-          .then(InvestigatingChanges.open({ investigator: user, owner, name, commit, at }).responds({ investigation }))
+          .then(
+            InvestigatingChanges.submit({ investigator: user, owner, name, commit, title, affected, evidence, at }).responds({
+              investigation,
+            }),
+          )
           .then(respond({ investigation })),
       ),
   {
-    input: { required: ["session", "owner", "name", "commit"] },
-    validators: { input: openInvestigationInput, output: openedInvestigationOutput },
+    input: { required: ["session", "owner", "name", "commit", "title", "affected", "evidence"] },
+    validators: { input: submitInvestigationInput, output: submittedInvestigationOutput },
   },
 );
 
 const GetInvestigation = endpoint(
   "/investigations/get",
-  ({ session, user, investigation, owner, name, commit, investigator, openedAt }) =>
+  ({ session, user, investigation }) =>
     receive({ session, investigation })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
-        where(InvestigatingChanges._get({ investigation }).is({ owner, name, commit, investigator, openedAt }))
-          .then(respond({ investigation, owner, name, commit, investigator, openedAt }))
+        where(InvestigatingChanges._get({ investigation }))
+          .then(respond({ investigation: InvestigationDetail({ investigation }) }))
           .named("found"),
         where(no(InvestigatingChanges._get({ investigation })))
           .then(respond({ error: "INVESTIGATION_NOT_FOUND" }))
@@ -80,7 +118,26 @@ const ListInvestigations = endpoint(
   },
 );
 
+const ListCommitInvestigations = endpoint(
+  "/investigations/for-commit",
+  ({ session, user, owner, name, commit }) =>
+    receive({ session, owner, name, commit })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(respond({ commit: CommitInvestigations({ owner, name, commit }) })),
+  {
+    input: { required: ["session", "owner", "name", "commit"] },
+    validators: { input: commitInput, output: commitInvestigationsOutput },
+  },
+);
+
 export const composition = {
-  Opening: { OpenInvestigation },
-  Reading: { GetInvestigation, ListInvestigations, RepositoryInvestigations },
+  Submitting: { SubmitInvestigation },
+  Reading: {
+    GetInvestigation,
+    ListInvestigations,
+    ListCommitInvestigations,
+    InvestigationDetail,
+    RepositoryInvestigations,
+    CommitInvestigations,
+  },
 };

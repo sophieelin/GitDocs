@@ -2,123 +2,138 @@
 
 ## Purpose
 
-Allow developers to construct and justify alternative documentation structures
-in response to a set of commits without requiring documentation to mirror the
-code structure.
+Let a developer propose and justify a different documentation structure, in
+response to an investigation of a commit, without requiring the documentation
+to mirror the code, so a structural change to the docs is argued for before it
+is made.
 
 ## Principle
 
-After creating a restructuring proposal, the proposal preserves the current
-documentation structure and allows the developer to construct and justify an
-alternative structure. If the developer wants to keep working on a proposal
-they already submitted, they revise it back into a draft, and a draft they no
-longer want can be discarded.
+Ari starts proposal `p-1`, "Organize the agents docs", from investigation
+`inv-1` of commit `6d4a4c6` in `sophieelin/PaperNet`. The proposal keeps the
+documentation structure as it was at that commit and starts with the same
+structure as its proposal. Ari moves `csail_hack/lib/agents/README.md` to the
+root in the proposed structure and saves; the current structure is unchanged.
+Submitting without a rationale is refused. Ari writes the rationale and submits,
+and the proposal is pending approval. Further edits are refused, as are Bo's
+attempts to edit or submit it. A draft Ari no longer wants can be discarded.
+PaperNet's proposals list `p-1` with its title, author, and status.
 
 ## Types
 
 ```types
-external Commit
-  A repository commit.
-external DocumentationTree
-  The hierarchy connecting documentation items.
-Status is DRAFT or UNDER_REVIEW or APPROVED or APPLIED
-  The lifecycle states a restructuring may occupy.
+external User
+  The developer who writes a proposal.
+external Investigation
+  The investigation a proposal responds to.
+opaque DocumentationTree
+  Documentation files nested in folders by path: folders with names, paths, subfolders, and files.
+Status is DRAFT or PENDING_APPROVAL
+  The lifecycle states a proposal may occupy.
 ```
 
 ## State
 
 ```state
 a set of Restructurings with
-  a commits set of Commits
+  an author User
+  an investigation Investigation
+  an owner String
+  a name String
+  a commit String
+  a title String
   a currentStructure DocumentationTree
   a proposedStructure DocumentationTree
   a rationale String
   a status Status
+  a createdAt DateTime
+  an updatedAt DateTime
+  Rule: owner and name are compared without regard to letter case, as on GitHub; commit is a full 40-character SHA in lowercase.
+  Rule: currentStructure never changes after the proposal is created.
 ```
 
 ## Actions
 
 ```actions
-create(commits: Commits, currentStructure: DocumentationTree, rationale: String) : returns (restructuring: Restructuring)
-  where currentStructure is given
+create(author: User, investigation: Investigation, owner: String, name: String, commit: String, title: String, currentStructure: DocumentationTree, at: DateTime) : returns (restructuring: Restructuring)
+  where owner or name is empty, or commit is not a full 40-character commit SHA
   then
-    add a new restructuring with commits, currentStructure, currentStructure as its proposedStructure, rationale, and status DRAFT
+    refuses INVALID_PROPOSAL_SOURCE "A proposal needs a repository and a full commit SHA."
+  where title is empty or longer than 120 characters
+  then
+    refuses INVALID_PROPOSAL_TITLE "A proposal needs a title of at most 120 characters."
+  where currentStructure is not a documentation tree
+  then
+    refuses INVALID_STRUCTURE "That is not a documentation structure."
+  where every part is valid
+  then
+    add a new restructuring with author, investigation, owner, name, commit, title, currentStructure, currentStructure as its proposedStructure, an empty rationale, status DRAFT, and at as its createdAt and updatedAt
     returns restructuring
 
-modify(restructuring: Restructuring, proposedStructure: DocumentationTree, rationale: String) : returns ()
-  where restructuring is in Restructurings and its status is DRAFT
-  then
-    set the restructuring's proposedStructure to proposedStructure and its rationale to rationale
-    returns
+modify(restructuring: Restructuring, author: User, title: String, proposedStructure: DocumentationTree, rationale: String, at: DateTime) : returns ()
   where restructuring is not in Restructurings
   then
-    refuses MODIFY_RESTRUCTURING_NOT_FOUND "There is no such restructuring."
+    refuses PROPOSAL_NOT_FOUND "There is no such proposal."
+  where author is not the restructuring's author
+  then
+    refuses NOT_PROPOSAL_AUTHOR "Only the proposal's author can change it."
   where the restructuring's status is not DRAFT
   then
-    refuses MODIFY_RESTRUCTURING_NOT_DRAFT "Only a draft restructuring can be modified."
-
-submit(restructuring: Restructuring) : returns ()
-  where restructuring is in Restructurings and its status is DRAFT
+    refuses NOT_DRAFT "Only a draft proposal can be changed."
+  where title is empty or longer than 120 characters
   then
-    set the restructuring's status to UNDER_REVIEW
+    refuses INVALID_PROPOSAL_TITLE "A proposal needs a title of at most 120 characters."
+  where proposedStructure is not a documentation tree
+  then
+    refuses INVALID_STRUCTURE "That is not a documentation structure."
+  where the author's draft is valid
+  then
+    set the restructuring's title, proposedStructure, and rationale, and at as its updatedAt
     returns
+
+submit(restructuring: Restructuring, author: User, at: DateTime) : returns ()
   where restructuring is not in Restructurings
   then
-    refuses SUBMIT_RESTRUCTURING_NOT_FOUND "There is no such restructuring."
+    refuses PROPOSAL_NOT_FOUND "There is no such proposal."
+  where author is not the restructuring's author
+  then
+    refuses NOT_PROPOSAL_AUTHOR "Only the proposal's author can change it."
   where the restructuring's status is not DRAFT
   then
-    refuses SUBMIT_RESTRUCTURING_NOT_DRAFT "Only a draft restructuring can be submitted."
-
-revise(restructuring: Restructuring) : returns ()
-  where restructuring is in Restructurings and its status is UNDER_REVIEW or APPROVED
+    refuses NOT_DRAFT "Only a draft proposal can be changed."
+  where the restructuring's rationale is empty
   then
-    set the restructuring's status to DRAFT
+    refuses RATIONALE_MISSING "Explain the proposed structure before submitting it."
+  where the author's draft has a rationale
+  then
+    set the restructuring's status to PENDING_APPROVAL and at as its updatedAt
     returns
+
+discard(restructuring: Restructuring, author: User) : returns ()
   where restructuring is not in Restructurings
   then
-    refuses REVISE_RESTRUCTURING_NOT_FOUND "There is no such restructuring."
-  where the restructuring's status is DRAFT or APPLIED
+    refuses PROPOSAL_NOT_FOUND "There is no such proposal."
+  where author is not the restructuring's author
   then
-    refuses REVISE_RESTRUCTURING_NOT_SUBMITTED "Only a restructuring under review or approved can be revised."
-
-discard(restructuring: Restructuring) : returns ()
-  where restructuring is in Restructurings and its status is DRAFT
+    refuses NOT_PROPOSAL_AUTHOR "Only the proposal's author can change it."
+  where the restructuring's status is not DRAFT
+  then
+    refuses NOT_DRAFT "Only a draft proposal can be changed."
+  where the restructuring is the author's draft
   then
     remove restructuring
     returns
-  where restructuring is not in Restructurings
-  then
-    refuses DISCARD_RESTRUCTURING_NOT_FOUND "There is no such restructuring."
-  where the restructuring's status is not DRAFT
-  then
-    refuses DISCARD_RESTRUCTURING_NOT_DRAFT "Only a draft restructuring can be discarded."
-
-approve(restructuring: Restructuring) : returns ()
-  where restructuring is in Restructurings and its status is UNDER_REVIEW
-  then
-    set the restructuring's status to APPROVED
-    returns
-  where restructuring is not in Restructurings
-  then
-    refuses APPROVE_RESTRUCTURING_NOT_FOUND "There is no such restructuring."
-  where the restructuring's status is not UNDER_REVIEW
-  then
-    refuses APPROVE_RESTRUCTURING_NOT_UNDER_REVIEW "Only a restructuring under review can be approved."
-
-apply(restructuring: Restructuring) : returns ()
-  where restructuring is in Restructurings and its status is APPROVED
-  then
-    set the restructuring's currentStructure to its proposedStructure and its status to APPLIED
-    returns
-  where restructuring is not in Restructurings
-  then
-    refuses APPLY_RESTRUCTURING_NOT_FOUND "There is no such restructuring."
-  where the restructuring's status is not APPROVED
-  then
-    refuses APPLY_RESTRUCTURING_NOT_APPROVED "Only an approved restructuring can be applied."
 ```
 
 ## Queries
 
 ```queries
+_get(restructuring: Restructuring) : optional (restructuring: Restructuring, author: User, investigation: Investigation, owner: String, name: String, commit: String, title: String, rationale: String, status: Status, currentStructure: DocumentationTree, proposedStructure: DocumentationTree, createdAt: DateTime, updatedAt: DateTime)
+  answers the proposal with both of its structures
+  answers no row for an unknown or discarded proposal
+
+_forRepository(owner: String, name: String) : many (restructuring: Restructuring, author: User, investigation: Investigation, commit: String, title: String, status: Status, updatedAt: DateTime)
+  answers every proposal in the repository, without its structures, compared without regard to letter case
+  orders rows by updatedAt, the most recently changed first
+  answers no rows for a repository with no proposals
 ```

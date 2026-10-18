@@ -6,7 +6,7 @@ import { errorMessage, handleEndedSession } from "../errors.ts";
 import { gitHubErrorMessages, listCommits, readTree, type CommitsResponse, type TreeResponse } from "../github.ts";
 import { rememberRepository } from "../recentRepositories.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
-import { useCurrentRepository } from "../repository.ts";
+import { repositoryPath, useCurrentRepository } from "../repository.ts";
 import { useSession } from "../session.ts";
 
 /** A repository's Home, as in sketch 1: its recent commits and its current documentation structure. */
@@ -54,6 +54,10 @@ watch([owner, name], () => {
 
 function firstLine(message: string): string {
   return message.split("\n")[0] ?? "";
+}
+
+function commitPath(sha: string): string {
+  return repository.value ? repositoryPath(repository.value, `/commits/${sha}`) : "/repositories";
 }
 
 function isEmptyFolder(folder: TreeResponse["tree"]): boolean {
@@ -106,8 +110,12 @@ const isCodeEmpty = computed(() => documentation.value !== null && isEmptyFolder
         <p v-else-if="commits.length === 0" class="muted">This repository has no commits yet.</p>
         <ol v-else class="commits">
           <li v-for="commit in commits" :key="commit.sha">
-            <code>{{ commit.sha.slice(0, 7) }}</code>
-            <span class="message">{{ firstLine(commit.message) }}</span>
+            <!-- Each commit opens its own page, with its changes and the Investigate button. -->
+            <RouterLink :to="commitPath(commit.sha)" class="commit" :data-sha="commit.sha">
+              <code>{{ commit.sha.slice(0, 7) }}</code>
+              <span class="message">{{ firstLine(commit.message) }}</span>
+              <span class="open" aria-hidden="true">›</span>
+            </RouterLink>
           </li>
         </ol>
       </div>
@@ -144,10 +152,25 @@ const isCodeEmpty = computed(() => documentation.value !== null && isEmptyFolder
 }
 
 .commits li {
-  display: flex;
-  gap: 12px;
-  padding: 10px 0;
   border-bottom: 1px solid var(--border);
+}
+
+.commit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.commit:hover {
+  background: var(--sidebar);
+}
+
+.open {
+  color: var(--ink-faint);
 }
 
 .commits li:last-child {
@@ -160,6 +183,7 @@ code {
 }
 
 .message {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

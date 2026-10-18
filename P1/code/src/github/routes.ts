@@ -1,5 +1,5 @@
 /**
- * Two plain HTTP routes that read public repositories from GitHub. They are not
+ * Plain HTTP routes that read public repositories from GitHub. They are not
  * sync-engine endpoints: they store nothing and make no decisions, so there is
  * no concept behind them (decision of 2026-10-17). They answer JSON POST
  * requests and errors in the same `{ "error": "…" }` shape as the endpoints.
@@ -14,11 +14,17 @@ import {
   InvalidRepositoryName,
 } from "./GitHubApi.ts";
 import type { GitHubFetcher } from "./GitHubFetcher.ts";
-import { buildDocumentationTree, buildFileTree, type DocumentationFolder } from "./documentationTree.ts";
-import type { Commit } from "./types.ts";
+import { buildDocumentationTree, buildFileTree, isDocumentation, type DocumentationFolder } from "./documentationTree.ts";
+import type { Commit, CommitDetails } from "./types.ts";
 
 export interface CommitsResponse {
   commits: Commit[];
+}
+
+/** One commit and every file it changed, and whether any of them is documentation. */
+export interface CommitResponse {
+  commit: CommitDetails;
+  changesDocumentation: boolean;
 }
 
 export interface TreeResponse {
@@ -43,10 +49,11 @@ const MAX_BODY_CHARS = 10_000;
 export function createGitHubRoutes({ github, currentUser, basePath }: GitHubRoutesOptions) {
   const commitsPath = `${basePath}/github/commits`;
   const treePath = `${basePath}/github/tree`;
+  const commitPath = `${basePath}/github/commit`;
 
   return async (request: Request): Promise<Response | undefined> => {
     const path = new URL(request.url).pathname;
-    if (path !== commitsPath && path !== treePath) return undefined;
+    if (path !== commitsPath && path !== treePath && path !== commitPath) return undefined;
     if (request.method !== "POST") return error("INVALID_REQUEST", 400);
 
     const input = await readJson(request);
@@ -61,6 +68,16 @@ export function createGitHubRoutes({ github, currentUser, basePath }: GitHubRout
     try {
       if (path === commitsPath) {
         return json({ commits: await github.listCommits(repository) } satisfies CommitsResponse);
+      }
+      if (path === commitPath) {
+        const commit = await github.getCommit(repository, input.sha as string);
+        return json({
+          commit,
+          // A rename counts if either the old or the new path is documentation.
+          changesDocumentation: commit.files.some(
+            (file) => isDocumentation(file.path) || (file.previousPath !== undefined && isDocumentation(file.previousPath)),
+          ),
+        } satisfies CommitResponse);
       }
       const tree = await github.getTree(repository, input.sha as string);
       return json({

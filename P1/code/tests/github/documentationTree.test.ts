@@ -81,6 +81,42 @@ describe("buildDocumentationTree", () => {
     expect(tree.files.map((f) => f.name)).toEqual(["guide.markdown", "NOTES.MD"]);
   });
 
+  test("sorts numbered names by their number", () => {
+    const tree = buildDocumentationTree([
+      file("documentation/10-instances.md"),
+      file("documentation/2-options.md"),
+      file("documentation/1-promise.md"),
+      file("documentation/quick-start.md"),
+      file("chapter-10/a.md"),
+      file("chapter-9/a.md"),
+    ]);
+
+    expect(tree.folders.map((f) => f.name)).toEqual(["chapter-9", "chapter-10", "documentation"]);
+    expect(tree.folders[2]!.files.map((f) => f.name)).toEqual([
+      "1-promise.md",
+      "2-options.md",
+      "10-instances.md",
+      "quick-start.md",
+    ]);
+  });
+
+  test("leaves out GitHub's .github/ folder, but keeps it in the code structure", () => {
+    const entries = [
+      file(".github/PULL_REQUEST_TEMPLATE.md"),
+      file(".github/ISSUE_TEMPLATE/1-bug-report.md"),
+      file(".github/workflows/test.yml"),
+      file("docs/.github-notes.md"),
+      file("README.md"),
+    ];
+
+    const docs = buildDocumentationTree(entries);
+    expect(docs.files.map((f) => f.path)).toEqual(["README.md"]);
+    expect(docs.folders.map((f) => f.path)).toEqual(["docs"]);
+
+    const code = buildFileTree(entries);
+    expect(code.folders.map((f) => f.path)).toEqual([".github", "docs"]);
+  });
+
   test("returns an empty root when there is no Markdown", () => {
     expect(buildDocumentationTree([dir("src"), file("src/index.ts")])).toEqual({
       name: "",

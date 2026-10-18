@@ -7,9 +7,18 @@ let api: ReturnType<typeof testApi>;
 let ari: string;
 let bob: string;
 
+// Example inputs for these tests only.
 const paperNet = { owner: "sophieelin", name: "PaperNet" };
-const d8ab205 = "d8ab205" + "a".repeat(33);
-const c6d4a4c6 = "6d4a4c6" + "b".repeat(33);
+const firstCommit = "d8ab205" + "a".repeat(33);
+const secondCommit = "6d4a4c6" + "b".repeat(33);
+
+const sampleSubmission = {
+  ...paperNet,
+  commit: firstCommit,
+  title: "Agents moved under lib/",
+  affected: [{ path: "csail_hack/README.md", reason: "Still describes the old layout." }],
+  evidence: ["lib/agents/ gained its own README in this commit"],
+};
 
 beforeAll(async () => {
   testDb = await openTestDb();
@@ -26,40 +35,61 @@ afterAll(async () => {
   await testDb.close();
 });
 
-async function open(session: string, commit: string, repository = paperNet) {
-  return api.post("/investigations/open", { session, ...repository, commit });
+function submit(session: string, changes: Partial<typeof sampleSubmission> = {}) {
+  return api.post("/investigations/submit", { session, ...sampleSubmission, ...changes });
 }
 
-describe("/investigations/open", () => {
-  test("opens an investigation, with the signed-in user as investigator", async () => {
-    const opened = await open(ari, d8ab205);
-    expect(opened.status).toBe(200);
-    const id = opened.body.investigation as string;
+type Summary = { investigation: string; title: string; investigator: string; commit?: string };
+
+describe("/investigations/submit", () => {
+  test("records the investigation, with the signed-in user as investigator", async () => {
+    const submitted = await submit(ari);
+    expect(submitted.status).toBe(200);
+    const id = submitted.body.investigation as string;
 
     const { status, body } = await api.post("/investigations/get", { session: ari, investigation: id });
     expect(status).toBe(200);
-    expect(body).toMatchObject({ investigation: id, ...paperNet, commit: d8ab205, investigator: "ari" });
-    expect(Math.abs(new Date(body.openedAt as string).getTime() - Date.now())).toBeLessThan(60_000);
+    expect(body.investigation).toMatchObject({
+      investigation: id,
+      ...paperNet,
+      commit: firstCommit,
+      investigator: "ari",
+      title: sampleSubmission.title,
+      affected: sampleSubmission.affected,
+      evidence: [{ text: sampleSubmission.evidence[0] }],
+    });
+    const submittedAt = new Date((body.investigation as { submittedAt: string }).submittedAt).getTime();
+    expect(Math.abs(submittedAt - Date.now())).toBeLessThan(60_000);
   });
 
-  test("the same commit, by the same or another user, is the same investigation", async () => {
-    const first = await open(ari, d8ab205);
-    const again = await open(ari, d8ab205);
-    const byBob = await open(bob, d8ab205);
+  test("a commit can have many investigations", async () => {
+    const first = await submit(ari);
+    const second = await submit(bob, { title: "A second reading" });
 
-    expect(again.body.investigation).toBe(first.body.investigation);
-    expect(byBob.body.investigation).toBe(first.body.investigation);
-    const { body } = await api.post("/investigations/get", { session: bob, investigation: first.body.investigation });
-    expect(body.investigator).toBe("ari");
+    expect(second.body.investigation).not.toBe(first.body.investigation);
+    const { body } = await api.post("/investigations/for-commit", { session: ari, ...paperNet, commit: firstCommit });
+    expect((body.commit as { investigations: Summary[] }).investigations.map((i) => [i.title, i.investigator])).toEqual([
+      ["A second reading", "bob"],
+      [sampleSubmission.title, "ari"],
+    ]);
+  });
+
+  test("refuses a missing title, affected documentation, or evidence with a 400, and records nothing", async () => {
+    for (const changes of [
+      { title: "" },
+      { affected: [] },
+      { affected: [{ path: "csail_hack/README.md", reason: "" }] },
+      { evidence: [] },
+      { commit: "d8ab205" },
+    ]) {
+      expect(await submit(ari, changes)).toEqual({ status: 400, body: { error: "INVALID_REQUEST" } });
+    }
+    const { body } = await api.post("/investigations/list", { session: ari, ...paperNet });
+    expect((body.repository as { investigations: unknown[] }).investigations).toEqual([]);
   });
 
   test("a request cannot choose its own investigator", async () => {
-    expect((await api.post("/investigations/open", { session: ari, ...paperNet, commit: d8ab205, investigator: "bob" })).status).toBe(400);
-  });
-
-  test("a short or invalid SHA is a 400", async () => {
-    expect(await open(ari, "d8ab205")).toEqual({ status: 400, body: { error: "INVALID_REQUEST" } });
-    expect(await open(ari, "z".repeat(40))).toEqual({ status: 400, body: { error: "INVALID_REQUEST" } });
+    expect((await api.post("/investigations/submit", { session: ari, ...sampleSubmission, investigator: "bob" })).status).toBe(400);
   });
 });
 
@@ -72,50 +102,44 @@ describe("/investigations/get", () => {
   });
 
   test("another user can read it, because the repository is shared", async () => {
-    const id = (await open(ari, d8ab205)).body.investigation;
+    const id = (await submit(ari)).body.investigation;
 
     expect((await api.post("/investigations/get", { session: bob, investigation: id })).status).toBe(200);
   });
 });
 
-describe("/investigations/list", () => {
-  test("lists the repository's investigations, newest first, with who opened each", async () => {
-    await open(ari, d8ab205);
+describe("lists", () => {
+  test("a repository's list is newest first, with titles, and only that repository's", async () => {
+    await submit(ari);
     await new Promise((r) => setTimeout(r, 5));
-    await open(bob, c6d4a4c6);
+    await submit(bob, { commit: secondCommit, title: "README removed" });
+    await submit(ari, { owner: "octocat", name: "Hello-World", title: "Elsewhere" });
 
-    const { status, body } = await api.post("/investigations/list", { session: ari, ...paperNet });
-    expect(status).toBe(200);
-    const list = (body.repository as { investigations: { commit: string; investigator: string }[] }).investigations;
-    expect(list.map((i) => [i.commit, i.investigator])).toEqual([
-      [c6d4a4c6, "bob"],
-      [d8ab205, "ari"],
+    const { body } = await api.post("/investigations/list", { session: ari, ...paperNet });
+    const list = (body.repository as { investigations: Summary[] }).investigations;
+    expect(list.map((i) => [i.title, i.commit, i.investigator])).toEqual([
+      ["README removed", secondCommit, "bob"],
+      [sampleSubmission.title, firstCommit, "ari"],
     ]);
   });
 
-  test("shows only that repository's investigations", async () => {
-    await open(ari, d8ab205);
-    await open(ari, c6d4a4c6, { owner: "octocat", name: "Hello-World" });
+  test("a commit's list has only that commit's, and is empty when there are none", async () => {
+    await submit(ari);
 
-    const paper = await api.post("/investigations/list", { session: ari, ...paperNet });
-    const hello = await api.post("/investigations/list", { session: ari, owner: "octocat", name: "Hello-World" });
-    const empty = await api.post("/investigations/list", { session: ari, owner: "someone", name: "else" });
-    const commits = (r: typeof paper) => (r.body.repository as { investigations: { commit: string }[] }).investigations.map((i) => i.commit);
-
-    expect(commits(paper)).toEqual([d8ab205]);
-    expect(commits(hello)).toEqual([c6d4a4c6]);
-    expect(empty).toEqual({ status: 200, body: { repository: { investigations: [] } } });
+    const other = await api.post("/investigations/for-commit", { session: ari, ...paperNet, commit: secondCommit });
+    expect(other).toEqual({ status: 200, body: { commit: { investigations: [] } } });
   });
 });
 
 test("every investigation endpoint needs an active session", async () => {
-  const id = (await open(ari, d8ab205)).body.investigation;
+  const id = (await submit(ari)).body.investigation;
   await api.post("/auth/sign-out", { session: ari });
 
-  expect((await open(ari, c6d4a4c6)).status).toBe(401);
+  expect((await submit(ari, { title: "After sign-out" })).status).toBe(401);
   expect((await api.post("/investigations/get", { session: ari, investigation: id })).status).toBe(401);
   expect((await api.post("/investigations/list", { session: "invented", ...paperNet })).status).toBe(401);
-  // Nothing was opened by the refused request.
+  expect((await api.post("/investigations/for-commit", { session: "invented", ...paperNet, commit: firstCommit })).status).toBe(401);
+  // Nothing was recorded by the refused request.
   const list = await api.post("/investigations/list", { session: bob, ...paperNet });
   expect((list.body.repository as { investigations: unknown[] }).investigations).toHaveLength(1);
 });

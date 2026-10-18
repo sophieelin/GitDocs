@@ -1,4 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router";
+import CommitPage from "./pages/CommitPage.vue";
+import InvestigationPage from "./pages/InvestigationPage.vue";
+import InvestigationsPage from "./pages/InvestigationsPage.vue";
+import NewInvestigationPage from "./pages/NewInvestigationPage.vue";
 import PlaceholderPage from "./pages/PlaceholderPage.vue";
 import RepositoriesPage from "./pages/RepositoriesPage.vue";
 import RepositoryHomePage from "./pages/RepositoryHomePage.vue";
@@ -25,17 +29,19 @@ export const router = createRouter({
     { path: "/sign-in", component: SignInPage, meta: { title: "Sign in", public: true } },
     { path: "/repositories", component: RepositoriesPage, meta: { title: "Repositories" } },
     { path: workspace, component: RepositoryHomePage, meta: { title: "Home" } },
-    // Commit and tree pages were replaced by Home and investigations (plan step 4.5).
-    { path: `${workspace}/commits/:rest(.*)*`, redirect: (to) => `/repositories/${to.params.owner}/${to.params.name}` },
+    // A commit's own page, with its changes and the Investigate button (plan step 4.10).
+    { path: `${workspace}/commits/:sha`, component: CommitPage, meta: { title: "Commit" } },
     {
-      path: `${workspace}/investigations`,
-      component: PlaceholderPage,
-      meta: { title: "Investigations", step: "4.9" },
+      path: `${workspace}/commits/:sha/investigations/new`,
+      component: NewInvestigationPage,
+      meta: { title: "New investigation" },
     },
+    { path: `${workspace}/commits`, redirect: (to) => `/repositories/${to.params.owner}/${to.params.name}` },
+    { path: `${workspace}/investigations`, component: InvestigationsPage, meta: { title: "Investigations" } },
     {
       path: `${workspace}/investigations/:investigation`,
-      component: PlaceholderPage,
-      meta: { title: "Investigation", step: "4.9" },
+      component: InvestigationPage,
+      meta: { title: "Investigation" },
     },
     { path: `${workspace}/proposals`, component: PlaceholderPage, meta: { title: "Proposals", step: "5.8" } },
     {

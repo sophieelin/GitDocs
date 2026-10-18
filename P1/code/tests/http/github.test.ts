@@ -84,6 +84,56 @@ describe("/github/tree", () => {
   });
 });
 
+describe("/github/commit", () => {
+  test("returns the commit and every file it changed", async () => {
+    const { status, body } = await api.post("/github/commit", { session, ...myRepo, sha: myRepoCommits.refactor });
+
+    expect(status).toBe(200);
+    const commit = body.commit as { sha: string; message: string; author: string; files: { path: string; status: string }[] };
+    expect(commit).toMatchObject({ sha: myRepoCommits.refactor, message: "Restructured user and service layers", author: "octo-dev" });
+    expect(commit.files.map((f) => [f.status, f.path])).toContainEqual(["renamed", "src/user/user_service.py"]);
+    expect(commit.files.map((f) => [f.status, f.path])).toContainEqual(["removed", "src/models.py"]);
+  });
+
+  test("a commit that changes only code does not change the documentation", async () => {
+    const { body } = await api.post("/github/commit", { session, ...myRepo, sha: myRepoCommits.refactor });
+
+    expect(body.changesDocumentation).toBe(false);
+  });
+
+  test("a commit that changes Markdown changes the documentation", async () => {
+    const { body } = await api.post("/github/commit", { session, ...myRepo, sha: myRepoCommits.initial });
+
+    expect(body.changesDocumentation).toBe(true);
+  });
+
+  test("renaming a Markdown file away still changes the documentation", async () => {
+    const sha = "c".repeat(40);
+    const renamed = new StubGitHubFetcher({
+      "sophieelin/my-repo": {
+        commits: [{ sha, message: "Move notes" }],
+        trees: {},
+        changes: { [sha]: [{ path: "notes.txt", previousPath: "docs/notes.md", status: "renamed", additions: 0, deletions: 0 }] },
+      },
+    });
+    const renamedApi = testApi(testDb.db, renamed);
+    const renamedSession = await renamedApi.register("dee");
+
+    expect((await renamedApi.post("/github/commit", { session: renamedSession, ...myRepo, sha })).body.changesDocumentation).toBe(true);
+  });
+
+  test("a commit that does not exist is a 404", async () => {
+    expect(await api.post("/github/commit", { session, ...myRepo, sha: "0".repeat(40) })).toEqual({
+      status: 404,
+      body: { error: "NOT_FOUND" },
+    });
+  });
+
+  test("needs an active session", async () => {
+    expect((await api.post("/github/commit", { session: "invented", ...myRepo, sha: myRepoCommits.initial })).status).toBe(401);
+  });
+});
+
 describe("both routes", () => {
   test("need an active session", async () => {
     await api.post("/auth/sign-out", { session });

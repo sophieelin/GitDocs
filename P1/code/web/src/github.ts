@@ -1,7 +1,8 @@
-import type { CommitsResponse, TreeResponse } from "../../src/github/routes.ts";
+import type { CommitResponse, CommitsResponse, TreeResponse } from "../../src/github/routes.ts";
 import { sessionInput } from "./session.ts";
 
-export type { CommitsResponse, TreeResponse };
+export type { CommitResponse, CommitsResponse, TreeResponse };
+export type { ChangedFile } from "../../src/github/types.ts";
 export type { DocumentationFolder, DocumentationFile } from "../../src/github/documentationTree.ts";
 
 /** An API error, in the same shape as the sync-engine endpoints' errors. */
@@ -31,6 +32,10 @@ export function listCommits(owner: string, name: string) {
 
 export function readTree(owner: string, name: string, sha: string) {
   return post<TreeResponse>("tree", { owner, name, sha });
+}
+
+export function readCommit(owner: string, name: string, sha: string) {
+  return post<CommitResponse>("commit", { owner, name, sha });
 }
 
 /** Messages shared by every screen that calls these routes. */

@@ -35,7 +35,7 @@ function homePath(repository: RecentRepository): string {
 async function open() {
   const repository = parse(input.value);
   if (!repository) {
-    error.value = "Enter a repository as owner/name, for example sophieelin/PaperNet.";
+    error.value = "Enter a repository as owner/name, or paste its github.com link.";
     return;
   }
   error.value = null;

@@ -372,15 +372,47 @@ The repository's list at `/repositories/:owner/:name/investigations`, and `/repo
 
 **Verify:** In the browser, as in the Try it check below.
 
+## 4.10 Commit page with its changes (added 2026-10-18)
+
+The user wants to click into a commit and see its code and documentation changes there, and to start an investigation from that page.
+
+**Diff:**
+- `src/github/types.ts`, `src/github/GitHubFetcher.ts`, `src/github/GitHubApi.ts`: `getCommit(repository, sha)` reads `GET /repos/{owner}/{repo}/commits/{sha}`: the message, author, date, and each changed file's path, previous path (for a rename), status, added and removed line counts, and patch.
+- `src/github/documentationTree.ts`: export `isDocumentation(path)`, the rule the documentation tree already uses (Markdown outside `.github/`).
+- `src/github/routes.ts`: `/api/github/commit` (session, owner, name, sha) answers the commit, all its changed files, and whether it changes the documentation (decided with the user: one list, not separate documentation and code groups, because a commit can change either or both).
+- `tests/github/StubGitHubFetcher.ts`: the changes for its two commits.
+- `web/src/pages/CommitPage.vue` at `/repositories/:owner/:name/commits/:sha`: the commit message, author, and date; whether it changes the documentation; every changed file with its status and line counts, expanding to its diff; and the **Investigate** button, moved here from Home. Home's commits link to this page.
+- The investigation page links to its commit's page.
+
+**Verify:** Route tests with the stub; an integration test against a fixed real commit; in the browser, PaperNet's `6d4a4c6` shows `csail_hack/README.md` removed and says it changes the documentation.
+
+## 4.11 Submitted investigations (added 2026-10-18)
+
+The user wants an investigation to be written and submitted, not created by clicking Investigate. Decided with the user:
+
+- Investigate opens the **New investigation** page at `/repositories/:owner/:name/commits/:sha/investigations/new`. Nothing is saved until **Submit**; leaving the page discards what was written.
+- A submission has a **title**, the **affected documentation** (files ticked in the Documentation Structure, each with a reason it needs to change; at least one), and **evidence** (one or more short items, which may include links; at least one).
+- A commit can have **many** investigations, each with its own title and investigator. The commit page lists the ones already submitted.
+- A submitted investigation is **read-only** in the MVP.
+
+**Diff:**
+- `design/concepts/InvestigatingChanges.md`: replace `open` with `submit(investigator, owner, name, commit, title, affected, evidence, at)`, refusing an invalid repository or commit, a missing title, no affected documentation (or a missing reason or a repeated path), and no evidence. Queries `_get`, `_affected`, `_evidence`, `_forRepository`, and `_forCommit`.
+- `src/concepts/InvestigatingChanges.ts`, its registry, `src/http.ts` (`publicErrors`), and the concept tests.
+- `src/compositions/Investigations.ts` and `design/compositions/Investigations.md`: `/investigations/submit`, `/investigations/get` (with its affected documentation and evidence), `/investigations/list` (with titles), and `/investigations/for-commit`.
+- `web/src/pages/NewInvestigationPage.vue` (the form, with the two structures), `CommitPage.vue` (Investigate opens the New investigation page; lists the commit's investigations), `InvestigationPage.vue` (title, affected documentation with reasons, evidence, and the structures with affected files highlighted, read-only), and `InvestigationsPage.vue` (titles).
+
+**Verify:** concept and endpoint tests, including every refusal; in the browser, as in the Try it check below.
+
 ## ✋ Try it: Phase 4
 
 1. As A, open `sophieelin/PaperNet`. Its page shows its commits and current documentation. After a reload, it is in your recent repositories.
 2. Open `sophieelin/PaperNett`, which is misspelled. You see "repository not found."
 3. PaperNet's commits match GitHub's commit list.
-4. Investigate commit `d8ab205`. The Documentation Structure includes `csail_hack/README.md`, and the Code Structure shows the `csail_hack/` code.
-5. Investigate commit `6d4a4c6`. `csail_hack/README.md` is gone, and `README.md` at the root and the four `lib/agents` READMEs are still there.
-6. Both investigations are listed under PaperNet's Investigations, and investigating `d8ab205` again opens the same one.
-7. Click your username to go back to your repositories, and open another one. Its Investigations list does not show PaperNet's.
+4. Click commit `6d4a4c6`. Its page lists `csail_hack/README.md` as removed, says the commit changes the documentation, and each file opens to its diff.
+5. Click Investigate on `d8ab205`. The New investigation page shows the Code Structure and a Documentation Structure that includes `csail_hack/README.md`. Leaving the page without submitting saves nothing.
+6. Submit an investigation of `d8ab205` with a title, `csail_hack/README.md` ticked with a reason, and one evidence item. Its page shows all three, read-only, with the affected file highlighted. Submitting without a title, an affected file, or evidence is refused with a message.
+7. Submit a second investigation of the same commit, as B. Both are listed on the commit page and under PaperNet's Investigations, with their titles.
+8. Click your username to go back to your repositories, and open another one. Its Investigations list does not show PaperNet's.
 
 # Phase 5: Slice 3 — Create, save, and submit a proposal
 
@@ -393,6 +425,7 @@ The repository's list at `/repositories/:owner/:name/investigations`, and `/repo
 - Add the author, repository (owner and name), and commit to each proposal, and the investigation it started from.
 - Add queries to get one proposal and to list a repository's proposals (the repository workspace's Proposals page), with the author on each.
 - Decide whether author-only actions check the author themselves (see `history.md`, 2026-10-17, "Plans for reactions and views").
+- Decided 2026-10-18: a proposal starts from a submitted investigation ("Propose a restructuring" on its page) and has a required title. `modify`, `submit`, and `discard` take the author and refuse anyone else. Only Phase 5's actions are in the spec; `approve` is added in 6.1 and `revise` in 7.1.
 
 **Verify:** `bun run check:design`
 
@@ -452,7 +485,7 @@ Access-control tests that call the HTTP handler directly, with no frontend, as t
 
 ## ✋ Try it: Phase 5
 
-1. As A, open PaperNet at commit `6d4a4c6` and start a proposal.
+1. As A, open an investigation of PaperNet's commit `6d4a4c6` and choose "Propose a restructuring". Give it a title.
 2. Move `csail_hack/lib/agents/README.md` to the root and write a rationale.
 3. Save and reload. Your changes are still there.
 4. Submit. The status is *Pending Approval*, and you can no longer edit it.

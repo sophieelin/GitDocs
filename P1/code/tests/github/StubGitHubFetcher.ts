@@ -1,13 +1,25 @@
 import { CommitNotFound, GitHubNotFound } from "../../src/github/GitHubApi.ts";
 import type { GitHubFetcher } from "../../src/github/GitHubFetcher.ts";
-import type { Commit, RepositoryRef, RepositoryTree, TreeEntry } from "../../src/github/types.ts";
+import type {
+  ChangedFile,
+  Commit,
+  CommitDetails,
+  RepositoryRef,
+  RepositoryTree,
+  TreeEntry,
+} from "../../src/github/types.ts";
 
 export interface StubRepository {
   /** Newest first, as GitHub returns them. */
   commits: Commit[];
   /** Tree entries at each commit SHA. */
   trees: Record<string, TreeEntry[]>;
+  /** The files each commit changed. A commit with none listed changed nothing. */
+  changes?: Record<string, ChangedFile[]>;
 }
+
+/** The author and date every stub commit reports. */
+export const stubAuthor = { author: "octo-dev", date: "2026-09-12T10:00:00Z" };
 
 /**
  * A `GitHubFetcher` with fixed data, so tests run without the network.
@@ -29,6 +41,15 @@ export class StubGitHubFetcher implements GitHubFetcher {
     const entries = this.find(repository).trees[sha];
     if (!entries) throw new CommitNotFound(`Commit ${sha} does not exist in this repository.`);
     return { sha, entries: [...entries], truncated: false };
+  }
+
+  async getCommit(repository: RepositoryRef, sha: string): Promise<CommitDetails> {
+    this.calls.push(`getCommit ${key(repository)} ${sha}`);
+    const found = this.find(repository);
+    const commit = found.commits.find((c) => c.sha === sha);
+    if (!commit) throw new CommitNotFound(`Commit ${sha} does not exist in this repository.`);
+    const files = (found.changes?.[sha] ?? []).map((file) => ({ ...file }));
+    return { sha, message: commit.message, ...stubAuthor, files, truncated: false };
   }
 
   private find(repository: RepositoryRef): StubRepository {
@@ -90,6 +111,27 @@ export const myRepo: StubRepository = {
       dir("src/services"),
       file("src/services/email.py"),
       file("src/services/storage.py"),
+    ],
+  },
+  changes: {
+    // The first commit adds every file, documentation and code.
+    [myRepoCommits.initial]: [
+      ...documentation
+        .filter((entry) => entry.type === "file")
+        .map((entry): ChangedFile => ({ path: entry.path, status: "added", additions: 10, deletions: 0, patch: "@@ -0,0 +1 @@\n+# Docs" })),
+      { path: "src/user_service.py", status: "added", additions: 40, deletions: 0 },
+      { path: "src/auth_service.py", status: "added", additions: 30, deletions: 0 },
+      { path: "src/models.py", status: "added", additions: 25, deletions: 0 },
+    ],
+    // The refactor moves code and changes no documentation: the case GitDocs is for.
+    [myRepoCommits.refactor]: [
+      { path: "src/user/user_service.py", previousPath: "src/user_service.py", status: "renamed", additions: 0, deletions: 0 },
+      { path: "src/user/auth_service.py", previousPath: "src/auth_service.py", status: "renamed", additions: 2, deletions: 1, patch: "@@ -1,3 +1,4 @@\n-from user_service import User\n+from user.user_service import User\n+\n def sign_in():" },
+      { path: "src/models.py", status: "removed", additions: 0, deletions: 25 },
+      { path: "src/models/user.py", status: "added", additions: 15, deletions: 0 },
+      { path: "src/models/post.py", status: "added", additions: 10, deletions: 0 },
+      { path: "src/services/email.py", status: "added", additions: 20, deletions: 0 },
+      { path: "src/services/storage.py", status: "added", additions: 18, deletions: 0 },
     ],
   },
 };
