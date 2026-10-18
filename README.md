@@ -1,5 +1,10 @@
 # GitDocs
 
+## P1
+- Project MVP code in P1/code
+- User journey and video in P1/p1-docs
+- Design document in docs/
+
 ## Project Documentation
 - [Problem framing and stakeholders](docs/problem-framing.md)
 - [Application pitch](docs/application-pitch.md)
