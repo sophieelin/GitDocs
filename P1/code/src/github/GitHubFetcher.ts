@@ -2,7 +2,7 @@ import type { Commit, RepositoryRef, RepositoryTree } from "./types.ts";
 
 /**
  * Reads public repository data from GitHub. It knows nothing about HTTP routes,
- * MongoDB, or sync-engine, so concepts can be tested with a fake.
+ * MongoDB, or sync-engine, so concepts can be tested with a stub.
  */
 export interface GitHubFetcher {
   /** Recent commits on the default branch, newest first. */
