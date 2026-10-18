@@ -27,7 +27,7 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 
 #### Instances
 
-- `Authenticating` — instance of `Authenticating` — [GitDocs Application Types](../design/types.md), line 12.
+- `Authenticating` — instance of `Authenticating` — [GitDocs Application Types](../design/types.md), line 13.
 
 ### InvestigatingChanges
 
@@ -52,8 +52,8 @@ Defined in [InvestigatingChanges](../design/concepts/InvestigatingChanges.md), l
 
 #### Instances
 
-- `InvestigatingChanges` — instance of `InvestigatingChanges` — [GitDocs Application Types](../design/types.md), line 17.
-  - `User` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 18.
+- `InvestigatingChanges` — instance of `InvestigatingChanges` — [GitDocs Application Types](../design/types.md), line 18.
+  - `User` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 19.
 
 ### RestructuringDocumentation
 
@@ -92,9 +92,33 @@ Defined in [RestructuringDocumentation](../design/concepts/RestructuringDocument
 
 #### Instances
 
-- `RestructuringDocumentation` — instance of `RestructuringDocumentation` — [GitDocs Application Types](../design/types.md), line 20.
-  - `Investigation` is `InvestigatingChanges.Investigation` — [GitDocs Application Types](../design/types.md), line 22.
-  - `User` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 21.
+- `RestructuringDocumentation` — instance of `RestructuringDocumentation` — [GitDocs Application Types](../design/types.md), line 21.
+  - `Investigation` is `InvestigatingChanges.Investigation` — [GitDocs Application Types](../design/types.md), line 23.
+  - `User` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 22.
+
+### ReviewingDocumentation
+
+Defined in [ReviewingDocumentation](../design/concepts/ReviewingDocumentation.md), line 1.
+
+#### Actions
+
+- `open(proposal: Restructuring, reviewer: User, at: DateTime) : returns (review: Review)`
+  - Refuses `REVIEW_EXISTS`: This proposal already has a review.
+- `approve(review: Review, reviewer: User, at: DateTime) : returns ()`
+  - Refuses `REVIEW_NOT_FOUND`: There is no such review.
+  - Refuses `NOT_REVIEWER`: Only the review's reviewer can decide it.
+  - Refuses `REVIEW_NOT_PENDING`: This review has already been decided.
+
+#### Queries
+
+- `_get(review: Review) : optional (review: Review, proposal: Restructuring, reviewer: User, decision: Decision, openedAt: DateTime, updatedAt: DateTime)`
+- `_forProposal(proposal: Restructuring) : optional (review: Review, reviewer: User, decision: Decision, openedAt: DateTime, updatedAt: DateTime)`
+
+#### Instances
+
+- `ReviewingDocumentation` — instance of `ReviewingDocumentation` — [GitDocs Application Types](../design/types.md), line 25.
+  - `Restructuring` is `RestructuringDocumentation.Restructuring` — [GitDocs Application Types](../design/types.md), line 26.
+  - `User` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 27.
 
 ### Sessioning
 
@@ -114,8 +138,8 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 
 #### Instances
 
-- `Sessioning` — instance of `Sessioning` — [GitDocs Application Types](../design/types.md), line 14.
-  - `Subject` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 15.
+- `Sessioning` — instance of `Sessioning` — [GitDocs Application Types](../design/types.md), line 15.
+  - `Subject` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 16.
 
 ## Views
 

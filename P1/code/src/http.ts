@@ -37,6 +37,11 @@ export const publicErrors = {
   NOT_DRAFT: "CONFLICT",
   // The request is well formed; the saved draft just has no rationale yet.
   RATIONALE_MISSING: "CONFLICT",
+  // ReviewingDocumentation
+  REVIEW_EXISTS: "CONFLICT",
+  REVIEW_NOT_FOUND: "NOT_FOUND",
+  NOT_REVIEWER: "FORBIDDEN",
+  REVIEW_NOT_PENDING: "CONFLICT",
   // Investigations composition
   INVESTIGATION_NOT_FOUND: "NOT_FOUND",
 } as const satisfies Record<string, HttpPublicErrorCategory>;

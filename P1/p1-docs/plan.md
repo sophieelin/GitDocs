@@ -537,6 +537,8 @@ Done 2026-10-18. `open(proposal, reviewer, at)` refuses `REVIEW_EXISTS`; `approv
 
 Bind its proposal type to `RestructuringDocumentation.Restructuring`.
 
+Done 2026-10-18. The concept class has `open`, `approve`, `_get`, and `_forProposal` as TODO stubs for step 6.4; its four refusals are registered and sent over HTTP as `CONFLICT`, `NOT_FOUND`, and `FORBIDDEN`.
+
 **Verify:** `bun run generate && bun run check`
 
 ## 6.4 Open and approve a review
@@ -544,6 +546,8 @@ Bind its proposal type to `RestructuringDocumentation.Restructuring`.
 **Diff:** `src/concepts/ReviewingDocumentation.ts`, `tests/concepts/ReviewingDocumentation.test.ts`
 
 Opening a review uses a unique index, and the duplicate-key error becomes the declared refusal.
+
+Done 2026-10-18. The unique index on `proposal` is created on the first `open`. `approve` is one conditional update on the review, its reviewer, and `PENDING`, so a review is approved at most once. The tests also cover two opens at once and a second concept instance.
 
 **Verify:** `bun run test:memory` covers opening, opening twice, and approving.
 
