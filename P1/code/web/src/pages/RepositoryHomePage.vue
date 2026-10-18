@@ -56,16 +56,48 @@ function firstLine(message: string): string {
   return message.split("\n")[0] ?? "";
 }
 
-const isEmpty = computed(
-  () => documentation.value && documentation.value.tree.files.length === 0 && documentation.value.tree.folders.length === 0,
-);
+function isEmptyFolder(folder: TreeResponse["tree"]): boolean {
+  return folder.files.length === 0 && folder.folders.length === 0;
+}
+
+const isEmpty = computed(() => documentation.value !== null && isEmptyFolder(documentation.value.tree));
+const isCodeEmpty = computed(() => documentation.value !== null && isEmptyFolder(documentation.value.code));
 </script>
 
 <template>
   <section>
     <h1 class="page-title">{{ owner }}/{{ name }}</h1>
-    <p class="page-subtitle">Recent commits and the documentation as it is now.</p>
+    <p class="page-subtitle">Recent commits, and the code and documentation as they are now.</p>
     <ErrorBanner :message="error" />
+
+    <p v-if="!error && commits && commits[0]" class="muted at">
+      Structures at the newest commit, <code>{{ commits[0].sha.slice(0, 7) }}</code>.
+    </p>
+    <p v-if="!error && documentation?.truncated" class="warning" role="status">
+      This repository is very large, and GitHub returned only part of it. Some files may be missing.
+    </p>
+
+    <!-- The code and the documentation side by side, as in the pitch's Documentation Map:
+         the documentation is what a proposal reorganizes, and the code is the context for it. -->
+    <div v-if="!error" class="structures">
+      <div class="card scroll">
+        <h2>Code Structure</h2>
+        <p v-if="!documentation && (!commits || commits.length > 0)" class="muted">Loading the repository from GitHub…</p>
+        <template v-else-if="documentation">
+          <p v-if="isCodeEmpty" class="muted">There are no files yet.</p>
+          <TreeView v-else :folder="documentation.code" />
+        </template>
+      </div>
+
+      <div class="card scroll">
+        <h2>Current Documentation Structure</h2>
+        <p v-if="!documentation && (!commits || commits.length > 0)" class="muted">Loading the documentation from GitHub…</p>
+        <template v-else-if="documentation">
+          <p v-if="isEmpty" class="muted">There are no Markdown files yet.</p>
+          <TreeView v-else :folder="documentation.tree" />
+        </template>
+      </div>
+    </div>
 
     <div v-if="!error" class="columns">
       <div class="card">
@@ -79,27 +111,28 @@ const isEmpty = computed(
           </li>
         </ol>
       </div>
-
-      <div class="card">
-        <h2>Current Documentation Structure</h2>
-        <p v-if="commits && commits[0]" class="muted at">At the newest commit, <code>{{ commits[0].sha.slice(0, 7) }}</code>.</p>
-        <p v-if="!documentation && (!commits || commits.length > 0)" class="muted">Loading the documentation from GitHub…</p>
-        <template v-else-if="documentation">
-          <p v-if="documentation.truncated" class="warning" role="status">
-            This repository is very large, and GitHub returned only part of it. Some documentation may be missing.
-          </p>
-          <p v-if="isEmpty" class="muted">There are no Markdown files yet.</p>
-          <TreeView v-else :folder="documentation.tree" />
-        </template>
-      </div>
     </div>
   </section>
 </template>
 
 <style scoped>
+.structures {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 20px;
+}
+
+/* A large repository's code tree can be long; each panel scrolls on its own. */
+.scroll {
+  max-height: 60vh;
+  overflow: auto;
+}
+
 .columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
