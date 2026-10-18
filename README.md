@@ -2,7 +2,8 @@
 
 ## P1
 - Project MVP code in P1/code
-- User journey and video in P1/p1-docs
+- User journey in P1/p1-docs
+- Demo video at this link: https://youtu.be/BXuCtekfzwA 
 - Design document in docs/
 
 ## Project Documentation
