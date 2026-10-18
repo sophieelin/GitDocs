@@ -18,8 +18,9 @@ export function modifyProposal(
   return api.proposals.modify({ ...sessionInput(), proposal, ...draft });
 }
 
-export function submitProposal(proposal: string) {
-  return api.proposals.submit({ ...sessionInput(), proposal });
+/** Submits the draft and asks `reviewer`, another account's username, to review it. */
+export function submitProposal(proposal: string, reviewer: string) {
+  return api.proposals.submit({ ...sessionInput(), proposal, reviewer });
 }
 
 export function discardProposal(proposal: string) {
@@ -32,6 +33,16 @@ export function getProposal(proposal: string) {
 
 export function listProposals(repository: RepositoryRef) {
   return api.proposals.list({ ...sessionInput(), ...repository });
+}
+
+/** The repository's proposals waiting for the signed-in user's review. */
+export function listReviewQueue(repository: RepositoryRef) {
+  return api.proposals["under-review"]({ ...sessionInput(), ...repository });
+}
+
+/** Approves the review; answers the proposal with its new status. */
+export function approveReview(review: string) {
+  return api.reviews.approve({ ...sessionInput(), review });
 }
 
 /** The messages for a proposal change, by error category. */

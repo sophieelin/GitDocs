@@ -9,6 +9,7 @@ import ProposalPage from "./pages/ProposalPage.vue";
 import ProposalsPage from "./pages/ProposalsPage.vue";
 import RepositoriesPage from "./pages/RepositoriesPage.vue";
 import RepositoryHomePage from "./pages/RepositoryHomePage.vue";
+import ReviewsPage from "./pages/ReviewsPage.vue";
 import SignInPage from "./pages/SignInPage.vue";
 import { restoreSession, useSession } from "./session.ts";
 
@@ -49,7 +50,7 @@ export const router = createRouter({
     { path: `${workspace}/proposals`, component: ProposalsPage, meta: { title: "Proposals" } },
     { path: `${workspace}/proposals/:proposal`, component: ProposalPage, meta: { title: "Proposal" } },
     { path: `${workspace}/proposals/:proposal/edit`, component: ProposalEditPage, meta: { title: "Edit proposal" } },
-    { path: `${workspace}/reviews`, component: PlaceholderPage, meta: { title: "Reviews", step: "6.7" } },
+    { path: `${workspace}/reviews`, component: ReviewsPage, meta: { title: "Reviews" } },
     { path: `${workspace}/reviews/:review`, component: PlaceholderPage, meta: { title: "Review", step: "6.7" } },
     { path: "/:path(.*)*", component: PlaceholderPage, meta: { title: "Page not found" } },
   ],

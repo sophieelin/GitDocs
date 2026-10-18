@@ -65,7 +65,7 @@ describe("another account", () => {
   });
 
   test("B cannot submit A's draft, and it is still a draft", async () => {
-    expect(await api.post("/proposals/submit", { session: b, proposal: draft })).toEqual({
+    expect(await api.post("/proposals/submit", { session: b, proposal: draft, reviewer: "b-user" })).toEqual({
       status: 403,
       body: { error: "FORBIDDEN" },
     });
@@ -78,15 +78,49 @@ describe("another account", () => {
   });
 });
 
+describe("reviews", () => {
+  let c: string;
+
+  beforeEach(async () => {
+    c = await api.register("c-user");
+  });
+
+  async function submitFor(reviewer: string) {
+    return api.post("/proposals/submit", { session: a, proposal: draft, reviewer });
+  }
+
+  test("A cannot name themselves as reviewer, and the draft is not submitted or reviewed", async () => {
+    expect(await submitFor("a-user")).toEqual({ status: 400, body: { error: "INVALID_REQUEST" } });
+    expect(await readBack()).toMatchObject({ status: "DRAFT", review: null });
+  });
+
+  test("A cannot approve their own proposal through B's review, and it stays pending", async () => {
+    await submitFor("b-user");
+    const { review } = await readBack();
+    expect(await api.post("/reviews/approve", { session: a, review })).toEqual({ status: 403, body: { error: "FORBIDDEN" } });
+    expect((await readBack()).status).toBe("PENDING_APPROVAL");
+  });
+
+  test("C cannot approve the review A asked B for", async () => {
+    await submitFor("b-user");
+    const { review } = await readBack();
+    expect(await api.post("/reviews/approve", { session: c, review })).toEqual({ status: 403, body: { error: "FORBIDDEN" } });
+    expect((await readBack()).status).toBe("PENDING_APPROVAL");
+  });
+});
+
 describe("no session or an ended session", () => {
   const requests = (session?: string) => {
     const withSession = (body: Record<string, unknown>) => (session === undefined ? body : { session, ...body });
     return [
       ["/proposals/modify", withSession({ proposal: draft, ...draftChanges, title: "Changed" })],
-      ["/proposals/submit", withSession({ proposal: draft })],
+      ["/proposals/submit", withSession({ proposal: draft, reviewer: "b-user" })],
       ["/proposals/discard", withSession({ proposal: draft })],
       ["/proposals/get", withSession({ proposal: draft })],
       ["/proposals/list", withSession({ owner: "sophieelin", name: "PaperNet" })],
+      ["/proposals/under-review", withSession({ owner: "sophieelin", name: "PaperNet" })],
+      ["/reviews/get", withSession({ review: "any" })],
+      ["/reviews/approve", withSession({ review: "any" })],
     ] as const;
   };
 

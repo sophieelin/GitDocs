@@ -68,6 +68,11 @@ function modify(session: string, proposal: string, changes: Record<string, unkno
   });
 }
 
+/** Submits with bob as the reviewer. */
+function submit(session: string, proposal: string) {
+  return api.post("/proposals/submit", { session, proposal, reviewer: "bob" });
+}
+
 async function get(session: string, proposal: string) {
   return api.post("/proposals/get", { session, proposal });
 }
@@ -129,19 +134,20 @@ describe("/proposals/modify and /proposals/submit", () => {
 
   test("submitting without a rationale is a 409; with one it is pending approval, once", async () => {
     const proposal = await create(ari);
-    expect(await api.post("/proposals/submit", { session: ari, proposal })).toEqual({ status: 409, body: { error: "CONFLICT" } });
+    expect(await submit(ari, proposal)).toEqual({ status: 409, body: { error: "CONFLICT" } });
+    expect(((await get(ari, proposal)).body.proposal as { review: string | null }).review).toBeNull();
 
     await modify(ari, proposal);
-    expect(await api.post("/proposals/submit", { session: ari, proposal })).toEqual({ status: 200, body: { proposal } });
-    expect(((await get(ari, proposal)).body.proposal as { status: string }).status).toBe("PENDING_APPROVAL");
+    expect(await submit(ari, proposal)).toEqual({ status: 200, body: { proposal } });
+    expect((await get(ari, proposal)).body.proposal).toMatchObject({ status: "PENDING_APPROVAL", reviewer: "bob", decision: "PENDING" });
 
-    expect((await api.post("/proposals/submit", { session: ari, proposal })).status).toBe(409);
+    expect((await submit(ari, proposal)).status).toBe(409);
     expect((await modify(ari, proposal, { title: "Too late" })).status).toBe(409);
   });
 
   test("a proposal that does not exist is a 404", async () => {
     expect((await modify(ari, "missing")).status).toBe(404);
-    expect((await api.post("/proposals/submit", { session: ari, proposal: "missing" })).status).toBe(404);
+    expect((await submit(ari, "missing")).status).toBe(404);
   });
 });
 
@@ -157,7 +163,7 @@ describe("/proposals/discard", () => {
   test("a submitted proposal cannot be discarded", async () => {
     const proposal = await create(ari);
     await modify(ari, proposal);
-    await api.post("/proposals/submit", { session: ari, proposal });
+    await submit(ari, proposal);
 
     expect((await api.post("/proposals/discard", { session: ari, proposal })).status).toBe(409);
   });
@@ -171,7 +177,7 @@ describe("/proposals/get", () => {
     expect(await get(bob, proposal)).toEqual({ status: 404, body: { error: "NOT_FOUND" } });
     expect(await get(bob, "missing")).toEqual({ status: 404, body: { error: "NOT_FOUND" } });
 
-    await api.post("/proposals/submit", { session: ari, proposal });
+    await submit(ari, proposal);
     for (const session of [ari, bob]) {
       const { status, body } = await get(session, proposal);
       expect(status).toBe(200);
@@ -188,7 +194,7 @@ describe("/proposals/list", () => {
   test("lists every submitted proposal and only the requester's own drafts", async () => {
     const submitted = await create(ari, "Submitted by ari");
     await modify(ari, submitted, { title: "Submitted by ari" });
-    await api.post("/proposals/submit", { session: ari, proposal: submitted });
+    await submit(ari, submitted);
     const arisDraft = await create(ari, "Ari's draft");
     const bobsDraft = await create(bob, "Bob's draft");
 

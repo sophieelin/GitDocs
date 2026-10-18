@@ -1,6 +1,6 @@
-f# User Journey: Propose and Approve a Documentation Restructuring
+# User Journey: Propose and Approve a Documentation Restructuring
 
-A developer refactors a codebase and realizes that the existing documentation no longer accurately represents how the system is organized. They open GitDocs, connect a GitHub repository, and select the relevant commit. They create a proposal to reorganize the documentation, provide a rationale, and submit it for approval. Another developer reviews the proposed structure and approves it.
+A developer refactors a codebase and realizes that the existing documentation no longer accurately represents how the system is organized. They open GitDocs, connect a GitHub repository, and select the relevant commit. They create a proposal to reorganize the documentation, provide a rationale, and submit it for approval. Another developer reviews the proposed structure and approves it. GitDocs helps developers keep documentation aligned with a changing codebase by letting them propose structural changes and obtain peer approval through a clear, reviewable workflow.
 
 ## User Journey Steps
 
@@ -28,8 +28,3 @@ The prototype will demonstrate
 The MVP works only with public GitHub repositories. Users never give GitDocs a GitHub token or sign in with GitHub; GitDocs reads public repositories with the GitHub API, optionally using one server-wide token to raise the rate limit. Private repositories, and signing in with GitHub, are left for a later version.
 
 GitDocs is read-only on GitHub in the MVP. Proposals, reviews, and approvals are saved only in GitDocs, and approving a proposal does not change the repository. Writing approved changes back to GitHub as a pull request needs GitHub sign-in (OAuth) and is planned for the Beta.
-
-
-## Elevator Pitch
-
-GitDocs helps developers keep documentation aligned with a changing codebase by letting them propose structural changes and obtain peer approval through a clear, reviewable workflow.

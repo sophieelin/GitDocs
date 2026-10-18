@@ -555,6 +555,8 @@ Done 2026-10-18. The unique index on `proposal` is created on the first `open`. 
 
 **Diff:** see `plan-reactions.md` R4.1–R4.4.
 
+Done 2026-10-18. `src/compositions/Policy.ts` has R4.1 (`(user) may review (proposal)`, plus the author and already-approved views that `/reviews/open` refuses with) and R4.3 (`the review of (proposal)`, optional). R4.2 is not needed: ReviewingDocumentation refuses anyone but the reviewer. `src/compositions/ReviewWorkflow.ts` has `ApprovalApprovesProposal`; its false interval and failed repair are in `design/compositions/ReviewWorkflow.md`.
+
 **Verify:** As in R4.4: approving the review makes the proposal `APPROVED`.
 
 ## 6.6 Review endpoints and the review queue
@@ -569,11 +571,17 @@ Add review cases:
 - A approves their own proposal, using a review id → refused (403), and the proposal stays *Pending Approval*.
 - C, a third account, approves the review that B opened → refused (403).
 
+Done 2026-10-18. `/proposals/under-review` (E4.3), and `/reviews/open`, `/reviews/get`, and `/reviews/approve` (E5) in `src/compositions/Reviews.ts`. `/reviews/approve` answers after the flow settles, with the proposal detail. `/proposals/get` and `/proposals/list` now include approved proposals; the proposal detail carries `review`, `reviewer`, and `decision` (`null` without a review), and the submitted list carries `status`. Tests: `tests/http/reviews.test.ts`, `tests/compositions/ReviewWorkflow.test.ts`, and the review cases in `tests/http/access-control.test.ts`.
+
+Changed 2026-10-18 (user decision): the author names exactly one reviewer when submitting. `/proposals/submit` takes `reviewer` and opens the review for that account; naming yourself or an unknown account answers `INVALID_REVIEWER` (400). `/reviews/open` is removed. `/proposals/under-review` lists only the proposals waiting for the requester's review. The first access-control case above is now "A names themselves as reviewer → refused (400), and it stays a draft with no review".
+
 **Verify:** A two-account endpoint test: A submits, B opens the review and approves, and A's proposal is `APPROVED`. The access-control cases above pass.
 
 ## 6.7 Review screens
 
 **Diff:** see `plan-vue.md` V7.1, then V7.2, then V7.3 with only the Approve button.
+
+Partly done 2026-10-18: the Reviews tab (`web/src/pages/ReviewsPage.vue`) lists the proposals waiting for the user's review, and the proposal page shows the reviewer and, for the reviewer, an Approve button. The edit page asks for the reviewer when submitting. Still to do: the review screen at `/reviews/:review` with the changes marked (V7.2).
 
 **Verify:** As in V7.
 

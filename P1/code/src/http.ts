@@ -37,6 +37,7 @@ export const publicErrors = {
   NOT_DRAFT: "CONFLICT",
   // The request is well formed; the saved draft just has no rationale yet.
   RATIONALE_MISSING: "CONFLICT",
+  PROPOSAL_NOT_PENDING: "CONFLICT",
   // ReviewingDocumentation
   REVIEW_EXISTS: "CONFLICT",
   REVIEW_NOT_FOUND: "NOT_FOUND",
@@ -44,6 +45,8 @@ export const publicErrors = {
   REVIEW_NOT_PENDING: "CONFLICT",
   // Investigations composition
   INVESTIGATION_NOT_FOUND: "NOT_FOUND",
+  // Proposals composition: the named reviewer is not registered, or is the author.
+  INVALID_REVIEWER: "INVALID_REQUEST",
 } as const satisfies Record<string, HttpPublicErrorCategory>;
 
 /** Every endpoint and route is served under this path, e.g. `/api/auth/register`. */

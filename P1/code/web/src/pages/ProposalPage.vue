@@ -7,7 +7,7 @@ import TreeView from "../components/TreeView.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
 import type { DocumentationFolder } from "../github.ts";
 import { formatDate } from "../investigations.ts";
-import { getProposal } from "../proposals.ts";
+import { approveReview, getProposal } from "../proposals.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
 import { useSession } from "../session.ts";
@@ -56,6 +56,33 @@ watch([id, repository], () => {
 
 const editable = computed(() => proposal.value?.status === "DRAFT" && proposal.value.author === session.username);
 
+/** The named reviewer sees Approve while their review is pending. */
+const canApprove = computed(
+  () => proposal.value?.reviewer === session.username && proposal.value.decision === "PENDING" && proposal.value.review !== null,
+);
+const approveError = ref<string | null>(null);
+const approving = ref(false);
+
+async function approve() {
+  const review = proposal.value?.review;
+  if (!review) return;
+  approving.value = true;
+  const result = await approveReview(review);
+  approving.value = false;
+  if ("error" in result) {
+    if (!handleEndedSession(result.error)) {
+      approveError.value = errorMessage(result.error, {
+        FORBIDDEN: "Only the reviewer the author named can approve this proposal.",
+        CONFLICT: "This proposal has already been approved.",
+        NOT_FOUND: "This review no longer exists.",
+      });
+    }
+    return;
+  }
+  approveError.value = null;
+  proposal.value = result.proposal;
+}
+
 function isEmpty(folder: DocumentationFolder): boolean {
   return folder.files.length === 0 && folder.folders.length === 0;
 }
@@ -81,6 +108,12 @@ function isEmpty(folder: DocumentationFolder): boolean {
         </RouterLink>
         <span class="muted">This draft is visible only to you until you submit it.</span>
       </p>
+      <p v-if="proposal.reviewer" class="edit">
+        <span v-if="canApprove" class="muted">{{ proposal.author }} asked you to review this proposal.</span>
+        <span v-else class="muted">Reviewer: {{ proposal.reviewer }}</span>
+        <button v-if="canApprove" type="button" class="button" :disabled="approving" @click="approve">Approve</button>
+      </p>
+      <ErrorBanner :message="approveError" />
     </template>
     <h1 v-else-if="!error" class="page-title">Proposal</h1>
     <ErrorBanner :message="error" />

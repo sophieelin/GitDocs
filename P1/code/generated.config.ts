@@ -16,6 +16,9 @@ export default {
       new URL("./design/compositions/Sessions.md", import.meta.url),
       new URL("./design/compositions/Investigations.md", import.meta.url),
       new URL("./design/compositions/Proposals.md", import.meta.url),
+      new URL("./design/compositions/Policy.md", import.meta.url),
+      new URL("./design/compositions/ReviewWorkflow.md", import.meta.url),
+      new URL("./design/compositions/Reviews.md", import.meta.url),
     ],
   },
   // The wire as the browser sees it: refusals become their public error categories.

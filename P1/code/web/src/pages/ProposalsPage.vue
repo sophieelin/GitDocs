@@ -40,7 +40,7 @@ async function load() {
   // The server answers two lists, because who may see a proposal depends on its status.
   const { submitted, drafts } = result.repository;
   items.value = [
-    ...submitted.map((item) => ({ ...item, status: "PENDING_APPROVAL" })),
+    ...submitted,
     ...drafts.map((item) => ({ ...item, author: session.username ?? "", status: "DRAFT" })),
   ].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }

@@ -50,6 +50,9 @@ const moveTarget = ref("");
 const newFolderName = ref("");
 const editError = ref<string | null>(null);
 
+/** The username of the account asked to review the proposal on submit. */
+const reviewer = ref("");
+
 const formError = ref<string | null>(null);
 const notice = ref<string | null>(null);
 const busy = ref(false);
@@ -206,12 +209,26 @@ async function submitForReview() {
     formError.value = "Explain the proposed structure before submitting it.";
     return;
   }
+  const name = reviewer.value.trim();
+  if (name === "") {
+    formError.value = "Name the person who should review this proposal.";
+    return;
+  }
+  if (name === session.username) {
+    formError.value = "Name someone else as the reviewer. You cannot review your own proposal.";
+    return;
+  }
   if (!(await save())) return;
   busy.value = true;
-  const result = await submitProposal(id.value);
+  const result = await submitProposal(id.value, name);
   busy.value = false;
   if ("error" in result) {
-    if (!handleEndedSession(result.error)) formError.value = errorMessage(result.error, proposalErrorMessages);
+    if (!handleEndedSession(result.error)) {
+      formError.value = errorMessage(result.error, {
+        ...proposalErrorMessages,
+        INVALID_REQUEST: `There is no other account named "${name}". Check the reviewer's username.`,
+      });
+    }
     return;
   }
   await router.push(proposalPath());
@@ -299,6 +316,10 @@ function isEmpty(folder: DocumentationFolder): boolean {
         <label class="field">
           <span>Rationale</span>
           <textarea v-model="rationale" name="rationale" rows="5" placeholder="Why is the proposed structure better? Needed before you submit." />
+        </label>
+        <label class="field">
+          <span>Reviewer</span>
+          <input v-model="reviewer" name="reviewer" maxlength="32" autocomplete="off" placeholder="Username of the person who approves it. Needed before you submit." />
         </label>
 
         <ErrorBanner :message="formError" />

@@ -202,43 +202,86 @@ export const proposalIdInput = validator(
   "session and proposal must be bounded strings",
 );
 
+/** The reviewer is a username; the composition checks that it is registered. */
+export const submitProposalInput = validator(
+  (value) =>
+    hasOnly(value, ["session", "proposal", "reviewer"]) && hasSession(value) && text(value.proposal, 128) && text(value.reviewer, 32),
+  "session, proposal, and reviewer must be bounded strings",
+);
+
 /** Every proposal change answers the proposal's identity. */
 export const proposalIdentityOutput = validator(
   (value) => hasOnly(value, ["proposal"]) && typeof value.proposal === "string",
   "response must contain a proposal identity",
 );
 
+/** A string, or `null` where an optional part such as a proposal's review is absent. */
+function textOrNull(value: unknown): boolean {
+  return value === null || typeof value === "string";
+}
+
+/** A proposal with both of its structures and its review's identity, reviewer, and decision. */
+function isProposalDetail(detail: unknown): boolean {
+  return (
+    record(detail) &&
+    hasOnly(detail, [
+      "proposal",
+      "author",
+      "investigation",
+      "owner",
+      "name",
+      "commit",
+      "title",
+      "rationale",
+      "status",
+      "currentStructure",
+      "proposedStructure",
+      "createdAt",
+      "updatedAt",
+      "review",
+      "reviewer",
+      "decision",
+    ]) &&
+    ["proposal", "author", "investigation", "owner", "name", "commit", "title", "rationale", "status"].every(
+      (key) => typeof detail[key] === "string",
+    ) &&
+    ["review", "reviewer", "decision"].every((key) => textOrNull(detail[key])) &&
+    hasStructure(detail.currentStructure) &&
+    hasStructure(detail.proposedStructure) &&
+    detail.createdAt instanceof Date &&
+    detail.updatedAt instanceof Date
+  );
+}
+
 export const proposalOutput = validator(
+  (value) => hasOnly(value, ["proposal"]) && isProposalDetail(value.proposal),
+  "response must contain a proposal with both of its structures and its review",
+);
+
+export const reviewIdInput = validator(
+  (value) => hasOnly(value, ["session", "review"]) && hasSession(value) && text(value.review, 128),
+  "session and review must be bounded strings",
+);
+
+export const reviewIdentityOutput = validator(
+  (value) => hasOnly(value, ["review"]) && typeof value.review === "string",
+  "response must contain a review identity",
+);
+
+export const reviewOutput = validator(
   (value) => {
-    const detail = value.proposal;
+    const detail = value.review;
     return (
-      hasOnly(value, ["proposal"]) &&
+      hasOnly(value, ["review"]) &&
       record(detail) &&
-      hasOnly(detail, [
-        "proposal",
-        "author",
-        "investigation",
-        "owner",
-        "name",
-        "commit",
-        "title",
-        "rationale",
-        "status",
-        "currentStructure",
-        "proposedStructure",
-        "createdAt",
-        "updatedAt",
-      ]) &&
-      ["proposal", "author", "investigation", "owner", "name", "commit", "title", "rationale", "status"].every(
-        (key) => typeof detail[key] === "string",
-      ) &&
-      hasStructure(detail.currentStructure) &&
-      hasStructure(detail.proposedStructure) &&
-      detail.createdAt instanceof Date &&
-      detail.updatedAt instanceof Date
+      hasOnly(detail, ["review", "reviewer", "decision", "openedAt", "updatedAt", "proposal"]) &&
+      ["review", "reviewer", "decision"].every((key) => typeof detail[key] === "string") &&
+      detail.openedAt instanceof Date &&
+      detail.updatedAt instanceof Date &&
+      isProposalDetail(detail.proposal)
     );
   },
-  "response must contain a proposal with both of its structures",
+  "response must contain a review with its proposal",
 );
 
 /** A list of proposal summaries, each with the given text fields and a Date it last changed. */
@@ -262,9 +305,22 @@ export const repositoryProposalsOutput = validator(
       hasOnly(value, ["repository"]) &&
       record(holder) &&
       hasOnly(holder, ["submitted", "drafts"]) &&
-      proposalSummaries(holder.submitted, ["proposal", "author", "investigation", "commit", "title"]) &&
+      proposalSummaries(holder.submitted, ["proposal", "author", "investigation", "commit", "title", "status"]) &&
       proposalSummaries(holder.drafts, ["proposal", "investigation", "commit", "title"])
     );
   },
   "response must contain the repository's submitted proposals and the user's drafts",
+);
+
+export const reviewQueueOutput = validator(
+  (value) => {
+    const holder = value.repository;
+    return (
+      hasOnly(value, ["repository"]) &&
+      record(holder) &&
+      hasOnly(holder, ["proposals"]) &&
+      proposalSummaries(holder.proposals, ["proposal", "author", "investigation", "commit", "title"])
+    );
+  },
+  "response must contain the repository's proposals that the user may review",
 );

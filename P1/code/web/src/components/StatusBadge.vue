@@ -7,6 +7,7 @@ const props = defineProps<{ status: string }>();
 const labels: Record<string, string> = {
   DRAFT: "Draft",
   PENDING_APPROVAL: "Pending Approval",
+  APPROVED: "Approved",
 };
 
 const label = computed(() => labels[props.status] ?? props.status);
@@ -31,6 +32,11 @@ const label = computed(() => labels[props.status] ?? props.status);
 .pending_approval {
   background: #fef3c7;
   color: #92400e;
+}
+
+.approved {
+  background: #dcfce7;
+  color: #166534;
 }
 
 .draft {

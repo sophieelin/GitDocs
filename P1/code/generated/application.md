@@ -148,7 +148,7 @@ _Views name reusable conditions. Multiple `where` blocks are alternatives._
 ### (proposal) is a draft by (user)
 
 Authored path: `Proposals.Reading.ProposalIsDraftByUser`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 40.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 52.
 
 ```view
 (proposal) is a draft by (user) — inputs (proposal, user); outputs (); bindings ()
@@ -158,7 +158,7 @@ Authored path: `Proposals.Reading.ProposalIsDraftByUser`.
 ### (proposal) is a draft by someone other than (user)
 
 Authored path: `Proposals.Reading.ProposalIsDraftByOther`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 42.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 54.
 
 ```view
 (proposal) is a draft by someone other than (user) — inputs (proposal, user); outputs (); bindings ()
@@ -170,11 +170,24 @@ Authored path: `Proposals.Reading.ProposalIsDraftByOther`.
 ### (proposal) is submitted
 
 Authored path: `Proposals.Reading.ProposalIsSubmitted`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 38.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 50.
 
 ```view
-(proposal) is submitted — inputs (proposal); outputs (); bindings ()
-  where RestructuringDocumentation._get (restructuring: proposal) has (status: "PENDING_APPROVAL")
+(proposal) is submitted — inputs (proposal); outputs (); bindings (status)
+  where
+    RestructuringDocumentation._get (restructuring: proposal) has (status)
+    status is among ["PENDING_APPROVAL", "APPROVED"]
+```
+
+### the review of (proposal)
+
+Authored path: `Policy.TheReviewOf`.
+- Covered by [Policy](../design/compositions/Policy.md), line 9.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 46.
+
+```view
+the review of (proposal) — inputs (proposal); outputs (review, reviewer, decision); bindings () — answers at most one (review, reviewer, decision)
+  where ReviewingDocumentation._forProposal (proposal) has (decision, review, reviewer)
 ```
 
 ## Formers
@@ -185,24 +198,46 @@ _the authored explanation; this section records the generated shape._
 ### a proposal with its current and proposed structures
 
 Authored path: `Proposals.Reading.ProposalDetail`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 33.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 43.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 23.
 
 ```former
-Former "a proposal with its current and proposed structures" — inputs (proposal); bindings (author, investigation, owner, name, commit, title, rationale, status, currentStructure, proposedStructure, createdAt, updatedAt); promises exactly one record — forms:
+Former "a proposal with its current and proposed structures" — inputs (proposal); bindings (author, investigation, owner, name, commit, title, rationale, status, currentStructure, proposedStructure, createdAt, updatedAt, review, reviewer, decision); promises exactly one record — forms:
   a record of
     where RestructuringDocumentation._get (restructuring: proposal) has (author, commit, createdAt, currentStructure, investigation, name, owner, proposedStructure, rationale, status, title, updatedAt)
+    where whether view "the review of (proposal)" with (proposal) has (decision, review, reviewer)
     author
     commit
     createdAt
     currentStructure
+    decision
     investigation
     name
     owner
     proposal
     proposedStructure
     rationale
+    review
+    reviewer
     status
     title
+    updatedAt
+```
+
+### a review with its proposal
+
+Authored path: `Reviews.Reading.ReviewDetail`.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 9.
+
+```former
+Former "a review with its proposal" — inputs (review); bindings (proposal, reviewer, decision, openedAt, updatedAt); promises exactly one record — forms:
+  a record of
+    where ReviewingDocumentation._get (review) has (decision, openedAt, proposal, reviewer, updatedAt)
+    decision
+    openedAt
+    proposal: former "a proposal with its current and proposed structures" with (proposal)
+    review
+    reviewer
     updatedAt
 ```
 
@@ -269,10 +304,10 @@ Former "the investigations of a repository" — inputs (owner, name); bindings (
 ### the proposals of a repository that (user) may see
 
 Authored path: `Proposals.Reading.RepositoryProposals`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 52.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 64.
 
 ```former
-Former "the proposals of a repository that (user) may see" — inputs (owner, name, user); bindings (proposal, author, investigation, commit, title, updatedAt); promises exactly one record — forms:
+Former "the proposals of a repository that (user) may see" — inputs (owner, name, user); bindings (proposal, author, investigation, commit, title, status, updatedAt); promises exactly one record — forms:
   a record of
     drafts: each RestructuringDocumentation._forRepository (name, owner) has (author: user, commit, investigation, restructuring: proposal, status: "DRAFT", title, updatedAt)
       arranged by updatedAt, descending
@@ -282,8 +317,30 @@ Former "the proposals of a repository that (user) may see" — inputs (owner, na
         proposal
         title
         updatedAt
-    submitted: each RestructuringDocumentation._forRepository (name, owner) has (author, commit, investigation, restructuring: proposal, status: "PENDING_APPROVAL", title, updatedAt)
+    submitted: each RestructuringDocumentation._forRepository (name, owner) has (author, commit, investigation, restructuring: proposal, status, title, updatedAt)
+      where status is among ["PENDING_APPROVAL", "APPROVED"]
       arranged by updatedAt, descending
+      form a record of
+        author
+        commit
+        investigation
+        proposal
+        status
+        title
+        updatedAt
+```
+
+### the proposals of a repository waiting for (user)'s review
+
+Authored path: `Proposals.Reading.ReviewQueue`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 75.
+
+```former
+Former "the proposals of a repository waiting for (user)'s review" — inputs (owner, name, user); bindings (proposal, author, investigation, commit, title, updatedAt); promises exactly one record — forms:
+  a record of
+    proposals: each RestructuringDocumentation._pendingApproval (name, owner) has (author, commit, investigation, restructuring: proposal, title, updatedAt)
+      where view "the review of (proposal)" with (proposal) has (reviewer: user)
+      arranged by updatedAt
       form a record of
         author
         commit
@@ -453,8 +510,8 @@ then
 ### Proposals.Reading.GetProposal
 
 Authored path: `Proposals.Reading.GetProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 32.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 42.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 59.
 
 ```reaction
 when RequestBoundary.request (path: "/proposals/get", proposal, requestId, session)
@@ -465,8 +522,8 @@ then
 ### Proposals.Reading.GetProposal:missing#2
 
 Authored path: `Proposals.Reading.GetProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 32.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 42.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 59.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
@@ -480,8 +537,8 @@ then
 ### Proposals.Reading.GetProposal:others-draft#2
 
 Authored path: `Proposals.Reading.GetProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 32.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 42.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 59.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
@@ -495,8 +552,8 @@ then
 ### Proposals.Reading.GetProposal:own-draft#2
 
 Authored path: `Proposals.Reading.GetProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 32.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 42.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 59.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
@@ -510,8 +567,8 @@ then
 ### Proposals.Reading.GetProposal:submitted#2
 
 Authored path: `Proposals.Reading.GetProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 32.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 42.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 59.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
@@ -525,8 +582,8 @@ then
 ### Proposals.Reading.ListProposals
 
 Authored path: `Proposals.Reading.ListProposals`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 50.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 58.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 62.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 70.
 
 ```reaction
 when RequestBoundary.request (name, owner, path: "/proposals/list", requestId, session)
@@ -537,8 +594,8 @@ then
 ### Proposals.Reading.ListProposals#2
 
 Authored path: `Proposals.Reading.ListProposals`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 50.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 58.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 62.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 70.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.ListProposals
@@ -546,6 +603,32 @@ where
   earlier, RequestBoundary.request (name, owner, path: "/proposals/list", requestId, session)
 then
   RequestBoundary.respond (repository: former "the proposals of a repository that (user) may see" with (name, owner, user), requestId)
+```
+
+### Proposals.Reading.ListProposalsUnderReview
+
+Authored path: `Proposals.Reading.ListProposalsUnderReview`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 73.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 82.
+
+```reaction
+when RequestBoundary.request (name, owner, path: "/proposals/under-review", requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### Proposals.Reading.ListProposalsUnderReview#2
+
+Authored path: `Proposals.Reading.ListProposalsUnderReview`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 73.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 82.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Reading.ListProposalsUnderReview
+where
+  earlier, RequestBoundary.request (name, owner, path: "/proposals/under-review", requestId, session)
+then
+  RequestBoundary.respond (repository: former "the proposals of a repository waiting for (user)'s review" with (name, owner, user), requestId)
 ```
 
 ### Proposals.Writing.CreateProposal
@@ -609,7 +692,7 @@ then
 
 Authored path: `Proposals.Writing.DiscardProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 21.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 29.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 39.
 
 ```reaction
 when RequestBoundary.request (path: "/proposals/discard", proposal, requestId, session)
@@ -621,7 +704,7 @@ then
 
 Authored path: `Proposals.Writing.DiscardProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 21.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 29.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 39.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Writing.DiscardProposal
@@ -635,7 +718,7 @@ then
 
 Authored path: `Proposals.Writing.DiscardProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 21.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 29.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 39.
 
 ```reaction
 when RestructuringDocumentation.discard (author: user, restructuring: proposal), asked by Proposals.Writing.DiscardProposal#2
@@ -649,7 +732,7 @@ then
 
 Authored path: `Proposals.Writing.ModifyProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 18.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 27.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 37.
 
 ```reaction
 when RequestBoundary.request (path: "/proposals/modify", proposal, proposedStructure, rationale, requestId, session, title)
@@ -661,7 +744,7 @@ then
 
 Authored path: `Proposals.Writing.ModifyProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 18.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 27.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 37.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Writing.ModifyProposal
@@ -676,7 +759,7 @@ then
 
 Authored path: `Proposals.Writing.ModifyProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 18.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 27.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 37.
 
 ```reaction
 when RestructuringDocumentation.modify (at, author: user, proposedStructure, rationale, restructuring: proposal, title), asked by Proposals.Writing.ModifyProposal#2
@@ -690,41 +773,208 @@ then
 
 Authored path: `Proposals.Writing.SubmitProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 20.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 28.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 38.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 4.
 
 ```reaction
-when RequestBoundary.request (path: "/proposals/submit", proposal, requestId, session)
+when RequestBoundary.request (path: "/proposals/submit", proposal, requestId, reviewer, session)
 then
   Sessioning.current (session)
 ```
 
-### Proposals.Writing.SubmitProposal#2
+### Proposals.Writing.SubmitProposal:allowed#2
 
 Authored path: `Proposals.Writing.SubmitProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 20.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 28.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 38.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 4.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Writing.SubmitProposal
 where
   at is the current flow's instant
-  earlier, RequestBoundary.request (path: "/proposals/submit", proposal, requestId, session)
+  earlier, RequestBoundary.request (path: "/proposals/submit", proposal, requestId, reviewer, session)
+  Authenticating._registered (username: reviewer) has (registered: true)
+  RestructuringDocumentation._get (restructuring: proposal) and not (author: reviewer)
 then
   RestructuringDocumentation.submit (at, author: user, restructuring: proposal)
 ```
 
-### Proposals.Writing.SubmitProposal#3
+### Proposals.Writing.SubmitProposal:allowed#3
 
 Authored path: `Proposals.Writing.SubmitProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 20.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 28.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 38.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 4.
 
 ```reaction
-when RestructuringDocumentation.submit (at, author: user, restructuring: proposal), asked by Proposals.Writing.SubmitProposal#2
+when RestructuringDocumentation.submit (at, author: user, restructuring: proposal), asked by Proposals.Writing.SubmitProposal:allowed#2
 where
-  earlier, RequestBoundary.request (path: "/proposals/submit", proposal, requestId, session)
+  earlier, RequestBoundary.request (path: "/proposals/submit", proposal, requestId, reviewer, session)
+then
+  ReviewingDocumentation.open (at, proposal, reviewer)
+```
+
+### Proposals.Writing.SubmitProposal:allowed#4
+
+Authored path: `Proposals.Writing.SubmitProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 20.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 38.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 4.
+
+```reaction
+when ReviewingDocumentation.open (at, proposal, reviewer, review), asked by Proposals.Writing.SubmitProposal:allowed#3
+where
+  earlier, RequestBoundary.request (path: "/proposals/submit", proposal, requestId, reviewer, session)
 then
   RequestBoundary.respond (proposal, requestId)
+```
+
+### Proposals.Writing.SubmitProposal:missing#2
+
+Authored path: `Proposals.Writing.SubmitProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 20.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 38.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 4.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Writing.SubmitProposal
+where
+  earlier, RequestBoundary.request (path: "/proposals/submit", proposal, requestId, reviewer, session)
+  no RestructuringDocumentation._get (restructuring: proposal)
+then
+  RequestBoundary.respond (error: "PROPOSAL_NOT_FOUND", requestId)
+```
+
+### Proposals.Writing.SubmitProposal:own-reviewer#2
+
+Authored path: `Proposals.Writing.SubmitProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 20.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 38.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 4.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Writing.SubmitProposal
+where
+  earlier, RequestBoundary.request (path: "/proposals/submit", proposal, requestId, reviewer, session)
+  RestructuringDocumentation._get (restructuring: proposal) has (author: reviewer)
+then
+  RequestBoundary.respond (error: "INVALID_REVIEWER", requestId)
+```
+
+### Proposals.Writing.SubmitProposal:unknown-reviewer#2
+
+Authored path: `Proposals.Writing.SubmitProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 20.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 38.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 4.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Writing.SubmitProposal
+where
+  earlier, RequestBoundary.request (path: "/proposals/submit", proposal, requestId, reviewer, session)
+  RestructuringDocumentation._get (restructuring: proposal)
+  Authenticating._registered (username: reviewer) has (registered: false)
+then
+  RequestBoundary.respond (error: "INVALID_REVIEWER", requestId)
+```
+
+### ReviewWorkflow.ApprovalApprovesProposal
+
+Authored path: `ReviewWorkflow.ApprovalApprovesProposal`.
+- Covered by [Review Workflow](../design/compositions/ReviewWorkflow.md), line 8.
+
+```reaction
+when ReviewingDocumentation.approve (at, review)
+where
+  ReviewingDocumentation._get (review) has (proposal)
+then
+  RestructuringDocumentation.approve (at, restructuring: proposal)
+```
+
+### Reviews.Deciding.ApproveReview
+
+Authored path: `Reviews.Deciding.ApproveReview`.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 18.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 27.
+
+```reaction
+when RequestBoundary.request (path: "/reviews/approve", requestId, review, session)
+then
+  Sessioning.current (session)
+```
+
+### Reviews.Deciding.ApproveReview#2
+
+Authored path: `Reviews.Deciding.ApproveReview`.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 18.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 27.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Reviews.Deciding.ApproveReview
+where
+  at is the current flow's instant
+  earlier, RequestBoundary.request (path: "/reviews/approve", requestId, review, session)
+then
+  ReviewingDocumentation.approve (at, review, reviewer: user)
+```
+
+### Reviews.Deciding.ApproveReview#3
+
+Authored path: `Reviews.Deciding.ApproveReview`.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 18.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 27.
+
+```reaction
+when ReviewingDocumentation.approve (at, review, reviewer: user), asked by Reviews.Deciding.ApproveReview#2
+at the flow's settlement frontier
+where
+  ReviewingDocumentation._get (review) has (proposal)
+  earlier, RequestBoundary.request (path: "/reviews/approve", requestId, review, session)
+then
+  RequestBoundary.respond (proposal: former "a proposal with its current and proposed structures" with (proposal), requestId)
+```
+
+### Reviews.Reading.GetReview
+
+Authored path: `Reviews.Reading.GetReview`.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 8.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 15.
+
+```reaction
+when RequestBoundary.request (path: "/reviews/get", requestId, review, session)
+then
+  Sessioning.current (session)
+```
+
+### Reviews.Reading.GetReview:found#2
+
+Authored path: `Reviews.Reading.GetReview`.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 8.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 15.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Reviews.Reading.GetReview
+where
+  earlier, RequestBoundary.request (path: "/reviews/get", requestId, review, session)
+  ReviewingDocumentation._get (review)
+then
+  RequestBoundary.respond (requestId, review: former "a review with its proposal" with (review))
+```
+
+### Reviews.Reading.GetReview:missing#2
+
+Authored path: `Reviews.Reading.GetReview`.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 8.
+- Covered by [Reviews](../design/compositions/Reviews.md), line 15.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Reviews.Reading.GetReview
+where
+  earlier, RequestBoundary.request (path: "/reviews/get", requestId, review, session)
+  no ReviewingDocumentation._get (review)
+then
+  RequestBoundary.respond (error: "REVIEW_NOT_FOUND", requestId)
 ```
 
 ### Sessions.CurrentAccount.CurrentUser
@@ -875,4 +1125,7 @@ not listed here have no explicit input contract.
 - `/proposals/get` — requires `session`, `proposal`
 - `/proposals/list` — requires `session`, `owner`, `name`
 - `/proposals/modify` — requires `session`, `proposal`, `title`, `proposedStructure`, `rationale`
-- `/proposals/submit` — requires `session`, `proposal`
+- `/proposals/submit` — requires `session`, `proposal`, `reviewer`
+- `/proposals/under-review` — requires `session`, `owner`, `name`
+- `/reviews/approve` — requires `session`, `review`
+- `/reviews/get` — requires `session`, `review`

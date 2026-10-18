@@ -8,8 +8,9 @@
  * author, and a submitted proposal to every signed-in account.
  */
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
-import { each, form, former, no, now, view, where } from "@mit-sdg/sync-engine/language";
+import { each, form, former, is, no, now, view, where, whether } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
+import { TheReviewOf } from "./Policy.ts";
 import {
   createProposalInput,
   modifyProposalInput,
@@ -18,14 +19,19 @@ import {
   proposalOutput,
   repositoryInput,
   repositoryProposalsOutput,
+  reviewQueueOutput,
+  submitProposalInput,
 } from "./validators.ts";
 
-const { InvestigatingChanges, RestructuringDocumentation, Sessioning } = concepts;
+const { Authenticating, InvestigatingChanges, RestructuringDocumentation, ReviewingDocumentation, Sessioning } = concepts;
+
+/** Every status after a draft: pending approval or approved. */
+const SUBMITTED = ["PENDING_APPROVAL", "APPROVED"];
 
 const ProposalIsSubmitted = view(
   "(proposal) is submitted",
-  ({ proposal }, _outputs, _bindings) =>
-    where(RestructuringDocumentation._get({ restructuring: proposal }).is({ status: "PENDING_APPROVAL" })),
+  ({ proposal }, _outputs, { status }) =>
+    where(RestructuringDocumentation._get({ restructuring: proposal }).is({ status }), is.among(status, SUBMITTED)),
 ).holds();
 
 const ProposalIsDraftByUser = view(
@@ -43,7 +49,7 @@ const ProposalIsDraftByOther = view(
     ),
 ).holds();
 
-/** One proposal with both of its structures. */
+/** One proposal with both of its structures, and its review if it has one (`null` fields if not). */
 const ProposalDetail = former(
   "a proposal with its current and proposed structures",
   (
@@ -61,6 +67,9 @@ const ProposalDetail = former(
       proposedStructure,
       createdAt,
       updatedAt,
+      review,
+      reviewer,
+      decision,
     },
   ) =>
     where(
@@ -78,7 +87,11 @@ const ProposalDetail = former(
         createdAt,
         updatedAt,
       }),
+      whether(TheReviewOf({ proposal }).is({ review, reviewer, decision })),
     ).form({
+      review,
+      reviewer,
+      decision,
       proposal,
       author,
       investigation,
@@ -101,7 +114,7 @@ const ProposalDetail = former(
  */
 const RepositoryProposals = former(
   "the proposals of a repository that (user) may see",
-  ({ owner, name, user }, { proposal, author, investigation, commit, title, updatedAt }) =>
+  ({ owner, name, user }, { proposal, author, investigation, commit, title, status, updatedAt }) =>
     form({
       submitted: each(
         RestructuringDocumentation._forRepository({ owner, name }).is({
@@ -110,12 +123,13 @@ const RepositoryProposals = former(
           investigation,
           commit,
           title,
-          status: "PENDING_APPROVAL",
+          status,
           updatedAt,
         }),
       )
+        .where(is.among(status, SUBMITTED))
         .arranged(updatedAt, "descending")
-        .form({ proposal, author, investigation, commit, title, updatedAt }),
+        .form({ proposal, author, investigation, commit, title, status, updatedAt }),
       drafts: each(
         RestructuringDocumentation._forRepository({ owner, name }).is({
           restructuring: proposal,
@@ -129,6 +143,27 @@ const RepositoryProposals = former(
       )
         .arranged(updatedAt, "descending")
         .form({ proposal, investigation, commit, title, updatedAt }),
+    }),
+);
+
+/** A repository's proposals pending approval whose author named `user` as reviewer, the longest waiting first. */
+const ReviewQueue = former(
+  "the proposals of a repository waiting for (user)'s review",
+  ({ owner, name, user }, { proposal, author, investigation, commit, title, updatedAt }) =>
+    form({
+      proposals: each(
+        RestructuringDocumentation._pendingApproval({ owner, name }).is({
+          restructuring: proposal,
+          author,
+          investigation,
+          commit,
+          title,
+          updatedAt,
+        }),
+      )
+        .where(TheReviewOf({ proposal }).is({ reviewer: user }))
+        .arranged(updatedAt, "ascending")
+        .form({ proposal, author, investigation, commit, title, updatedAt }),
     }),
 );
 
@@ -188,19 +223,43 @@ const ModifyProposal = endpoint(
   },
 );
 
+/**
+ * Submits the draft and opens its review for the reviewer the author names.
+ * The reviewer must be a registered account other than the author. The
+ * concept still refuses anyone but the author, so naming a reviewer for
+ * someone else's draft submits nothing.
+ */
 const SubmitProposal = endpoint(
   "/proposals/submit",
-  ({ session, user, proposal, at }) =>
-    receive({ session, proposal })
+  ({ session, user, proposal, reviewer, at, review }) =>
+    receive({ session, proposal, reviewer })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
-        where(now(at))
+        where(
+          Authenticating._registered({ username: reviewer }).is({ registered: true }),
+          RestructuringDocumentation._get({ restructuring: proposal }).is.not({ author: reviewer }),
+          now(at),
+        )
           .then(RestructuringDocumentation.submit({ restructuring: proposal, author: user, at }).responds({}))
-          .then(respond({ proposal })),
+          .then(ReviewingDocumentation.open({ proposal, reviewer, at }).responds({ review }))
+          .then(respond({ proposal }))
+          .named("allowed"),
+        where(RestructuringDocumentation._get({ restructuring: proposal }).is({ author: reviewer }))
+          .then(respond({ error: "INVALID_REVIEWER" }))
+          .named("own-reviewer"),
+        where(
+          RestructuringDocumentation._get({ restructuring: proposal }),
+          Authenticating._registered({ username: reviewer }).is({ registered: false }),
+        )
+          .then(respond({ error: "INVALID_REVIEWER" }))
+          .named("unknown-reviewer"),
+        where(no(RestructuringDocumentation._get({ restructuring: proposal })))
+          .then(respond({ error: "PROPOSAL_NOT_FOUND" }))
+          .named("missing"),
       ),
   {
-    input: { required: ["session", "proposal"] },
-    validators: { input: proposalIdInput, output: proposalIdentityOutput },
+    input: { required: ["session", "proposal", "reviewer"] },
+    validators: { input: submitProposalInput, output: proposalIdentityOutput },
   },
 );
 
@@ -255,13 +314,29 @@ const ListProposals = endpoint(
   },
 );
 
+const ListProposalsUnderReview = endpoint(
+  "/proposals/under-review",
+  ({ session, user, owner, name }) =>
+    receive({ session, owner, name })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(respond({ repository: ReviewQueue({ owner, name, user }) })),
+  {
+    input: { required: ["session", "owner", "name"] },
+    validators: { input: repositoryInput, output: reviewQueueOutput },
+  },
+);
+
+export { ProposalDetail };
+
 export const composition = {
   Writing: { CreateProposal, ModifyProposal, SubmitProposal, DiscardProposal },
   Reading: {
     GetProposal,
     ListProposals,
+    ListProposalsUnderReview,
     ProposalDetail,
     RepositoryProposals,
+    ReviewQueue,
     ProposalIsSubmitted,
     ProposalIsDraftByUser,
     ProposalIsDraftByOther,
