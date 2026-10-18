@@ -60,3 +60,63 @@ export const issuedSessionOutput = validator(
     value.expiresAt instanceof Date,
   "response must contain account, session, and Date expiry",
 );
+
+/** A non-empty string no longer than `max`. */
+function text(value: unknown, max: number): boolean {
+  return typeof value === "string" && value.length > 0 && value.length <= max;
+}
+
+/** A repository's owner and name, as GitHub limits them. */
+function hasRepository(value: Record<string, unknown>): boolean {
+  return text(value.owner, 100) && text(value.name, 100);
+}
+
+export const openInvestigationInput = validator(
+  (value) => hasOnly(value, ["session", "owner", "name", "commit"]) && hasSession(value) && hasRepository(value) && text(value.commit, 64),
+  "session, owner, name, and commit must be bounded strings",
+);
+
+export const investigationIdInput = validator(
+  (value) => hasOnly(value, ["session", "investigation"]) && hasSession(value) && text(value.investigation, 128),
+  "session and investigation must be bounded strings",
+);
+
+export const repositoryInput = validator(
+  (value) => hasOnly(value, ["session", "owner", "name"]) && hasSession(value) && hasRepository(value),
+  "session, owner, and name must be bounded strings",
+);
+
+export const openedInvestigationOutput = validator(
+  (value) => hasOnly(value, ["investigation"]) && typeof value.investigation === "string",
+  "response must contain an investigation identity",
+);
+
+export const investigationOutput = validator(
+  (value) =>
+    hasOnly(value, ["investigation", "owner", "name", "commit", "investigator", "openedAt"]) &&
+    ["investigation", "owner", "name", "commit", "investigator"].every((key) => typeof value[key] === "string") &&
+    value.openedAt instanceof Date,
+  "response must contain an investigation's repository, commit, investigator, and Date opened",
+);
+
+export const repositoryInvestigationsOutput = validator(
+  (value) => {
+    const repository = value.repository;
+    return (
+      hasOnly(value, ["repository"]) &&
+      record(repository) &&
+      hasOnly(repository, ["investigations"]) &&
+      Array.isArray(repository.investigations) &&
+      repository.investigations.every(
+        (item) =>
+          record(item) &&
+          hasOnly(item, ["investigation", "commit", "investigator", "openedAt"]) &&
+          typeof item.investigation === "string" &&
+          typeof item.commit === "string" &&
+          typeof item.investigator === "string" &&
+          item.openedAt instanceof Date,
+      )
+    );
+  },
+  "response must contain the repository's investigations",
+);

@@ -25,6 +25,8 @@ export const publicErrors = {
   // InvestigatingChanges
   INVALID_REPOSITORY: "INVALID_REQUEST",
   INVALID_COMMIT: "INVALID_REQUEST",
+  // Investigations composition
+  INVESTIGATION_NOT_FOUND: "NOT_FOUND",
 } as const satisfies Record<string, HttpPublicErrorCategory>;
 
 /** Every endpoint and route is served under this path, e.g. `/api/auth/register`. */

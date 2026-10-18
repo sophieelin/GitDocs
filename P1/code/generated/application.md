@@ -70,6 +70,28 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 - `Sessioning` — instance of `Sessioning` — [GitDocs Application Types](../design/types.md), line 13.
   - `Subject` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 14.
 
+## Formers
+
+_Formers name result shapes evaluated when asked. The source former owns_
+_the authored explanation; this section records the generated shape._
+
+### the investigations of a repository
+
+Authored path: `Investigations.Reading.RepositoryInvestigations`.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 27.
+
+```former
+Former "the investigations of a repository" — inputs (owner, name); bindings (investigation, commit, investigator, openedAt); promises exactly one record — forms:
+  a record of
+    investigations: each InvestigatingChanges._forRepository (name, owner) has (commit, investigation, investigator, openedAt)
+      arranged by openedAt, descending
+      form a record of
+        commit
+        investigation
+        investigator
+        openedAt
+```
+
 ## Reactions
 
 ### DeliverFaultToAsker
@@ -90,6 +112,115 @@ where
   earlier, RequestBoundary.request (requestId)
 then
   RequestBoundary.respond (error: message, requestId)
+```
+
+### Investigations.Opening.OpenInvestigation
+
+Authored path: `Investigations.Opening.OpenInvestigation`.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 7.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 14.
+
+```reaction
+when RequestBoundary.request (commit, name, owner, path: "/investigations/open", requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### Investigations.Opening.OpenInvestigation#2
+
+Authored path: `Investigations.Opening.OpenInvestigation`.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 7.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 14.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Investigations.Opening.OpenInvestigation
+where
+  at is the current flow's instant
+  earlier, RequestBoundary.request (commit, name, owner, path: "/investigations/open", requestId, session)
+then
+  InvestigatingChanges.open (at, commit, investigator: user, name, owner)
+```
+
+### Investigations.Opening.OpenInvestigation#3
+
+Authored path: `Investigations.Opening.OpenInvestigation`.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 7.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 14.
+
+```reaction
+when InvestigatingChanges.open (at, commit, investigator: user, name, owner, investigation), asked by Investigations.Opening.OpenInvestigation#2
+where
+  earlier, RequestBoundary.request (commit, name, owner, path: "/investigations/open", requestId, session)
+then
+  RequestBoundary.respond (investigation, requestId)
+```
+
+### Investigations.Reading.GetInvestigation
+
+Authored path: `Investigations.Reading.GetInvestigation`.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 17.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 23.
+
+```reaction
+when RequestBoundary.request (investigation, path: "/investigations/get", requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### Investigations.Reading.GetInvestigation:found#2
+
+Authored path: `Investigations.Reading.GetInvestigation`.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 17.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 23.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Investigations.Reading.GetInvestigation
+where
+  earlier, RequestBoundary.request (investigation, path: "/investigations/get", requestId, session)
+  InvestigatingChanges._get (investigation) has (commit, investigator, name, openedAt, owner)
+then
+  RequestBoundary.respond (commit, investigation, investigator, name, openedAt, owner, requestId)
+```
+
+### Investigations.Reading.GetInvestigation:missing#2
+
+Authored path: `Investigations.Reading.GetInvestigation`.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 17.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 23.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Investigations.Reading.GetInvestigation
+where
+  earlier, RequestBoundary.request (investigation, path: "/investigations/get", requestId, session)
+  no InvestigatingChanges._get (investigation)
+then
+  RequestBoundary.respond (error: "INVESTIGATION_NOT_FOUND", requestId)
+```
+
+### Investigations.Reading.ListInvestigations
+
+Authored path: `Investigations.Reading.ListInvestigations`.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 26.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 33.
+
+```reaction
+when RequestBoundary.request (name, owner, path: "/investigations/list", requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### Investigations.Reading.ListInvestigations#2
+
+Authored path: `Investigations.Reading.ListInvestigations`.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 26.
+- Covered by [Investigations](../design/compositions/Investigations.md), line 33.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Investigations.Reading.ListInvestigations
+where
+  earlier, RequestBoundary.request (name, owner, path: "/investigations/list", requestId, session)
+then
+  RequestBoundary.respond (repository: former "the investigations of a repository" with (name, owner), requestId)
 ```
 
 ### Sessions.CurrentAccount.CurrentUser
@@ -231,3 +362,6 @@ not listed here have no explicit input contract.
 - `/auth/register` — requires `username`, `password`
 - `/auth/sign-in` — requires `username`, `password`
 - `/auth/sign-out` — requires `session`
+- `/investigations/get` — requires `session`, `investigation`
+- `/investigations/list` — requires `session`, `owner`, `name`
+- `/investigations/open` — requires `session`, `owner`, `name`, `commit`
