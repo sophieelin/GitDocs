@@ -76,9 +76,14 @@ Create the client with `createHttpClient<...>` from `@mit-sdg/sync-engine-http/c
 
 **Diff:** `web/src/errors.ts`, `web/src/components/ErrorBanner.vue`
 
-Map each error code from `plan-endpoints.md` to a sentence, such as `NOT_DRAFT` → "This proposal was already submitted. Ask for changes to edit it again." Unknown codes show the code itself.
+The API sends only an error category (`INVALID_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, or `INTERNAL_ERROR`), never the concept's own code (see `plan-endpoints.md`, working rules).
 
-**Verify:** Trigger `INVALID_CREDENTIALS` and see the message.
+- Give each call site its own sentence per category, because the same category means different things on different screens. For example, `CONFLICT` on register is "That username is already taken", and on submit it is "This proposal was already submitted. Ask for changes to edit it again."
+- Where one category covers several cases, check the input before sending it. On register, show "A username must be 3 to 32 letters, numbers, underscores, or hyphens" and "A password must be 8 to 128 characters" before calling the API, so a 400 is rare.
+- `UNAUTHORIZED` from any call other than sign-in means the session has ended: clear it and go to sign-in.
+- `INTERNAL_ERROR` and anything unexpected show a general "Something went wrong. Try again." with the status.
+
+**Verify:** Sign in with a wrong password and see "Wrong username or password." Register a username that is already taken and see "That username is already taken."
 
 # Phase V3: Sign-in
 
@@ -99,7 +104,7 @@ One form with "Sign in" and "Create account" buttons, calling `/auth/sign-in` or
 - An input for `owner/name`, with a note that only public repositories work.
 - Lists connected repositories from `/repositories/list`, with a disconnect button.
 
-**Verify:** Connect a real public repository. A misspelled name shows `REPOSITORY_NOT_FOUND`.
+**Verify:** Connect a real public repository. A misspelled name shows "Repository not found. Only public repositories work." (the API's `NOT_FOUND`).
 
 ## V4.2 Commit selection
 

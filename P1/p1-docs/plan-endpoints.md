@@ -13,7 +13,8 @@ This plan goes with `plan.md`, which decides when each step happens: E1–E2 in 
 
 - One endpoint group (one composition file) per diff. Within it, add endpoints one at a time if the diff gets large.
 - Every endpoint except register and sign-in receives a `session` and resolves the user with `Sessioning.current({ session })`. A request never names its own user.
-- Every concept refusal and policy failure becomes a named `{ "error": "CODE" }` response. Nothing fails silently.
+- Every concept refusal and policy failure is sent as an error **category**, never as its own code: the HTTP adapter's error body is only `{ "error": "CATEGORY" }`, with the matching status (see E1.1). Each refusal code must be listed in `publicErrors` in `src/http.ts`; a missing one is sent as `INTERNAL_ERROR` (500). Nothing fails silently.
+- The **Errors** columns below name the concepts' refusal codes. The client sees only their categories, so the frontend shows one message per category on each screen, and checks input itself where one category covers several cases (decision of 2026-10-17).
 - Every endpoint has input and output validators in `src/compositions/validators.ts`.
 - A former is only for a read that combines several sources or needs a specific shape. An endpoint that returns one action's result responds with it directly.
 - Each endpoint is tested by calling the HTTP handler in-process, and checked by hand with `curl`.
@@ -27,15 +28,17 @@ Do this phase after backend step 2.5 and before step 3.8.
 **Diff:** `src/http.ts`
 
 - Serve every endpoint under `/api`, so the Vue frontend (`plan-vue.md`) and the API can share an origin.
-- Map public error codes to HTTP statuses:
+- List every refusal code in `publicErrors`, with the category the client receives. Use this guide when adding a concept's codes:
 
-| Code pattern | Status |
-| ------------ | ------ |
-| `SESSION_*`, `INVALID_CREDENTIALS` | 401 |
-| `NOT_*` (such as `NOT_PROPOSAL_AUTHOR`, `NOT_REVIEWER`), `CANNOT_*` | 403 |
-| `*_NOT_FOUND` | 404 |
-| Status-transition and duplicate refusals (such as `ALREADY_SUBMITTED`, `REVIEW_EXISTS`) | 409 |
-| Validation failures | 400 |
+| Kind of refusal | Category | Status |
+| --------------- | -------- | ------ |
+| Invalid input (such as `INVALID_USERNAME`, `WEAK_PASSWORD`) | `INVALID_REQUEST` | 400 |
+| Not signed in or wrong credentials (such as `UNKNOWN_SESSION`, `INVALID_CREDENTIALS`) | `UNAUTHORIZED` | 401 |
+| Signed in but not allowed (such as `NOT_PROPOSAL_AUTHOR`, `NOT_REVIEWER`, `CANNOT_*`) | `FORBIDDEN` | 403 |
+| Missing (such as `*_NOT_FOUND`) | `NOT_FOUND` | 404 |
+| Duplicate or wrong status (such as `USERNAME_TAKEN`, `ALREADY_SUBMITTED`, `REVIEW_EXISTS`) | `CONFLICT` | 409 |
+
+There is no category for "GitHub is unavailable", so `GITHUB_UNAVAILABLE` (E3) is sent as `INTERNAL_ERROR` (500).
 
 **Verify:** `bun run check`, and a request to an unknown path returns the handler's 404.
 
@@ -64,10 +67,10 @@ Follow the message-board example's `Sessions` composition.
 
 | Endpoint | Input | Output | Errors |
 | -------- | ----- | ------ | ------ |
-| `/auth/register` | username, password | account, session, expiresAt | `USERNAME_TAKEN` |
-| `/auth/sign-in` | username, password | account, session, expiresAt | `INVALID_CREDENTIALS` |
-| `/auth/current` | session | username | `SESSION_NOT_ACTIVE` |
-| `/auth/sign-out` | session | (empty) | `SESSION_NOT_ACTIVE` |
+| `/auth/register` | username, password | account, session, expiresAt | `INVALID_USERNAME`, `WEAK_PASSWORD` → 400; `USERNAME_TAKEN` → 409 |
+| `/auth/sign-in` | username, password | account, session, expiresAt | `INVALID_CREDENTIALS` → 401 |
+| `/auth/current` | session | username | `UNKNOWN_SESSION` → 401 |
+| `/auth/sign-out` | session | signedOut | `UNKNOWN_SESSION` → 401 |
 
 `/auth/current` is added to the backend plan's list, because the frontend needs it to restore a signed-in user after a page reload.
 
