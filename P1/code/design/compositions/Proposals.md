@@ -1,0 +1,48 @@
+# Proposals
+
+A proposal argues for a different documentation structure in response to a
+submitted investigation. Each request is resolved through its active session
+first, so the author is always the signed-in account.
+
+A current account may [start a proposal from an investigation](reaction:Proposals.Writing.CreateProposal)
+with a title and the documentation structure it saw at the investigated commit.
+The repository and commit are read from the investigation, so a caller cannot
+name a different commit; an investigation that does not exist answers
+`INVESTIGATION_NOT_FOUND`. The proposal starts as a draft whose proposed
+structure equals the current one.
+
+```endpoints
+Proposals.Writing.CreateProposal at /proposals/create
+```
+
+The author may [save the draft](reaction:Proposals.Writing.ModifyProposal) with
+a new title, proposed structure, and rationale,
+[submit it](reaction:Proposals.Writing.SubmitProposal) once it has a rationale,
+or [discard it](reaction:Proposals.Writing.DiscardProposal). These need no view:
+RestructuringDocumentation itself refuses anyone but the author
+(`NOT_PROPOSAL_AUTHOR`) and anything but a draft (`NOT_DRAFT`), so a direct call
+cannot skip the check. Each answers the proposal's identity.
+
+```endpoints
+Proposals.Writing.ModifyProposal at /proposals/modify
+Proposals.Writing.SubmitProposal at /proposals/submit
+Proposals.Writing.DiscardProposal at /proposals/discard
+```
+
+A current account may [read a proposal](reaction:Proposals.Reading.GetProposal).
+The answer is [the proposal with its current and proposed structures](former:Proposals.Reading.ProposalDetail):
+its author, investigation, repository, commit, title, rationale, status, both
+structures, and when it was created and last changed. Who may read it follows
+three views, one per branch, because a condition cannot say "or":
+
+- when [the proposal is submitted](view:Proposals.Reading.ProposalIsSubmitted),
+  any current account reads it;
+- when [it is a draft by the requester](view:Proposals.Reading.ProposalIsDraftByUser),
+  its author reads it;
+- when [it is a draft by someone else](view:Proposals.Reading.ProposalIsDraftByOther),
+  the answer is `PROPOSAL_NOT_FOUND`, the same as for a proposal that does not
+  exist, so others cannot tell that the draft exists.
+
+```endpoints
+Proposals.Reading.GetProposal at /proposals/get
+```

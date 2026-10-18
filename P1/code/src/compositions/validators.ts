@@ -164,3 +164,79 @@ function summaries(key: string, fields: readonly string[]) {
 
 export const repositoryInvestigationsOutput = summaries("repository", ["investigation", "commit", "investigator"]);
 export const commitInvestigationsOutput = summaries("commit", ["investigation", "investigator"]);
+
+/**
+ * The concept checks a structure's shape and size; this only requires an object,
+ * as a documentation tree's root folder is.
+ */
+function hasStructure(value: unknown): boolean {
+  return record(value);
+}
+
+export const createProposalInput = validator(
+  (value) =>
+    hasOnly(value, ["session", "investigation", "title", "currentStructure"]) &&
+    hasSession(value) &&
+    text(value.investigation, 128) &&
+    typeof value.title === "string" &&
+    value.title.length <= 200 &&
+    hasStructure(value.currentStructure),
+  "session and investigation must be bounded strings, title a string, and currentStructure a documentation folder",
+);
+
+export const modifyProposalInput = validator(
+  (value) =>
+    hasOnly(value, ["session", "proposal", "title", "proposedStructure", "rationale"]) &&
+    hasSession(value) &&
+    text(value.proposal, 128) &&
+    typeof value.title === "string" &&
+    value.title.length <= 200 &&
+    hasStructure(value.proposedStructure) &&
+    typeof value.rationale === "string" &&
+    value.rationale.length <= 10_000,
+  "session and proposal must be bounded strings, title and rationale strings, and proposedStructure a documentation folder",
+);
+
+export const proposalIdInput = validator(
+  (value) => hasOnly(value, ["session", "proposal"]) && hasSession(value) && text(value.proposal, 128),
+  "session and proposal must be bounded strings",
+);
+
+/** Every proposal change answers the proposal's identity. */
+export const proposalIdentityOutput = validator(
+  (value) => hasOnly(value, ["proposal"]) && typeof value.proposal === "string",
+  "response must contain a proposal identity",
+);
+
+export const proposalOutput = validator(
+  (value) => {
+    const detail = value.proposal;
+    return (
+      hasOnly(value, ["proposal"]) &&
+      record(detail) &&
+      hasOnly(detail, [
+        "proposal",
+        "author",
+        "investigation",
+        "owner",
+        "name",
+        "commit",
+        "title",
+        "rationale",
+        "status",
+        "currentStructure",
+        "proposedStructure",
+        "createdAt",
+        "updatedAt",
+      ]) &&
+      ["proposal", "author", "investigation", "owner", "name", "commit", "title", "rationale", "status"].every(
+        (key) => typeof detail[key] === "string",
+      ) &&
+      hasStructure(detail.currentStructure) &&
+      hasStructure(detail.proposedStructure) &&
+      detail.createdAt instanceof Date &&
+      detail.updatedAt instanceof Date
+    );
+  },
+  "response must contain a proposal with both of its structures",
+);

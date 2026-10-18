@@ -6,6 +6,7 @@ import {
   NotDraft,
   NotProposalAuthor,
   ProposalNotFound,
+  RationaleMissing,
   RestructuringDocumentationConcept,
 } from "../../src/concepts/RestructuringDocumentation.ts";
 import type { DocumentationFolder } from "../../src/github/documentationTree.ts";
@@ -165,17 +166,57 @@ describe("RestructuringDocumentation", () => {
     expect(saved).toMatchObject({ proposedStructure: current, updatedAt: morning });
   });
 
-  test("modify refuses a proposal that is no longer a draft", async () => {
+  test("its principle: edit, submit with a rationale, and the proposal is pending approval and fixed", async () => {
     const proposals = newConcept();
     await proposals.create({ author: "ari", ...valid, at: morning });
-    // Set directly until submit exists (plan step 5.4).
-    await testDb.db
-      .collection("RestructuringDocumentation.restructurings")
-      .updateOne({ _id: "p-1" as never }, { $set: { status: "PENDING_APPROVAL" } });
+    const draft = { restructuring: "p-1", author: "ari", title: valid.title, proposedStructure: moved };
+    await proposals.modify({ ...draft, rationale: "", at: morning });
 
-    await expect(
-      proposals.modify({ restructuring: "p-1", author: "ari", title: "Again", proposedStructure: moved, rationale: "", at: noon }),
-    ).rejects.toThrow(NotDraft);
+    await expect(proposals.submit({ restructuring: "p-1", author: "ari", at: noon })).rejects.toThrow(RationaleMissing);
+    await proposals.modify({ ...draft, rationale: "One place to look.", at: morning });
+    await expect(proposals.submit({ restructuring: "p-1", author: "bob", at: noon })).rejects.toThrow(NotProposalAuthor);
+
+    expect(await proposals.submit({ restructuring: "p-1", author: "ari", at: noon })).toEqual({});
+    const [submitted] = await proposals._get({ restructuring: "p-1" });
+    expect(submitted).toMatchObject({ status: "PENDING_APPROVAL", rationale: "One place to look.", proposedStructure: moved, updatedAt: noon });
+
+    await expect(proposals.submit({ restructuring: "p-1", author: "ari", at: noon })).rejects.toThrow(NotDraft);
+    await expect(proposals.modify({ ...draft, title: "Again", rationale: "Changed", at: noon })).rejects.toThrow(NotDraft);
+    await expect(proposals.modify({ ...draft, author: "bob", rationale: "Changed", at: noon })).rejects.toThrow(NotProposalAuthor);
+    await expect(proposals.discard({ restructuring: "p-1", author: "ari" })).rejects.toThrow(NotDraft);
+    expect(await proposals._get({ restructuring: "p-1" })).toEqual([submitted!]);
+  });
+
+  test("two submits at once: one succeeds and the other is refused", async () => {
+    const proposals = newConcept();
+    await proposals.create({ author: "ari", ...valid, at: morning });
+    await proposals.modify({ restructuring: "p-1", author: "ari", title: valid.title, proposedStructure: moved, rationale: "Why", at: morning });
+
+    const results = await Promise.allSettled([
+      proposals.submit({ restructuring: "p-1", author: "ari", at: noon }),
+      proposals.submit({ restructuring: "p-1", author: "ari", at: noon }),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled").length).toBe(1);
+    const refused = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(refused.reason).toBeInstanceOf(NotDraft);
+  });
+
+  test("submit refuses a missing proposal", async () => {
+    await expect(newConcept().submit({ restructuring: "missing", author: "ari", at: noon })).rejects.toThrow(ProposalNotFound);
+  });
+
+  test("discard removes the author's draft, and only that", async () => {
+    const proposals = newConcept(ids("p-1", "p-2"));
+    await proposals.create({ author: "ari", ...valid, at: morning });
+    await proposals.create({ author: "ari", ...valid, title: "Another idea", at: morning });
+
+    await expect(proposals.discard({ restructuring: "p-1", author: "bob" })).rejects.toThrow(NotProposalAuthor);
+    await expect(proposals.discard({ restructuring: "missing", author: "ari" })).rejects.toThrow(ProposalNotFound);
+    expect(await proposals.discard({ restructuring: "p-1", author: "ari" })).toEqual({});
+
+    expect(await proposals._get({ restructuring: "p-1" })).toEqual([]);
+    expect((await proposals._get({ restructuring: "p-2" })).length).toBe(1);
+    await expect(proposals.discard({ restructuring: "p-1", author: "ari" })).rejects.toThrow(ProposalNotFound);
   });
 
   test("an unknown proposal answers no rows", async () => {

@@ -52,6 +52,8 @@ Removed on 2026-10-17, together with the ConnectingRepositories concept it read 
 
 ## R3.1 View: the user owns the proposal
 
+**Replaced** by `plan.md` step 5.5: the concept refuses edits by anyone but the author, and reading uses three views (submitted, the user's own draft, someone else's draft). The original plan is kept below for reference.
+
 **Belongs to:** backend phase 5, after step 5.6 (proposal retrieval) and before step 5.9 (proposal endpoints).
 
 **Diff:** `src/compositions/Policy.ts`, `design/compositions/Policy.md`

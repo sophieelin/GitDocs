@@ -113,10 +113,70 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 - `Sessioning` — instance of `Sessioning` — [GitDocs Application Types](../design/types.md), line 14.
   - `Subject` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 15.
 
+## Views
+
+_Views name reusable conditions. Multiple `where` blocks are alternatives._
+
+### (proposal) is a draft by (user)
+
+Authored path: `Proposals.Reading.ProposalIsDraftByUser`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 40.
+
+```view
+(proposal) is a draft by (user) — inputs (proposal, user); outputs (); bindings ()
+  where RestructuringDocumentation._get (restructuring: proposal) has (author: user, status: "DRAFT")
+```
+
+### (proposal) is a draft by someone other than (user)
+
+Authored path: `Proposals.Reading.ProposalIsDraftByOther`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 42.
+
+```view
+(proposal) is a draft by someone other than (user) — inputs (proposal, user); outputs (); bindings ()
+  where
+    RestructuringDocumentation._get (restructuring: proposal) has (status: "DRAFT")
+    RestructuringDocumentation._get (restructuring: proposal) and not (author: user)
+```
+
+### (proposal) is submitted
+
+Authored path: `Proposals.Reading.ProposalIsSubmitted`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 38.
+
+```view
+(proposal) is submitted — inputs (proposal); outputs (); bindings ()
+  where RestructuringDocumentation._get (restructuring: proposal) has (status: "PENDING_APPROVAL")
+```
+
 ## Formers
 
 _Formers name result shapes evaluated when asked. The source former owns_
 _the authored explanation; this section records the generated shape._
+
+### a proposal with its current and proposed structures
+
+Authored path: `Proposals.Reading.ProposalDetail`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 33.
+
+```former
+Former "a proposal with its current and proposed structures" — inputs (proposal); bindings (author, investigation, owner, name, commit, title, rationale, status, currentStructure, proposedStructure, createdAt, updatedAt); promises exactly one record — forms:
+  a record of
+    where RestructuringDocumentation._get (restructuring: proposal) has (author, commit, createdAt, currentStructure, investigation, name, owner, proposedStructure, rationale, status, title, updatedAt)
+    author
+    commit
+    createdAt
+    currentStructure
+    investigation
+    name
+    owner
+    proposal
+    proposedStructure
+    rationale
+    status
+    title
+    updatedAt
+```
 
 ### an investigation with its affected documentation and evidence
 
@@ -335,6 +395,257 @@ then
   RequestBoundary.respond (investigation, requestId)
 ```
 
+### Proposals.Reading.GetProposal
+
+Authored path: `Proposals.Reading.GetProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 32.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+
+```reaction
+when RequestBoundary.request (path: "/proposals/get", proposal, requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### Proposals.Reading.GetProposal:missing#2
+
+Authored path: `Proposals.Reading.GetProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 32.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
+where
+  earlier, RequestBoundary.request (path: "/proposals/get", proposal, requestId, session)
+  no RestructuringDocumentation._get (restructuring: proposal)
+then
+  RequestBoundary.respond (error: "PROPOSAL_NOT_FOUND", requestId)
+```
+
+### Proposals.Reading.GetProposal:others-draft#2
+
+Authored path: `Proposals.Reading.GetProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 32.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
+where
+  earlier, RequestBoundary.request (path: "/proposals/get", proposal, requestId, session)
+  view "(proposal) is a draft by someone other than (user)" with (proposal, user)
+then
+  RequestBoundary.respond (error: "PROPOSAL_NOT_FOUND", requestId)
+```
+
+### Proposals.Reading.GetProposal:own-draft#2
+
+Authored path: `Proposals.Reading.GetProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 32.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
+where
+  earlier, RequestBoundary.request (path: "/proposals/get", proposal, requestId, session)
+  view "(proposal) is a draft by (user)" with (proposal, user)
+then
+  RequestBoundary.respond (proposal: former "a proposal with its current and proposed structures" with (proposal), requestId)
+```
+
+### Proposals.Reading.GetProposal:submitted#2
+
+Authored path: `Proposals.Reading.GetProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 32.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
+where
+  earlier, RequestBoundary.request (path: "/proposals/get", proposal, requestId, session)
+  view "(proposal) is submitted" with (proposal)
+then
+  RequestBoundary.respond (proposal: former "a proposal with its current and proposed structures" with (proposal), requestId)
+```
+
+### Proposals.Writing.CreateProposal
+
+Authored path: `Proposals.Writing.CreateProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 7.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 15.
+
+```reaction
+when RequestBoundary.request (currentStructure, investigation, path: "/proposals/create", requestId, session, title)
+then
+  Sessioning.current (session)
+```
+
+### Proposals.Writing.CreateProposal:found#2
+
+Authored path: `Proposals.Writing.CreateProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 7.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 15.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Writing.CreateProposal
+where
+  at is the current flow's instant
+  earlier, RequestBoundary.request (currentStructure, investigation, path: "/proposals/create", requestId, session, title)
+  InvestigatingChanges._get (investigation) has (commit, name, owner)
+then
+  RestructuringDocumentation.create (at, author: user, commit, currentStructure, investigation, name, owner, title)
+```
+
+### Proposals.Writing.CreateProposal:found#3
+
+Authored path: `Proposals.Writing.CreateProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 7.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 15.
+
+```reaction
+when RestructuringDocumentation.create (at, author: user, commit, currentStructure, investigation, name, owner, title, restructuring: proposal), asked by Proposals.Writing.CreateProposal:found#2
+where
+  earlier, RequestBoundary.request (currentStructure, investigation, path: "/proposals/create", requestId, session, title)
+then
+  RequestBoundary.respond (proposal, requestId)
+```
+
+### Proposals.Writing.CreateProposal:missing#2
+
+Authored path: `Proposals.Writing.CreateProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 7.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 15.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Writing.CreateProposal
+where
+  earlier, RequestBoundary.request (currentStructure, investigation, path: "/proposals/create", requestId, session, title)
+  no InvestigatingChanges._get (investigation)
+then
+  RequestBoundary.respond (error: "INVESTIGATION_NOT_FOUND", requestId)
+```
+
+### Proposals.Writing.DiscardProposal
+
+Authored path: `Proposals.Writing.DiscardProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 21.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 29.
+
+```reaction
+when RequestBoundary.request (path: "/proposals/discard", proposal, requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### Proposals.Writing.DiscardProposal#2
+
+Authored path: `Proposals.Writing.DiscardProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 21.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 29.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Writing.DiscardProposal
+where
+  earlier, RequestBoundary.request (path: "/proposals/discard", proposal, requestId, session)
+then
+  RestructuringDocumentation.discard (author: user, restructuring: proposal)
+```
+
+### Proposals.Writing.DiscardProposal#3
+
+Authored path: `Proposals.Writing.DiscardProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 21.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 29.
+
+```reaction
+when RestructuringDocumentation.discard (author: user, restructuring: proposal), asked by Proposals.Writing.DiscardProposal#2
+where
+  earlier, RequestBoundary.request (path: "/proposals/discard", proposal, requestId, session)
+then
+  RequestBoundary.respond (proposal, requestId)
+```
+
+### Proposals.Writing.ModifyProposal
+
+Authored path: `Proposals.Writing.ModifyProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 18.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 27.
+
+```reaction
+when RequestBoundary.request (path: "/proposals/modify", proposal, proposedStructure, rationale, requestId, session, title)
+then
+  Sessioning.current (session)
+```
+
+### Proposals.Writing.ModifyProposal#2
+
+Authored path: `Proposals.Writing.ModifyProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 18.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 27.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Writing.ModifyProposal
+where
+  at is the current flow's instant
+  earlier, RequestBoundary.request (path: "/proposals/modify", proposal, proposedStructure, rationale, requestId, session, title)
+then
+  RestructuringDocumentation.modify (at, author: user, proposedStructure, rationale, restructuring: proposal, title)
+```
+
+### Proposals.Writing.ModifyProposal#3
+
+Authored path: `Proposals.Writing.ModifyProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 18.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 27.
+
+```reaction
+when RestructuringDocumentation.modify (at, author: user, proposedStructure, rationale, restructuring: proposal, title), asked by Proposals.Writing.ModifyProposal#2
+where
+  earlier, RequestBoundary.request (path: "/proposals/modify", proposal, proposedStructure, rationale, requestId, session, title)
+then
+  RequestBoundary.respond (proposal, requestId)
+```
+
+### Proposals.Writing.SubmitProposal
+
+Authored path: `Proposals.Writing.SubmitProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 20.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 28.
+
+```reaction
+when RequestBoundary.request (path: "/proposals/submit", proposal, requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### Proposals.Writing.SubmitProposal#2
+
+Authored path: `Proposals.Writing.SubmitProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 20.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 28.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Writing.SubmitProposal
+where
+  at is the current flow's instant
+  earlier, RequestBoundary.request (path: "/proposals/submit", proposal, requestId, session)
+then
+  RestructuringDocumentation.submit (at, author: user, restructuring: proposal)
+```
+
+### Proposals.Writing.SubmitProposal#3
+
+Authored path: `Proposals.Writing.SubmitProposal`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 20.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 28.
+
+```reaction
+when RestructuringDocumentation.submit (at, author: user, restructuring: proposal), asked by Proposals.Writing.SubmitProposal#2
+where
+  earlier, RequestBoundary.request (path: "/proposals/submit", proposal, requestId, session)
+then
+  RequestBoundary.respond (proposal, requestId)
+```
+
 ### Sessions.CurrentAccount.CurrentUser
 
 Authored path: `Sessions.CurrentAccount.CurrentUser`.
@@ -478,3 +789,8 @@ not listed here have no explicit input contract.
 - `/investigations/get` — requires `session`, `investigation`
 - `/investigations/list` — requires `session`, `owner`, `name`
 - `/investigations/submit` — requires `session`, `owner`, `name`, `commit`, `title`, `affected`, `evidence`
+- `/proposals/create` — requires `session`, `investigation`, `title`, `currentStructure`
+- `/proposals/discard` — requires `session`, `proposal`
+- `/proposals/get` — requires `session`, `proposal`
+- `/proposals/modify` — requires `session`, `proposal`, `title`, `proposedStructure`, `rationale`
+- `/proposals/submit` — requires `session`, `proposal`

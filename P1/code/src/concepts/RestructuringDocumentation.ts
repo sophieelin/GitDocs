@@ -161,12 +161,23 @@ export class RestructuringDocumentationConcept {
     return {};
   }
 
-  async submit(_input: { restructuring: string; author: string; at: Date }): Promise<Record<string, never>> {
-    throw new Error("TODO: RestructuringDocumentation.submit (plan step 5.4)");
+  async submit({ restructuring, author, at }: { restructuring: string; author: string; at: Date }): Promise<Record<string, never>> {
+    // One conditional update, so only one of two simultaneous submits can succeed.
+    const { matchedCount } = await this.restructurings.updateOne(
+      { _id: restructuring, author, status: "DRAFT", rationale: { $ne: "" } },
+      { $set: { status: "PENDING_APPROVAL", updatedAt: at } },
+    );
+    if (matchedCount === 0) {
+      const draft = await this.#authorsDraft(restructuring, author);
+      if (draft.rationale === "") throw new RationaleMissing("Explain the proposed structure before submitting it.");
+    }
+    return {};
   }
 
-  async discard(_input: { restructuring: string; author: string }): Promise<Record<string, never>> {
-    throw new Error("TODO: RestructuringDocumentation.discard (plan step 5.4)");
+  async discard({ restructuring, author }: { restructuring: string; author: string }): Promise<Record<string, never>> {
+    const { deletedCount } = await this.restructurings.deleteOne({ _id: restructuring, author, status: "DRAFT" });
+    if (deletedCount === 0) await this.#authorsDraft(restructuring, author);
+    return {};
   }
 
   async _get({ restructuring }: { restructuring: string }): Promise<

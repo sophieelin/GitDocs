@@ -447,19 +447,31 @@ The repository is stored as owner and name strings, as in InvestigatingChanges, 
 
 **Diff:** `src/concepts/RestructuringDocumentation.ts`, `tests/concepts/RestructuringDocumentation.test.ts`
 
-Draft to pending approval, in one atomic conditional update.
+Draft to pending approval, in one atomic conditional update. `discard` is done here too, since it shares the author and draft checks.
 
 **Verify:** `bun run test:memory`: submitting works once, a second submit is refused, and editing after submitting is refused.
 
-## 5.5 View: the user owns the proposal
+## 5.5 Views: who may read a proposal
 
-**Diff:** see `plan-reactions.md` R3.1.
+A draft is visible only to its author; a submitted proposal is visible to every signed-in user. Changing a proposal needs no view, because the concept refuses anyone but the author (`NOT_PROPOSAL_AUTHOR`).
 
-**Verify:** As in R3.1.
+sync-engine has no "or" inside one `where`, so the rule is three views used as separate endpoint branches:
+
+- `(proposal) is submitted`: `_get` has status `PENDING_APPROVAL`.
+- `(proposal) is a draft by (user)`: `_get` has status `DRAFT` and author `user`.
+- `(proposal) is a draft by someone other than (user)`: status `DRAFT`, author not `user`. Answered like a missing proposal (`PROPOSAL_NOT_FOUND`, 404), so others cannot even tell that a draft exists.
+
+Done in step 5.6. The proposals list (step 5.8) uses the same rule: every submitted proposal in the repository, and the signed-in user's own drafts.
+
+**Diff:** the views in `src/compositions/Proposals.ts` and `design/compositions/Proposals.md`, written with step 5.6's `/proposals/get`, the first endpoint that uses them. This replaces `plan-reactions.md` R3.1.
+
+**Verify:** In step 5.6's tests: B gets 404 for A's draft, and both A and B can read it once A submits it.
 
 ## 5.6 Proposal endpoints
 
 **Diff:** see `plan-endpoints.md` E4, except the review queue (E4.3), which moves to Phase 6.
+
+Done 2026-10-18 as `/proposals/create`, `modify`, `submit`, `discard`, and `get` in `src/compositions/Proposals.ts`. `create` takes the investigation and reads the repository and commit from it. The list endpoint moves to step 5.8 with `_forRepository`. A request with no session is refused with 400 by the input validator; an ended or invented session gets 401.
 
 **Diff:** `tests/http/access-control.test.ts` (new)
 
