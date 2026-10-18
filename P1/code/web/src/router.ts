@@ -1,11 +1,15 @@
 import { createRouter, createWebHistory } from "vue-router";
 import PlaceholderPage from "./pages/PlaceholderPage.vue";
+import SignInPage from "./pages/SignInPage.vue";
+import { restoreSession, useSession } from "./session.ts";
 
 declare module "vue-router" {
   interface RouteMeta {
     title: string;
     /** The plan-vue.md step that builds this screen. */
     step?: string;
+    /** Open without signing in. Every other route requires a session. */
+    public?: boolean;
   }
 }
 
@@ -13,7 +17,7 @@ export const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/", redirect: "/repositories" },
-    { path: "/sign-in", component: PlaceholderPage, meta: { title: "Sign in", step: "V3.1" } },
+    { path: "/sign-in", component: SignInPage, meta: { title: "Sign in", public: true } },
     { path: "/repositories", component: PlaceholderPage, meta: { title: "Repositories", step: "V4.1" } },
     {
       path: "/repositories/:repository/commits",
@@ -32,4 +36,13 @@ export const router = createRouter({
     { path: "/reviews/:review", component: PlaceholderPage, meta: { title: "Review", step: "V7.3" } },
     { path: "/:path(.*)*", component: PlaceholderPage, meta: { title: "Page not found" } },
   ],
+});
+
+// Signed-out users go to sign-in, and come back to the page they asked for afterwards.
+router.beforeEach(async (to) => {
+  await restoreSession();
+  const signedIn = useSession().session !== null;
+  if (!to.meta.public && !signedIn) return { path: "/sign-in", query: { redirect: to.fullPath } };
+  if (to.path === "/sign-in" && signedIn) return "/repositories";
+  return true;
 });

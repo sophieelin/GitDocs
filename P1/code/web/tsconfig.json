@@ -8,7 +8,11 @@
     "noEmit": true,
     "strict": true,
     "skipLibCheck": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    // The API client's types come from ../generated/wire.ts, which refers to the
+    // backend's concepts. These two settings let vue-tsc read those types; the
+    // imports are type-only, so no backend code reaches the browser.
+    "paths": { "@design/*": ["../design/*"] }
   },
-  "include": ["src/**/*.ts", "src/**/*.vue", "vite.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.vue", "vite.config.ts", "../src/text.d.ts"]
 }
