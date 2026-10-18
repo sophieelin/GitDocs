@@ -1,5 +1,5 @@
 import { assembleApplication } from "./assembly.ts";
-import { closeDb, connectDb } from "./db.ts";
+import { closeDb, connectDb, db } from "./db.ts";
 import { createHandler } from "./http.ts";
 
 const port = Number(process.env.PORT ?? 3000);
@@ -7,7 +7,7 @@ const port = Number(process.env.PORT ?? 3000);
 // Fail now if MongoDB is unreachable, instead of on the first request.
 await connectDb();
 
-const handler = createHandler(assembleApplication());
+const handler = createHandler(assembleApplication({ db }));
 const server = Bun.serve({ hostname: "127.0.0.1", port, fetch: handler });
 console.log(`GitTrace backend listening on http://127.0.0.1:${server.port}/api`);
 
