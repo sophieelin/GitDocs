@@ -222,4 +222,19 @@ describe("RestructuringDocumentation", () => {
   test("an unknown proposal answers no rows", async () => {
     expect(await newConcept()._get({ restructuring: "missing" })).toEqual([]);
   });
+
+  test("_forRepository lists the repository's proposals, the most recently changed first, ignoring letter case", async () => {
+    const proposals = newConcept(ids("p-1", "p-2", "p-3"));
+    await proposals.create({ author: "ari", ...valid, at: morning });
+    await proposals.create({ author: "bob", ...valid, title: "Another idea", at: morning });
+    await proposals.create({ author: "ari", ...valid, owner: "octocat", name: "Hello-World", at: morning });
+    await proposals.modify({ restructuring: "p-1", author: "ari", title: "Organize the agents docs", proposedStructure: moved, rationale: "Easier to find.", at: noon });
+    await proposals.submit({ restructuring: "p-1", author: "ari", at: noon });
+
+    expect(await proposals._forRepository({ owner: "SophieeLin", name: "papernet" })).toEqual([
+      { restructuring: "p-1", author: "ari", investigation: "inv-1", commit: c6d4a4c6, title: "Organize the agents docs", status: "PENDING_APPROVAL", updatedAt: noon },
+      { restructuring: "p-2", author: "bob", investigation: "inv-1", commit: c6d4a4c6, title: "Another idea", status: "DRAFT", updatedAt: morning },
+    ]);
+    expect(await proposals._forRepository({ owner: "nobody", name: "nothing" })).toEqual([]);
+  });
 });

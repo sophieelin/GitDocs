@@ -86,6 +86,7 @@ describe("no session or an ended session", () => {
       ["/proposals/submit", withSession({ proposal: draft })],
       ["/proposals/discard", withSession({ proposal: draft })],
       ["/proposals/get", withSession({ proposal: draft })],
+      ["/proposals/list", withSession({ owner: "sophieelin", name: "PaperNet" })],
     ] as const;
   };
 

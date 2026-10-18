@@ -203,7 +203,7 @@ export class RestructuringDocumentationConcept {
     return [{ restructuring: _id, ...fields }];
   }
 
-  async _forRepository(_input: { owner: string; name: string }): Promise<
+  async _forRepository({ owner, name }: { owner: string; name: string }): Promise<
     Array<{
       restructuring: string;
       author: string;
@@ -214,7 +214,22 @@ export class RestructuringDocumentationConcept {
       updatedAt: Date;
     }>
   > {
-    throw new Error("TODO: RestructuringDocumentation._forRepository (plan step 5.8)");
+    const found = await this.restructurings
+      .find(
+        { repository: repositoryKey(owner, name) },
+        { projection: { author: 1, investigation: 1, commit: 1, title: 1, status: 1, updatedAt: 1 } },
+      )
+      .sort({ updatedAt: -1, _id: 1 })
+      .toArray();
+    return found.map(({ _id, author, investigation, commit, title, status, updatedAt }) => ({
+      restructuring: _id,
+      author,
+      investigation,
+      commit,
+      title,
+      status,
+      updatedAt,
+    }));
   }
 
   /** The proposal, once it is known to exist, to belong to the author, and to be a draft. */

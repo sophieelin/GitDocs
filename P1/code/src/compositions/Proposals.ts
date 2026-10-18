@@ -8,7 +8,7 @@
  * author, and a submitted proposal to every signed-in account.
  */
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
-import { former, no, now, view, where } from "@mit-sdg/sync-engine/language";
+import { each, form, former, no, now, view, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 import {
   createProposalInput,
@@ -16,6 +16,8 @@ import {
   proposalIdentityOutput,
   proposalIdInput,
   proposalOutput,
+  repositoryInput,
+  repositoryProposalsOutput,
 } from "./validators.ts";
 
 const { InvestigatingChanges, RestructuringDocumentation, Sessioning } = concepts;
@@ -90,6 +92,43 @@ const ProposalDetail = former(
       proposedStructure,
       createdAt,
       updatedAt,
+    }),
+);
+
+/**
+ * The proposals of a repository that `user` may see: every submitted one, and
+ * the user's own drafts. Two lists, because a condition cannot say "or".
+ */
+const RepositoryProposals = former(
+  "the proposals of a repository that (user) may see",
+  ({ owner, name, user }, { proposal, author, investigation, commit, title, updatedAt }) =>
+    form({
+      submitted: each(
+        RestructuringDocumentation._forRepository({ owner, name }).is({
+          restructuring: proposal,
+          author,
+          investigation,
+          commit,
+          title,
+          status: "PENDING_APPROVAL",
+          updatedAt,
+        }),
+      )
+        .arranged(updatedAt, "descending")
+        .form({ proposal, author, investigation, commit, title, updatedAt }),
+      drafts: each(
+        RestructuringDocumentation._forRepository({ owner, name }).is({
+          restructuring: proposal,
+          author: user,
+          investigation,
+          commit,
+          title,
+          status: "DRAFT",
+          updatedAt,
+        }),
+      )
+        .arranged(updatedAt, "descending")
+        .form({ proposal, investigation, commit, title, updatedAt }),
     }),
 );
 
@@ -204,7 +243,27 @@ const GetProposal = endpoint(
   },
 );
 
+const ListProposals = endpoint(
+  "/proposals/list",
+  ({ session, user, owner, name }) =>
+    receive({ session, owner, name })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(respond({ repository: RepositoryProposals({ owner, name, user }) })),
+  {
+    input: { required: ["session", "owner", "name"] },
+    validators: { input: repositoryInput, output: repositoryProposalsOutput },
+  },
+);
+
 export const composition = {
   Writing: { CreateProposal, ModifyProposal, SubmitProposal, DiscardProposal },
-  Reading: { GetProposal, ProposalDetail, ProposalIsSubmitted, ProposalIsDraftByUser, ProposalIsDraftByOther },
+  Reading: {
+    GetProposal,
+    ListProposals,
+    ProposalDetail,
+    RepositoryProposals,
+    ProposalIsSubmitted,
+    ProposalIsDraftByUser,
+    ProposalIsDraftByOther,
+  },
 };

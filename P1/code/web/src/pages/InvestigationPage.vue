@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import ErrorBanner from "../components/ErrorBanner.vue";
 import TreeView from "../components/TreeView.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
 import { gitHubErrorMessages, readTree, type TreeResponse } from "../github.ts";
 import { formatDate, getInvestigation } from "../investigations.ts";
+import { createProposal } from "../proposals.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
 
@@ -85,6 +86,35 @@ function isEmpty(folder: TreeResponse["tree"]): boolean {
 }
 
 const listPath = computed(() => (repository.value ? repositoryPath(repository.value, "/investigations") : "/repositories"));
+
+// "Propose a restructuring": a draft starts from the documentation structure at this investigation's commit.
+const router = useRouter();
+const proposing = ref(false);
+const proposalTitle = ref("");
+const proposalError = ref<string | null>(null);
+const creating = ref(false);
+
+async function startProposal() {
+  if (!structures.value || !repository.value) return;
+  const title = proposalTitle.value.trim();
+  if (title === "") {
+    proposalError.value = "Give the proposal a title.";
+    return;
+  }
+  creating.value = true;
+  const result = await createProposal(id.value, title, structures.value.tree);
+  creating.value = false;
+  if ("error" in result) {
+    if (!handleEndedSession(result.error)) {
+      proposalError.value = errorMessage(result.error, {
+        NOT_FOUND: "This investigation no longer exists.",
+        INVALID_REQUEST: "Keep the title to 120 characters.",
+      });
+    }
+    return;
+  }
+  await router.push(repositoryPath(repository.value, `/proposals/${result.proposal}/edit`));
+}
 </script>
 
 <template>
@@ -101,6 +131,21 @@ const listPath = computed(() => (repository.value ? repositoryPath(repository.va
     </template>
     <h1 v-else-if="!error" class="page-title">Investigation</h1>
     <ErrorBanner :message="error" />
+
+    <div v-if="investigation && !error" class="propose">
+      <button v-if="!proposing" type="button" class="button" :disabled="!structures" @click="proposing = true">
+        Propose a restructuring
+      </button>
+      <form v-else class="card propose-form" @submit.prevent="startProposal">
+        <label>
+          <span>Proposal title</span>
+          <input v-model="proposalTitle" name="proposal-title" maxlength="120" placeholder="What should the documentation look like?" />
+        </label>
+        <button type="submit" class="button" :disabled="creating">{{ creating ? "Starting…" : "Start proposal" }}</button>
+        <button type="button" class="link" @click="proposing = false">Cancel</button>
+        <ErrorBanner :message="proposalError" />
+      </form>
+    </div>
 
     <div v-if="investigation" class="findings">
       <div class="card">
@@ -167,6 +212,42 @@ const listPath = computed(() => (repository.value ? repositoryPath(repository.va
 
 .commit-link code {
   font-weight: 600;
+}
+
+.propose {
+  margin-bottom: 20px;
+}
+
+.propose-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  max-width: 820px;
+}
+
+.propose-form label {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.propose-form input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: normal;
+}
+
+.propose-form .link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  font: inherit;
+  cursor: pointer;
 }
 
 .findings {

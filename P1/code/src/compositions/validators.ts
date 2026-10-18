@@ -240,3 +240,31 @@ export const proposalOutput = validator(
   },
   "response must contain a proposal with both of its structures",
 );
+
+/** A list of proposal summaries, each with the given text fields and a Date it last changed. */
+function proposalSummaries(items: unknown, fields: readonly string[]): boolean {
+  return (
+    Array.isArray(items) &&
+    items.every(
+      (item) =>
+        record(item) &&
+        hasOnly(item, [...fields, "updatedAt"]) &&
+        fields.every((field) => typeof item[field] === "string") &&
+        item.updatedAt instanceof Date,
+    )
+  );
+}
+
+export const repositoryProposalsOutput = validator(
+  (value) => {
+    const holder = value.repository;
+    return (
+      hasOnly(value, ["repository"]) &&
+      record(holder) &&
+      hasOnly(holder, ["submitted", "drafts"]) &&
+      proposalSummaries(holder.submitted, ["proposal", "author", "investigation", "commit", "title"]) &&
+      proposalSummaries(holder.drafts, ["proposal", "investigation", "commit", "title"])
+    );
+  },
+  "response must contain the repository's submitted proposals and the user's drafts",
+);

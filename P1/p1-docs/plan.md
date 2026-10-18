@@ -487,11 +487,15 @@ Access-control tests that call the HTTP handler directly, with no frontend, as t
 
 **Diff:** see `plan-vue.md` V5.1, then V5.2.
 
+Done 2026-10-18. The tree edits are in `web/src/tree/edit.ts`, tested with `bun test` in `tests/web/treeEdit.test.ts` (the project has no Vitest). The editor is `ProposalEditPage.vue` with `EditableTree.vue`: click a file or folder, then rename, move, add a folder, or remove an empty folder from the toolbar. The investigation page's "Propose a restructuring" asks for a title and opens the editor.
+
 **Verify:** As in V5.
 
 ## 5.8 Proposals list and proposal page
 
 **Diff:** see `plan-vue.md` V6.1, then V6.2. Both live in the repository workspace: `/repositories/:owner/:name/proposals` lists that repository's proposals, with the author on each and "Mine" marked, and `/repositories/:owner/:name/proposals/:proposal` shows one.
+
+Done 2026-10-18. `_forRepository` and `/proposals/list` (replacing E4's `/proposals/mine`) answer every submitted proposal in the repository and the requester's own drafts, as two lists. `ProposalsPage.vue` merges them, newest first, with `StatusBadge.vue`; `ProposalPage.vue` is read-only, with "Continue editing" for the author of a draft.
 
 **Verify:** As in V6.
 

@@ -46,3 +46,14 @@ three views, one per branch, because a condition cannot say "or":
 ```endpoints
 Proposals.Reading.GetProposal at /proposals/get
 ```
+
+A current account may [list a repository's proposals](reaction:Proposals.Reading.ListProposals).
+The answer follows the same rule as reading one:
+[the proposals of the repository that the requester may see](former:Proposals.Reading.RepositoryProposals)
+are every submitted proposal, with its author, and the requester's own drafts,
+each the most recently changed first. Another account's drafts are not listed.
+The two are separate lists, because a condition cannot say "or".
+
+```endpoints
+Proposals.Reading.ListProposals at /proposals/list
+```

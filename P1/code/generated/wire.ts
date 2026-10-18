@@ -196,6 +196,33 @@ export type ApplicationWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "PROPOSAL_NOT_FOUND" | "UNKNOWN_SESSION" };
   };
+  "/proposals/list": {
+    input: {
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>[0], ["name"]>>;
+      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>[0], ["owner"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "repository": {
+        "drafts": {
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["commit"]>>;
+          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["investigation"]>>;
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["restructuring"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["updatedAt"]>>;
+        }[];
+        "submitted": {
+          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["author"]>>;
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["commit"]>>;
+          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["investigation"]>>;
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["restructuring"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["updatedAt"]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
   "/proposals/modify": {
     input: {
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["restructuring"]>>;
@@ -405,6 +432,33 @@ export type ApplicationWireHttp = {
       };
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/proposals/list": {
+    input: {
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>[0], ["name"]>>;
+      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>[0], ["owner"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "repository": {
+        "drafts": {
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["commit"]>>;
+          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["investigation"]>>;
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["restructuring"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["updatedAt"]>>;
+        }[];
+        "submitted": {
+          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["author"]>>;
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["commit"]>>;
+          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["investigation"]>>;
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["restructuring"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["updatedAt"]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/proposals/modify": {
     input: {

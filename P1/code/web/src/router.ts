@@ -4,6 +4,9 @@ import InvestigationPage from "./pages/InvestigationPage.vue";
 import InvestigationsPage from "./pages/InvestigationsPage.vue";
 import NewInvestigationPage from "./pages/NewInvestigationPage.vue";
 import PlaceholderPage from "./pages/PlaceholderPage.vue";
+import ProposalEditPage from "./pages/ProposalEditPage.vue";
+import ProposalPage from "./pages/ProposalPage.vue";
+import ProposalsPage from "./pages/ProposalsPage.vue";
 import RepositoriesPage from "./pages/RepositoriesPage.vue";
 import RepositoryHomePage from "./pages/RepositoryHomePage.vue";
 import SignInPage from "./pages/SignInPage.vue";
@@ -43,17 +46,9 @@ export const router = createRouter({
       component: InvestigationPage,
       meta: { title: "Investigation" },
     },
-    { path: `${workspace}/proposals`, component: PlaceholderPage, meta: { title: "Proposals", step: "5.8" } },
-    {
-      path: `${workspace}/proposals/:proposal`,
-      component: PlaceholderPage,
-      meta: { title: "Proposal", step: "5.8" },
-    },
-    {
-      path: `${workspace}/proposals/:proposal/edit`,
-      component: PlaceholderPage,
-      meta: { title: "Edit proposal", step: "5.7" },
-    },
+    { path: `${workspace}/proposals`, component: ProposalsPage, meta: { title: "Proposals" } },
+    { path: `${workspace}/proposals/:proposal`, component: ProposalPage, meta: { title: "Proposal" } },
+    { path: `${workspace}/proposals/:proposal/edit`, component: ProposalEditPage, meta: { title: "Edit proposal" } },
     { path: `${workspace}/reviews`, component: PlaceholderPage, meta: { title: "Reviews", step: "6.7" } },
     { path: `${workspace}/reviews/:review`, component: PlaceholderPage, meta: { title: "Review", step: "6.7" } },
     { path: "/:path(.*)*", component: PlaceholderPage, meta: { title: "Page not found" } },

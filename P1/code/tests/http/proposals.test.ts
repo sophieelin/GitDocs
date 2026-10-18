@@ -179,3 +179,35 @@ describe("/proposals/get", () => {
     }
   });
 });
+
+describe("/proposals/list", () => {
+  function list(session: string, repository = paperNet) {
+    return api.post("/proposals/list", { session, ...repository });
+  }
+
+  test("lists every submitted proposal and only the requester's own drafts", async () => {
+    const submitted = await create(ari, "Submitted by ari");
+    await modify(ari, submitted, { title: "Submitted by ari" });
+    await api.post("/proposals/submit", { session: ari, proposal: submitted });
+    const arisDraft = await create(ari, "Ari's draft");
+    const bobsDraft = await create(bob, "Bob's draft");
+
+    const forAri = await list(ari);
+    expect(forAri.status).toBe(200);
+    expect(forAri.body.repository).toMatchObject({
+      submitted: [{ proposal: submitted, author: "ari", investigation, commit, title: "Submitted by ari" }],
+      drafts: [{ proposal: arisDraft, investigation, commit, title: "Ari's draft" }],
+    });
+
+    const forBob = (await list(bob)).body.repository as { submitted: { proposal: string }[]; drafts: { proposal: string }[] };
+    expect(forBob.submitted.map((item) => item.proposal)).toEqual([submitted]);
+    expect(forBob.drafts.map((item) => item.proposal)).toEqual([bobsDraft]);
+  });
+
+  test("another repository's proposals are not listed", async () => {
+    await create(ari);
+    expect((await list(ari, { owner: "octocat", name: "Hello-World" })).body).toEqual({
+      repository: { submitted: [], drafts: [] },
+    });
+  });
+});

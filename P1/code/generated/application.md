@@ -238,6 +238,33 @@ Former "the investigations of a repository" — inputs (owner, name); bindings (
         title
 ```
 
+### the proposals of a repository that (user) may see
+
+Authored path: `Proposals.Reading.RepositoryProposals`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 52.
+
+```former
+Former "the proposals of a repository that (user) may see" — inputs (owner, name, user); bindings (proposal, author, investigation, commit, title, updatedAt); promises exactly one record — forms:
+  a record of
+    drafts: each RestructuringDocumentation._forRepository (name, owner) has (author: user, commit, investigation, restructuring: proposal, status: "DRAFT", title, updatedAt)
+      arranged by updatedAt, descending
+      form a record of
+        commit
+        investigation
+        proposal
+        title
+        updatedAt
+    submitted: each RestructuringDocumentation._forRepository (name, owner) has (author, commit, investigation, restructuring: proposal, status: "PENDING_APPROVAL", title, updatedAt)
+      arranged by updatedAt, descending
+      form a record of
+        author
+        commit
+        investigation
+        proposal
+        title
+        updatedAt
+```
+
 ## Reactions
 
 ### DeliverFaultToAsker
@@ -465,6 +492,32 @@ where
   view "(proposal) is submitted" with (proposal)
 then
   RequestBoundary.respond (proposal: former "a proposal with its current and proposed structures" with (proposal), requestId)
+```
+
+### Proposals.Reading.ListProposals
+
+Authored path: `Proposals.Reading.ListProposals`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 50.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 58.
+
+```reaction
+when RequestBoundary.request (name, owner, path: "/proposals/list", requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### Proposals.Reading.ListProposals#2
+
+Authored path: `Proposals.Reading.ListProposals`.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 50.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 58.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by Proposals.Reading.ListProposals
+where
+  earlier, RequestBoundary.request (name, owner, path: "/proposals/list", requestId, session)
+then
+  RequestBoundary.respond (repository: former "the proposals of a repository that (user) may see" with (name, owner, user), requestId)
 ```
 
 ### Proposals.Writing.CreateProposal
@@ -792,5 +845,6 @@ not listed here have no explicit input contract.
 - `/proposals/create` — requires `session`, `investigation`, `title`, `currentStructure`
 - `/proposals/discard` — requires `session`, `proposal`
 - `/proposals/get` — requires `session`, `proposal`
+- `/proposals/list` — requires `session`, `owner`, `name`
 - `/proposals/modify` — requires `session`, `proposal`, `title`, `proposedStructure`, `rationale`
 - `/proposals/submit` — requires `session`, `proposal`
