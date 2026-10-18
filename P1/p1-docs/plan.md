@@ -176,6 +176,8 @@ Do not add application endpoints yet.
 
 **Verify:** Application assembly succeeds.
 
+**Deferred to 3.4.** No concepts exist yet, and nothing uses the GitHub adapter until Phase 4, so there is nothing to assemble. Keep the assembly that `sync-engine setup` wrote, do 2.5 first, and make this change in 3.4, when the first concept is registered: `assembleApplication` then takes `{ db }`, and `{ github }` is added in 4.3.
+
 ## 2.5 Add the backend entry point
 
 **Diff:** `src/main.ts`
@@ -221,6 +223,10 @@ Copy the session specification from the same example.
 **Diff:** `src/concepts/Authenticating.registry.ts`
 
 Register the concept with its specification, refusals, and floors.
+
+**Diff:** `src/assembly.ts` (deferred from 2.4)
+
+Make `assembleApplication` take `{ db }` and assemble the MongoDB floor, so the first concept gets the shared database.
 
 **Verify:** `bun run generate && bun run check`
 
@@ -306,6 +312,10 @@ Define refusal cases for unknown repositories and insufficient access.
 Register the concept and its required dependencies.
 
 Add its type instantiation to `design/types.md` and include it in the concept set.
+
+**Diff:** `src/assembly.ts` (deferred from 2.4)
+
+Add `{ github }` to `assembleApplication`'s inputs and inject it into this concept: `gitHubApiFromEnv()` for the server, `StubGitHubFetcher` in tests.
 
 **Verify:** `bun run generate && bun run check`
 
