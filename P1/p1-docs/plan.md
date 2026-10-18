@@ -517,6 +517,8 @@ Done 2026-10-18. `_forRepository` and `/proposals/list` (replacing E4's `/propos
 
 Add `approve` and the query that lists proposals under review.
 
+Done 2026-10-18. `approve(restructuring, at)` moves a pending proposal to `APPROVED` in one conditional update and refuses anything else with `PROPOSAL_NOT_PENDING`. It takes no user: who may approve is the review's reviewer. `_pendingApproval(owner, name)` is the queue, the longest waiting first; hiding the user's own proposals stays in the E4.3 former. `/proposals/list` and the proposal views still match `PENDING_APPROVAL` exactly, and step 6.5 or 6.6 must widen them to include `APPROVED`.
+
 **Verify:** `bun run test:memory`: only a pending proposal can be approved, and the queue lists only one repository's pending proposals.
 
 ## 6.2 Review specification
@@ -524,6 +526,8 @@ Add `approve` and the query that lists proposals under review.
 **Diff:** `design/concepts/ReviewingDocumentation.md`
 
 Only what the MVP needs: open a review, get a review, get a proposal's review, and approve. Keep one review per proposal, reopened on resubmission (Phase 7).
+
+Done 2026-10-18. `open(proposal, reviewer, at)` refuses `REVIEW_EXISTS`; `approve(review, reviewer, at)` refuses `REVIEW_NOT_FOUND`, `NOT_REVIEWER`, and `REVIEW_NOT_PENDING`; the queries are `_get` and `_forProposal`. The concept checks the reviewer itself, as RestructuringDocumentation checks the author, so R4.2's `(user) reviews (review)` view is not needed for approving. Comments, suggestions, request changes, and reopen are not in this spec; request changes and reopen come back in step 7.2.
 
 **Verify:** `bun run check:design`
 

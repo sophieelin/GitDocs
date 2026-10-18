@@ -8,8 +8,9 @@ export class ProposalNotFound extends Error {}
 export class NotProposalAuthor extends Error {}
 export class NotDraft extends Error {}
 export class RationaleMissing extends Error {}
+export class ProposalNotPending extends Error {}
 
-export type Status = "DRAFT" | "PENDING_APPROVAL";
+export type Status = "DRAFT" | "PENDING_APPROVAL" | "APPROVED";
 
 type RestructuringDoc = {
   _id: string;
@@ -74,7 +75,8 @@ function documentationTree(value: unknown): DocumentationFolder | undefined {
 /**
  * Proposals for a different documentation structure, each started from an
  * investigation of one commit. The author edits a draft, then submits it with a
- * rationale; a submitted proposal is pending approval and can no longer change.
+ * rationale; a submitted proposal is pending approval and can no longer change,
+ * until it is approved.
  */
 export class RestructuringDocumentationConcept {
   private readonly restructurings: Collection<RestructuringDoc>;
@@ -180,6 +182,20 @@ export class RestructuringDocumentationConcept {
     return {};
   }
 
+  async approve({ restructuring, at }: { restructuring: string; at: Date }): Promise<Record<string, never>> {
+    // One conditional update, so a proposal is approved at most once.
+    const { matchedCount } = await this.restructurings.updateOne(
+      { _id: restructuring, status: "PENDING_APPROVAL" },
+      { $set: { status: "APPROVED", updatedAt: at } },
+    );
+    if (matchedCount === 0) {
+      const found = await this.restructurings.findOne({ _id: restructuring }, { projection: { _id: 1 } });
+      if (!found) throw new ProposalNotFound("There is no such proposal.");
+      throw new ProposalNotPending("Only a proposal pending approval can be approved.");
+    }
+    return {};
+  }
+
   async _get({ restructuring }: { restructuring: string }): Promise<
     Array<{
       restructuring: string;
@@ -228,6 +244,33 @@ export class RestructuringDocumentationConcept {
       commit,
       title,
       status,
+      updatedAt,
+    }));
+  }
+
+  async _pendingApproval({ owner, name }: { owner: string; name: string }): Promise<
+    Array<{
+      restructuring: string;
+      author: string;
+      investigation: string;
+      commit: string;
+      title: string;
+      updatedAt: Date;
+    }>
+  > {
+    const found = await this.restructurings
+      .find(
+        { repository: repositoryKey(owner, name), status: "PENDING_APPROVAL" },
+        { projection: { author: 1, investigation: 1, commit: 1, title: 1, updatedAt: 1 } },
+      )
+      .sort({ updatedAt: 1, _id: 1 })
+      .toArray();
+    return found.map(({ _id, author, investigation, commit, title, updatedAt }) => ({
+      restructuring: _id,
+      author,
+      investigation,
+      commit,
+      title,
       updatedAt,
     }));
   }

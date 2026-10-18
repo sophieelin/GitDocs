@@ -17,7 +17,9 @@ root in the proposed structure and saves; the current structure is unchanged.
 Submitting without a rationale is refused. Ari writes the rationale and submits,
 and the proposal is pending approval. Further edits are refused, as are Bo's
 attempts to edit or submit it. A draft Ari no longer wants can be discarded.
-PaperNet's proposals list `p-1` with its title, author, and status.
+PaperNet's proposals list `p-1` with its title, author, and status, and its
+proposals pending approval list `p-1` too. Once `p-1` is approved, it is no
+longer pending approval, and approving it again is refused.
 
 ## Types
 
@@ -28,7 +30,7 @@ external Investigation
   The investigation a proposal responds to.
 opaque DocumentationTree
   Documentation files nested in folders by path: folders with names, paths, subfolders, and files.
-Status is DRAFT or PENDING_APPROVAL
+Status is DRAFT or PENDING_APPROVAL or APPROVED
   The lifecycle states a proposal may occupy.
 ```
 
@@ -123,6 +125,18 @@ discard(restructuring: Restructuring, author: User) : returns ()
   then
     remove restructuring
     returns
+
+approve(restructuring: Restructuring, at: DateTime) : returns ()
+  where restructuring is not in Restructurings
+  then
+    refuses PROPOSAL_NOT_FOUND "There is no such proposal."
+  where the restructuring's status is not PENDING_APPROVAL
+  then
+    refuses PROPOSAL_NOT_PENDING "Only a proposal pending approval can be approved."
+  where the restructuring is pending approval
+  then
+    set the restructuring's status to APPROVED and at as its updatedAt
+    returns
 ```
 
 ## Queries
@@ -136,4 +150,9 @@ _forRepository(owner: String, name: String) : many (restructuring: Restructuring
   answers every proposal in the repository, without its structures, compared without regard to letter case
   orders rows by updatedAt, the most recently changed first
   answers no rows for a repository with no proposals
+
+_pendingApproval(owner: String, name: String) : many (restructuring: Restructuring, author: User, investigation: Investigation, commit: String, title: String, updatedAt: DateTime)
+  answers every proposal in the repository whose status is PENDING_APPROVAL, without its structures, compared without regard to letter case
+  orders rows by updatedAt, the longest waiting first
+  answers no rows for a repository with no proposals pending approval
 ```

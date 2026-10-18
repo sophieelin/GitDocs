@@ -80,11 +80,15 @@ Defined in [RestructuringDocumentation](../design/concepts/RestructuringDocument
   - Refuses `PROPOSAL_NOT_FOUND`: There is no such proposal.
   - Refuses `NOT_PROPOSAL_AUTHOR`: Only the proposal's author can change it.
   - Refuses `NOT_DRAFT`: Only a draft proposal can be changed.
+- `approve(restructuring: Restructuring, at: DateTime) : returns ()`
+  - Refuses `PROPOSAL_NOT_FOUND`: There is no such proposal.
+  - Refuses `PROPOSAL_NOT_PENDING`: Only a proposal pending approval can be approved.
 
 #### Queries
 
 - `_get(restructuring: Restructuring) : optional (restructuring: Restructuring, author: User, investigation: Investigation, owner: String, name: String, commit: String, title: String, rationale: String, status: Status, currentStructure: DocumentationTree, proposedStructure: DocumentationTree, createdAt: DateTime, updatedAt: DateTime)`
 - `_forRepository(owner: String, name: String) : many (restructuring: Restructuring, author: User, investigation: Investigation, commit: String, title: String, status: Status, updatedAt: DateTime)`
+- `_pendingApproval(owner: String, name: String) : many (restructuring: Restructuring, author: User, investigation: Investigation, commit: String, title: String, updatedAt: DateTime)`
 
 #### Instances
 

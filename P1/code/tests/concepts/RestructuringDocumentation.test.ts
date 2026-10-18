@@ -6,6 +6,7 @@ import {
   NotDraft,
   NotProposalAuthor,
   ProposalNotFound,
+  ProposalNotPending,
   RationaleMissing,
   RestructuringDocumentationConcept,
 } from "../../src/concepts/RestructuringDocumentation.ts";
@@ -236,5 +237,64 @@ describe("RestructuringDocumentation", () => {
       { restructuring: "p-2", author: "bob", investigation: "inv-1", commit: c6d4a4c6, title: "Another idea", status: "DRAFT", updatedAt: morning },
     ]);
     expect(await proposals._forRepository({ owner: "nobody", name: "nothing" })).toEqual([]);
+  });
+
+  /** Creates proposal `restructuring` by `author` and submits it with a rationale at `at`. */
+  async function submitted(proposals: RestructuringDocumentationConcept, author: string, at: Date, fields: Partial<typeof valid> = {}) {
+    const { restructuring } = await proposals.create({ author, ...valid, ...fields, at });
+    await proposals.modify({ restructuring, author, title: fields.title ?? valid.title, proposedStructure: moved, rationale: "Why", at });
+    await proposals.submit({ restructuring, author, at });
+    return restructuring;
+  }
+
+  test("approve approves a proposal pending approval, once", async () => {
+    const proposals = newConcept();
+    await submitted(proposals, "ari", morning);
+
+    expect(await proposals.approve({ restructuring: "p-1", at: noon })).toEqual({});
+    const [approved] = await proposals._get({ restructuring: "p-1" });
+    expect(approved).toMatchObject({ status: "APPROVED", updatedAt: noon });
+
+    await expect(proposals.approve({ restructuring: "p-1", at: noon })).rejects.toThrow(ProposalNotPending);
+    await expect(proposals.modify({ restructuring: "p-1", author: "ari", title: "Again", proposedStructure: current, rationale: "Changed", at: noon })).rejects.toThrow(NotDraft);
+    expect(await proposals._get({ restructuring: "p-1" })).toEqual([approved!]);
+  });
+
+  test("approve refuses a draft and a missing proposal", async () => {
+    const proposals = newConcept();
+    await proposals.create({ author: "ari", ...valid, at: morning });
+
+    await expect(proposals.approve({ restructuring: "p-1", at: noon })).rejects.toThrow(ProposalNotPending);
+    expect((await proposals._get({ restructuring: "p-1" }))[0]).toMatchObject({ status: "DRAFT", updatedAt: morning });
+    await expect(proposals.approve({ restructuring: "missing", at: noon })).rejects.toThrow(ProposalNotFound);
+  });
+
+  test("two approvals at once: one succeeds and the other is refused", async () => {
+    const proposals = newConcept();
+    await submitted(proposals, "ari", morning);
+
+    const results = await Promise.allSettled([
+      proposals.approve({ restructuring: "p-1", at: noon }),
+      proposals.approve({ restructuring: "p-1", at: noon }),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled").length).toBe(1);
+    const refused = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(refused.reason).toBeInstanceOf(ProposalNotPending);
+  });
+
+  test("_pendingApproval lists only one repository's proposals pending approval, the longest waiting first", async () => {
+    const proposals = newConcept(ids("p-1", "p-2", "p-3", "p-4", "p-5"));
+    await submitted(proposals, "bob", noon, { title: "Later idea" });
+    await submitted(proposals, "ari", morning);
+    await proposals.create({ author: "ari", ...valid, title: "Still a draft", at: morning });
+    await submitted(proposals, "ari", morning, { owner: "octocat", name: "Hello-World" });
+    await submitted(proposals, "bob", morning, { title: "Already approved" });
+    await proposals.approve({ restructuring: "p-5", at: noon });
+
+    expect(await proposals._pendingApproval({ owner: "SophieeLin", name: "papernet" })).toEqual([
+      { restructuring: "p-2", author: "ari", investigation: "inv-1", commit: c6d4a4c6, title: "Organize the agents docs", updatedAt: morning },
+      { restructuring: "p-1", author: "bob", investigation: "inv-1", commit: c6d4a4c6, title: "Later idea", updatedAt: noon },
+    ]);
+    expect(await proposals._pendingApproval({ owner: "nobody", name: "nothing" })).toEqual([]);
   });
 });

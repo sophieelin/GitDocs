@@ -7,6 +7,7 @@ import {
   NotDraft,
   NotProposalAuthor,
   ProposalNotFound,
+  ProposalNotPending,
   RationaleMissing,
   RestructuringDocumentationConcept,
 } from "./RestructuringDocumentation.ts";
@@ -23,6 +24,7 @@ export const restructuringDocumentation = registerConcept({
     NOT_PROPOSAL_AUTHOR: NotProposalAuthor,
     NOT_DRAFT: NotDraft,
     RATIONALE_MISSING: RationaleMissing,
+    PROPOSAL_NOT_PENDING: ProposalNotPending,
   },
   floors: {
     mongo: ({ db }: { db: Db }) => new RestructuringDocumentationConcept(db),
