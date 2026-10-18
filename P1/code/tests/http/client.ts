@@ -1,15 +1,20 @@
 import type { Db } from "mongodb";
 import { assembleApplication } from "../../src/assembly.ts";
+import type { GitHubFetcher } from "../../src/github/GitHubFetcher.ts";
 import { createHandler } from "../../src/http.ts";
+import { StubGitHubFetcher } from "../github/StubGitHubFetcher.ts";
 
 export interface ApiResponse {
   status: number;
   body: Record<string, unknown>;
 }
 
-/** Calls the HTTP handler in-process with `Request` objects. No server and no port are needed. */
-export function testApi(db: Db) {
-  const handler = createHandler(assembleApplication({ db }));
+/**
+ * Calls the HTTP handler in-process with `Request` objects. No server and no port
+ * are needed, and GitHub is the offline stub unless a test passes another fetcher.
+ */
+export function testApi(db: Db, github: GitHubFetcher = new StubGitHubFetcher()) {
+  const handler = createHandler(assembleApplication({ db }), github);
 
   async function post(path: string, body: unknown = {}): Promise<ApiResponse> {
     const response = await handler(

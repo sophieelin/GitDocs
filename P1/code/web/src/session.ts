@@ -54,6 +54,18 @@ export function restoreSession(): Promise<void> {
   return restoring;
 }
 
+/**
+ * Asks the server again whether the session is still active, for example after
+ * it expired or the user signed out in another tab. Forgets it if not.
+ */
+export async function recheckSession(): Promise<void> {
+  await restoreSession();
+  const session = state.session;
+  if (!session) return;
+  const result = await api.auth.current({ session });
+  if ("error" in result && state.session === session) clearSession();
+}
+
 export async function signIn(username: string, password: string) {
   const result = await api.auth["sign-in"]({ username, password });
   if (!("error" in result)) setSession(result.session, result.account);

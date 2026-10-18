@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildDocumentationTree } from "../../src/github/documentationTree.ts";
+import { buildDocumentationTree, buildFileTree } from "../../src/github/documentationTree.ts";
 import type { TreeEntry } from "../../src/github/types.ts";
 
 const file = (path: string): TreeEntry => ({ path, type: "file" });
@@ -89,5 +89,19 @@ describe("buildDocumentationTree", () => {
       files: [],
     });
     expect(buildDocumentationTree([])).toEqual({ name: "", path: "", folders: [], files: [] });
+  });
+});
+
+describe("buildFileTree", () => {
+  test("keeps every file, code and documentation, in its folders", () => {
+    const tree = buildFileTree([dir("src"), file("src/index.ts"), file("src/util/log.ts"), file("README.md")]);
+
+    expect(tree.files.map((f) => f.path)).toEqual(["README.md"]);
+    expect(tree.folders[0]!.files.map((f) => f.path)).toEqual(["src/index.ts"]);
+    expect(tree.folders[0]!.folders[0]!.files.map((f) => f.path)).toEqual(["src/util/log.ts"]);
+  });
+
+  test("leaves out empty directories", () => {
+    expect(buildFileTree([dir("empty"), file("a.ts")]).folders).toEqual([]);
   });
 });

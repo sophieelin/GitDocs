@@ -7,8 +7,8 @@ Build GitDocs incrementally using TypeScript, MongoDB, the GitHub REST API, sync
 The MVP supports this workflow:
 
 1. A developer registers and signs in.
-2. They connect a GitHub repository.
-3. They select a commit and view its documentation tree.
+2. They open a public GitHub repository and see its commits and current documentation.
+3. They open an investigation of a commit, which shows the code and documentation structures side by side.
 4. They create, edit, and submit a restructuring proposal.
 5. A second developer reviews the proposal.
 6. The reviewer approves it or requests changes.
@@ -29,6 +29,8 @@ From Phase 3 on, the plan is built in **thin slices**. Each phase adds one part 
 - Follow the existing sync-engine examples for concept classes, registries, floors, compositions, and reactions.
 - Do not implement features merely because they might be useful later.
 - Do not start a phase until the previous phase's Try it check passes.
+- **Access control is enforced in the backend.** The frontend may hide a button, but every rule about who may do what is checked by a view or reaction on the server, and each one has an HTTP test that calls the endpoint directly as the wrong user (`tests/http/access-control.test.ts`).
+- **No manual refreshes.** Every screen that shows server data loads it with `useRefreshOnFocus` (`web/src/refresh.ts`), so it reloads each time the tab is opened again, and after each of its own actions.
 
 ## Related plans
 
@@ -157,7 +159,7 @@ Implement the same interface with fixed test data: the `sophieelin/my-repo` repo
 
 **Phase completion:** GitDocs can retrieve real commits and a documentation tree for a selected commit.
 
-# Phase 2: Shared backend scaffolding ✅ Done (2.4 moved to 3.4 and 4.2)
+# Phase 2: Shared backend scaffolding ✅ Done (2.4 moved to 3.4)
 
 ## 2.1 Add the MongoDB connection helper ✅
 
@@ -190,7 +192,7 @@ Do not add application endpoints yet.
 
 ## 2.4 Add application assembly (moved)
 
-Moved to 3.4 (`{ db }`) and 4.2 (`{ github }`). No concepts existed yet, so there was nothing to assemble.
+Moved to 3.4 (`{ db }`). No concepts existed yet, so there was nothing to assemble. The `{ github }` input planned for the ConnectingRepositories concept was removed with that concept.
 
 ## 2.5 Add the backend entry point ✅
 
@@ -278,68 +280,107 @@ Implement session creation, current-user lookup, and sign-out.
 4. Sign in with a wrong password. You see an error message, not a blank page.
 5. Register account B in a private window.
 
-# Phase 4: Slice 2 — Connect a repository and see its documentation
+# Phase 4: Slice 2 — Open a repository and see its documentation
 
-**At the end:** you can connect a real repository, pick a commit, and see its documentation tree.
+**At the end:** you can open a real public repository, pick a commit, and see its documentation tree. Repositories you opened are listed as recent ones.
 
-## 4.1 Write the specification
+**No concept (decision of 2026-10-17).** Reading a repository's commits and documentation tree does not get its own concept; the ConnectingRepositories steps were removed.
 
-**Diff:** `design/concepts/ConnectingRepositories.md`
+**How the backend reads GitHub (decided 2026-10-17):** two plain routes in `src/http.ts`, such as `/api/github/commits` and `/api/github/tree`, answered before sync-engine's handler. They use the existing `GitHubApi` adapter and `buildDocumentationTree`, so `GITHUB_TOKEN` stays on the server. They store nothing and make no decisions, which is the case where sync-engine's design guide allows a thin adapter instead of a concept.
 
-Connect and disconnect a repository for a user; list a user's repositories; list a repository's commits; get the documentation tree at a commit. Refuse unknown repositories.
+**Recent repositories (decided 2026-10-17):** remembered in the browser's `localStorage`, per username, not in MongoDB. They last across reloads, sign-outs, and browser restarts on the same browser, need no concept, and store nothing on the server. There is no connect or disconnect.
 
-**Verify:** `bun run check:design`
+## 4.1 GitHub routes
 
-## 4.2 Skeleton and registration
+**Diff:** see `plan-endpoints.md` E3: `/api/github/commits` and `/api/github/tree`.
 
-**Diff:** `src/concepts/ConnectingRepositories.ts`, `src/concepts/ConnectingRepositories.registry.ts`, `src/concepts.ts`, `src/assembly.ts`, `design/types.md`
+**Verify:** Route tests pass with `StubGitHubFetcher`. Then, with the backend running, use `curl` to list `sophieelin/PaperNet`'s commits and read its tree.
 
-- Declare every action and query, and one error class per refusal. Bodies throw `TODO`.
-- Inject a `GitHubFetcher`. Make `assembleApplication` take `{ github }` (moved from 2.4): `gitHubApiFromEnv()` for the server and `StubGitHubFetcher` in tests.
-
-**Verify:** `bun run generate && bun run check`
-
-## 4.3 Connections
-
-**Diff:** `src/concepts/ConnectingRepositories.ts`, `tests/concepts/ConnectingRepositories.test.ts`
-
-Connect, disconnect, and list, stored in MongoDB.
-
-**Verify:** `bun run test:memory`, using `StubGitHubFetcher`, covers connecting, listing, disconnecting, and an unknown repository.
-
-## 4.4 Commits and documentation tree
-
-**Diff:** `src/concepts/ConnectingRepositories.ts`, `tests/concepts/ConnectingRepositories.test.ts`
-
-List commits and get the documentation tree at a commit, through the injected fetcher and `documentationTree.ts`.
-
-**Verify:** `bun run test:memory`: the stub's two commits come back newest first, and each commit's tree matches the stub data.
-
-## 4.5 View: the user has connected the repository
-
-**Diff:** see `plan-reactions.md` R1.1 and R2.1.
-
-**Verify:** As in R2.1.
-
-## 4.6 Repository endpoints
-
-**Diff:** see `plan-endpoints.md` E3.
-
-**Verify:** Endpoint tests pass. Then use `curl` to connect `sophieelin/PaperNet` and list its commits.
-
-## 4.7 Repository, commit, and tree screens
+## 4.2 Repository, commit, and tree screens
 
 **Diff:** see `plan-vue.md` V4.1, then V4.2, then V4.3, one screen per diff.
 
 **Verify:** After each screen, open it in the browser and check it as in that V step.
 
+**Follow the UI sketches (decided 2026-10-18).** The screens in 4.2 showed a separate page per commit, but in the sketches a commit is looked at inside an *investigation* (sketch 2), and a repository has its own home page (sketch 1). The rest of Phase 4 follows the sketches:
+
+- **A repository workspace (decided 2026-10-18).** Investigations, proposals, and reviews belong to one repository, so after you open a repository, everything is scoped to it, as in sketch 1 ("GitDocs  my-repo"):
+  - URLs include the repository: `/repositories/:owner/:name` (Home), `/repositories/:owner/:name/investigations` (and `/:investigation`), `/repositories/:owner/:name/proposals` (and `/:proposal`), `/repositories/:owner/:name/reviews`.
+  - A left sidebar with the repository's name (its Home, such as "PaperNet"), Investigations, Proposals, and Reviews for the current repository. Only working pages get links.
+  - A top bar with a breadcrumb ("PaperNet › Proposals") and the signed-in user. There is no repository dropdown (removed 2026-10-18 at the user's request): to change repositories, click the username or the GitDocs logo to go back to `/repositories`.
+  - `/repositories` stays as the starting page before a repository is chosen: open one or pick a recent one.
+  - Every stored investigation and proposal records its repository (owner and name), and every list shows only the current repository's items.
+- The repository's Home at `/repositories/:owner/:name` shows its recent commits and current documentation structure. It replaces 4.2's separate commit and tree pages.
+- Simple saved investigations: InvestigatingChanges joins the MVP, minimally. Opening a commit creates an investigation with its own URL, listed under the repository's Investigations, showing Code Structure and Documentation Structure side by side. A proposal will start from an investigation. No agent, evidence, or Copilot yet.
+
+## 4.3 Layout following the UI sketches
+
+**Diff:** `web/src/App.vue`, `web/src/components/AppSidebar.vue`, `web/src/components/AppTopBar.vue` (replacing `AppHeader.vue`), shared styles.
+
+- Sidebar: GitDocs, then the repository's name (its Home), Investigations, Proposals, and Reviews for the current repository. Before a repository is chosen, only Repositories.
+- Top bar: a breadcrumb ("PaperNet › Proposals", the name linking to Home) and the username, which links back to `/repositories` like the GitDocs logo, with a sign-out button.
+- Cards, buttons, and the `› folder/` tree style from the sketches.
+
+**Verify:** `bun run check`, and a screenshot of each existing page matches the sketches' layout. The username and the logo both go back to `/repositories`.
+
+## 4.4 Code tree in the tree route
+
+**Diff:** `src/github/documentationTree.ts`, `src/github/routes.ts`, tests.
+
+`/api/github/tree` also returns `code`: every file in the repository at that commit, nested in its folders, for the Code Structure panel. `documentation` stays Markdown only.
+
+**Verify:** Route tests with `StubGitHubFetcher` check both trees.
+
+## 4.5 Repository Home
+
+**Diff:** `web/src/pages/RepositoryHomePage.vue`, `web/src/router.ts` (all repository routes under `/repositories/:owner/:name`); remove `CommitsPage.vue` and `TreePage.vue`.
+
+At `/repositories/:owner/:name`: the repository name, its recent commits, and its current documentation structure (at the newest commit). Each commit has an "Investigate" button (step 4.9). The Investigations, Proposals, and Reviews routes under the repository show placeholders until their steps.
+
+**Verify:** In the browser, PaperNet's page shows 30 commits and its five current READMEs.
+
+## 4.6 InvestigatingChanges specification for the MVP
+
+**Diff:** `design/concepts/InvestigatingChanges.md`
+
+- Add the repository (owner and name) to an investigation, and use one commit per investigation.
+- The investigator is a User; the AI agent is out of scope.
+- Add queries to get one investigation and to list a user's investigations.
+- Opening the same commit twice reopens the existing investigation instead of creating another.
+
+**Verify:** `bun run check:design`
+
+## 4.7 Implement and register InvestigatingChanges
+
+**Diff:** `src/concepts/InvestigatingChanges.ts`, its registry, `src/concepts.ts`, `src/http.ts` (`publicErrors`), `design/types.md`, `tests/concepts/InvestigatingChanges.test.ts`
+
+**Verify:** `bun run test:memory` covers opening, opening the same commit again, getting, listing, and every refusal. `bun run generate && bun run check`.
+
+## 4.8 Investigation endpoints
+
+**Diff:** `src/compositions/Investigations.ts`, `design/compositions/Investigations.md`, tests.
+
+`/investigations/open` (session, owner, name, commit), `/investigations/get` (session, investigation), `/investigations/list` (session, owner, name). Only signed-in users. The list shows every investigation in that repository, with who opened it, because the repository is a shared workspace.
+
+**Verify:** Endpoint tests, including that the list shows only that repository's investigations, and another user's investigation in the same repository.
+
+## 4.9 Investigation screens
+
+**Diff:** `web/src/pages/InvestigationsPage.vue`, `web/src/pages/InvestigationPage.vue`, router.
+
+The repository's list at `/repositories/:owner/:name/investigations`, and `/repositories/:owner/:name/investigations/:investigation` with Code Structure and Documentation Structure side by side, as in sketch 2 (without Evidence and Copilot). Home's "Investigate" button opens one.
+
+**Verify:** In the browser, as in the Try it check below.
+
 ## ✋ Try it: Phase 4
 
-1. As A, connect `sophieelin/PaperNet`.
-2. Connect `sophieelin/PaperNett`, which is misspelled. You see "repository not found."
-3. Open PaperNet's commits. They match GitHub's commit list.
-4. Open commit `d8ab205`. The tree includes `csail_hack/README.md`.
-5. Open commit `6d4a4c6`. `csail_hack/README.md` is gone, and `README.md` at the root and the four `lib/agents` READMEs are still there.
+1. As A, open `sophieelin/PaperNet`. Its page shows its commits and current documentation. After a reload, it is in your recent repositories.
+2. Open `sophieelin/PaperNett`, which is misspelled. You see "repository not found."
+3. PaperNet's commits match GitHub's commit list.
+4. Investigate commit `d8ab205`. The Documentation Structure includes `csail_hack/README.md`, and the Code Structure shows the `csail_hack/` code.
+5. Investigate commit `6d4a4c6`. `csail_hack/README.md` is gone, and `README.md` at the root and the four `lib/agents` READMEs are still there.
+6. Both investigations are listed under PaperNet's Investigations, and investigating `d8ab205` again opens the same one.
+7. Click your username to go back to your repositories, and open another one. Its Investigations list does not show PaperNet's.
 
 # Phase 5: Slice 3 — Create, save, and submit a proposal
 
@@ -349,8 +390,8 @@ List commits and get the documentation tree at a commit, through the injected fe
 
 **Diff:** `design/concepts/RestructuringDocumentation.md`
 
-- Add the author, repository, and commit to each proposal.
-- Add queries to get one proposal and to list an author's proposals.
+- Add the author, repository (owner and name), and commit to each proposal, and the investigation it started from.
+- Add queries to get one proposal and to list a repository's proposals (the repository workspace's Proposals page), with the author on each.
 - Decide whether author-only actions check the author themselves (see `history.md`, 2026-10-17, "Plans for reactions and views").
 
 **Verify:** `bun run check:design`
@@ -359,7 +400,7 @@ List commits and get the documentation tree at a commit, through the injected fe
 
 **Diff:** `src/concepts/RestructuringDocumentation.ts`, `src/concepts/RestructuringDocumentation.registry.ts`, `src/concepts.ts`, `design/types.md`
 
-Bind its repository type to `ConnectingRepositories.Repository`.
+The repository is stored as owner and name strings, as in InvestigatingChanges, so there is no repository type to bind.
 
 **Verify:** `bun run generate && bun run check`
 
@@ -387,7 +428,15 @@ Draft to pending approval, in one atomic conditional update.
 
 **Diff:** see `plan-endpoints.md` E4, except the review queue (E4.3), which moves to Phase 6.
 
-**Verify:** Endpoint tests pass, including that user B cannot edit A's proposal. Then create and submit a proposal with `curl`.
+**Diff:** `tests/http/access-control.test.ts` (new)
+
+Access-control tests that call the HTTP handler directly, with no frontend, as two signed-in accounts A and B:
+
+- B calls `/proposals/modify` on A's draft proposal → refused (403), and A's proposal is unchanged when read back with `/proposals/get`.
+- B calls `/proposals/submit` on A's draft → refused (403), and it is still a draft.
+- A request with no session, or an ended session, → refused (401).
+
+**Verify:** Endpoint tests and access-control tests pass. Then create and submit a proposal with `curl`, and repeat the first access-control case by hand with B's session.
 
 ## 5.7 Proposal editor
 
@@ -395,9 +444,9 @@ Draft to pending approval, in one atomic conditional update.
 
 **Verify:** As in V5.
 
-## 5.8 My proposals and proposal page
+## 5.8 Proposals list and proposal page
 
-**Diff:** see `plan-vue.md` V6.1, then V6.2.
+**Diff:** see `plan-vue.md` V6.1, then V6.2. Both live in the repository workspace: `/repositories/:owner/:name/proposals` lists that repository's proposals, with the author on each and "Mine" marked, and `/repositories/:owner/:name/proposals/:proposal` shows one.
 
 **Verify:** As in V6.
 
@@ -419,7 +468,7 @@ Draft to pending approval, in one atomic conditional update.
 
 Add `approve` and the query that lists proposals under review.
 
-**Verify:** `bun run test:memory`: only a pending proposal can be approved, and the queue lists only pending proposals.
+**Verify:** `bun run test:memory`: only a pending proposal can be approved, and the queue lists only one repository's pending proposals.
 
 ## 6.2 Review specification
 
@@ -455,7 +504,15 @@ Opening a review uses a unique index, and the duplicate-key error becomes the de
 
 **Diff:** see `plan-endpoints.md` E4.3, then E5 without request-changes.
 
-**Verify:** A two-account endpoint test: A submits, B opens the review and approves, and A's proposal is `APPROVED`.
+**Diff:** `tests/http/access-control.test.ts`
+
+Add review cases:
+
+- A opens a review of their own proposal → refused (403), and no review is created.
+- A approves their own proposal, using a review id → refused (403), and the proposal stays *Pending Approval*.
+- C, a third account, approves the review that B opened → refused (403).
+
+**Verify:** A two-account endpoint test: A submits, B opens the review and approves, and A's proposal is `APPROVED`. The access-control cases above pass.
 
 ## 6.7 Review screens
 
@@ -465,10 +522,10 @@ Opening a review uses a unique index, and the duplicate-key error becomes the de
 
 ## ✋ Try it: Phase 6 (MVP complete)
 
-1. As B, open the review queue. A's proposal is there. As A, your own proposal is not in your queue.
+1. As B, open PaperNet's Reviews. A's proposal is there. As A, your own proposal is not in your Reviews.
 2. As B, open it. You see the current and proposed structures side by side, with the changes marked.
 3. As B, approve.
-4. As A, open *My proposals*. The status is *Approved*.
+4. As A, with PaperNet's Proposals already open in another window, switch back to it. The status changes to *Approved* without reloading the page.
 
 # Phase 7: Slice 5 — Request changes and resubmit
 
@@ -547,5 +604,5 @@ Use the project's existing script names where possible. If a required script is 
 
 - Comments and suggestions on reviews.
 - Applying an approved proposal (`apply`) and opening a pull request on GitHub.
-- InvestigatingChanges and the investigation agent.
+- The investigation agent, evidence, Copilot, and marking affected documentation. (Simple saved investigations are in the MVP since 2026-10-18.)
 - Private repositories and signing in with GitHub.

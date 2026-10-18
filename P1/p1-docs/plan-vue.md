@@ -101,16 +101,16 @@ One form with "Sign in" and "Create account" buttons, calling `/auth/sign-in` or
 
 **Diff:** `web/src/pages/RepositoriesPage.vue`
 
-- An input for `owner/name`, with a note that only public repositories work.
-- Lists connected repositories from `/repositories/list`, with a disconnect button.
+- An input for `owner/name`, with a note that only public repositories work. Opening one checks it with `/api/github/commits` before going to its commits.
+- A "Recent repositories" list, kept in `localStorage` under the signed-in username (decision of 2026-10-17), most recent first, with a remove button. It lasts across reloads, sign-outs, and browser restarts on the same browser, but not on other browsers or devices.
 
-**Verify:** Connect a real public repository. A misspelled name shows "Repository not found. Only public repositories work." (the API's `NOT_FOUND`).
+**Verify:** Open a real public repository, and it appears in the recent list after a reload. A misspelled name shows "Repository not found. Only public repositories work." (the API's `NOT_FOUND`). A second account in a private window has its own empty list.
 
 ## V4.2 Commit selection
 
 **Diff:** `web/src/pages/CommitsPage.vue`
 
-Lists commits (short SHA and first line of the message) from `/repositories/commits`. Choosing one opens the tree screen.
+Lists commits (short SHA and first line of the message) from `/api/github/commits`. Choosing one opens the tree screen.
 
 **Verify:** The list matches the repository's recent commits on GitHub.
 
@@ -118,7 +118,7 @@ Lists commits (short SHA and first line of the message) from `/repositories/comm
 
 **Diff:** `web/src/components/TreeView.vue`, `web/src/pages/TreePage.vue`
 
-- A recursive component that shows folders and Markdown files, read-only.
+- A recursive component that shows folders and Markdown files, read-only, from `/api/github/tree`.
 - Shows a warning when GitHub returned `truncated`.
 - A "Propose a restructuring" button calls `/proposals/create` and opens the editor.
 

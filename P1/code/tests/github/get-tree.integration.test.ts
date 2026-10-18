@@ -24,7 +24,7 @@ describe.skipIf(!enabled)("GitHubApi.getTree against GitHub", () => {
   });
 
   test("refuses a repository that does not exist", async () => {
-    await expect(api.getTree({ owner: "octocat", name: "no-such-repo-gittrace" }, knownCommit)).rejects.toBeInstanceOf(
+    await expect(api.getTree({ owner: "octocat", name: "no-such-repo-gitdocs" }, knownCommit)).rejects.toBeInstanceOf(
       GitHubNotFound,
     );
   });

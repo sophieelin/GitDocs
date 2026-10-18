@@ -22,7 +22,7 @@ This plan goes with `plan.md`, which decides when each step happens: R1–R2 in 
 
 | File | Contents |
 | ---- | -------- |
-| `src/compositions/Policy.ts` | Views shared by several endpoints (ownership, reviewer rights, connected repository) |
+| `src/compositions/Policy.ts` | Views shared by several endpoints (ownership, reviewer rights) |
 | `src/compositions/ReviewWorkflow.ts` | Reactions linking ReviewingDocumentation and RestructuringDocumentation |
 | `design/compositions/Policy.md` | The authorization decisions in plain language |
 | `design/compositions/ReviewWorkflow.md` | The review workflow decisions, with the false interval and repair for each |
@@ -44,23 +44,9 @@ This plan goes with `plan.md`, which decides when each step happens: R1–R2 in 
 
 # Phase R2: Views for repositories (with Phase 4)
 
-## R2.1 View: the user has connected the repository
+## R2.1 View: the user has connected the repository (removed)
 
-**Belongs to:** backend phase 4, before step 4.7 (repository endpoints).
-
-**Diff:** `src/compositions/Policy.ts`, `design/compositions/Policy.md`
-
-```ts
-const hasConnected = view("(user) has connected (repository)", ({ user, repository }) =>
-  where(ConnectingRepositories._connection({ user, repository })),
-);
-```
-
-Add the opposite view, `(user) has not connected (repository)`, using `no(...)`, so endpoints can answer `REPOSITORY_NOT_CONNECTED` instead of silently dropping the request.
-
-**Used by:** `/repositories/commits`, `/repositories/tree`, `/proposals/create`.
-
-**Verify:** Tests for a connected user, an unconnected user, and an unknown repository.
+Removed on 2026-10-17, together with the ConnectingRepositories concept it read from. Users no longer connect repositories: they type `owner/name`, and the GitHub routes (`plan-endpoints.md` E3) only need a signed-in session.
 
 # Phase R3: Views for proposals (with Phase 5)
 

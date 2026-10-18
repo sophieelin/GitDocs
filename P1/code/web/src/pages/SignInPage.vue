@@ -51,8 +51,9 @@ async function submit(action: "sign-in" | "register") {
 
 <template>
   <section class="sign-in">
-    <h2>Sign in to GitDocs</h2>
-    <form @submit.prevent="submit('sign-in')">
+    <p class="brand">GitDocs</p>
+    <form class="card" @submit.prevent="submit('sign-in')">
+      <h1>Sign in</h1>
       <label>
         Username
         <input v-model="username" name="username" autocomplete="username" required />
@@ -63,8 +64,10 @@ async function submit(action: "sign-in" | "register") {
       </label>
       <ErrorBanner :message="error" />
       <div class="actions">
-        <button type="submit" :disabled="busy">Sign in</button>
-        <button type="button" class="secondary" :disabled="busy" @click="submit('register')">Create account</button>
+        <button type="submit" class="button" :disabled="busy">Sign in</button>
+        <button type="button" class="button secondary" :disabled="busy" @click="submit('register')">
+          Create account
+        </button>
       </div>
     </form>
   </section>
@@ -72,13 +75,26 @@ async function submit(action: "sign-in" | "register") {
 
 <style scoped>
 .sign-in {
-  max-width: 360px;
-  margin: 48px auto;
+  max-width: 380px;
+  margin: 0 auto;
+  padding-top: 80px;
+}
+
+.brand {
+  margin: 0 0 20px;
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
 }
 
 form {
   display: grid;
-  gap: 14px;
+  gap: 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 22px;
 }
 
 label {
@@ -88,34 +104,14 @@ label {
 }
 
 input {
-  padding: 8px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   font: inherit;
 }
 
 .actions {
   display: flex;
   gap: 10px;
-}
-
-button {
-  padding: 8px 16px;
-  border: 1px solid #2563eb;
-  border-radius: 6px;
-  background: #2563eb;
-  color: #fff;
-  font: inherit;
-  cursor: pointer;
-}
-
-button.secondary {
-  background: #fff;
-  color: #2563eb;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 </style>

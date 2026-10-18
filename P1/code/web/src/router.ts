@@ -1,39 +1,55 @@
 import { createRouter, createWebHistory } from "vue-router";
 import PlaceholderPage from "./pages/PlaceholderPage.vue";
+import RepositoriesPage from "./pages/RepositoriesPage.vue";
+import RepositoryHomePage from "./pages/RepositoryHomePage.vue";
 import SignInPage from "./pages/SignInPage.vue";
 import { restoreSession, useSession } from "./session.ts";
 
 declare module "vue-router" {
   interface RouteMeta {
     title: string;
-    /** The plan-vue.md step that builds this screen. */
+    /** The plan step that builds this screen. */
     step?: string;
     /** Open without signing in. Every other route requires a session. */
     public?: boolean;
   }
 }
 
+/** Every page about a repository lives in its workspace, under this path. */
+const workspace = "/repositories/:owner/:name";
+
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/", redirect: "/repositories" },
     { path: "/sign-in", component: SignInPage, meta: { title: "Sign in", public: true } },
-    { path: "/repositories", component: PlaceholderPage, meta: { title: "Repositories", step: "V4.1" } },
+    { path: "/repositories", component: RepositoriesPage, meta: { title: "Repositories" } },
+    { path: workspace, component: RepositoryHomePage, meta: { title: "Home" } },
+    // Commit and tree pages were replaced by Home and investigations (plan step 4.5).
+    { path: `${workspace}/commits/:rest(.*)*`, redirect: (to) => `/repositories/${to.params.owner}/${to.params.name}` },
     {
-      path: "/repositories/:repository/commits",
+      path: `${workspace}/investigations`,
       component: PlaceholderPage,
-      meta: { title: "Commits", step: "V4.2" },
+      meta: { title: "Investigations", step: "4.9" },
     },
     {
-      path: "/repositories/:repository/commits/:sha",
+      path: `${workspace}/investigations/:investigation`,
       component: PlaceholderPage,
-      meta: { title: "Documentation at a commit", step: "V4.3" },
+      meta: { title: "Investigation", step: "4.9" },
     },
-    { path: "/proposals", component: PlaceholderPage, meta: { title: "My proposals", step: "V6.1" } },
-    { path: "/proposals/:proposal", component: PlaceholderPage, meta: { title: "Proposal", step: "V6.2" } },
-    { path: "/proposals/:proposal/edit", component: PlaceholderPage, meta: { title: "Edit proposal", step: "V5.2" } },
-    { path: "/reviews", component: PlaceholderPage, meta: { title: "Review queue", step: "V7.1" } },
-    { path: "/reviews/:review", component: PlaceholderPage, meta: { title: "Review", step: "V7.3" } },
+    { path: `${workspace}/proposals`, component: PlaceholderPage, meta: { title: "Proposals", step: "5.8" } },
+    {
+      path: `${workspace}/proposals/:proposal`,
+      component: PlaceholderPage,
+      meta: { title: "Proposal", step: "5.8" },
+    },
+    {
+      path: `${workspace}/proposals/:proposal/edit`,
+      component: PlaceholderPage,
+      meta: { title: "Edit proposal", step: "5.7" },
+    },
+    { path: `${workspace}/reviews`, component: PlaceholderPage, meta: { title: "Reviews", step: "6.7" } },
+    { path: `${workspace}/reviews/:review`, component: PlaceholderPage, meta: { title: "Review", step: "6.7" } },
     { path: "/:path(.*)*", component: PlaceholderPage, meta: { title: "Page not found" } },
   ],
 });

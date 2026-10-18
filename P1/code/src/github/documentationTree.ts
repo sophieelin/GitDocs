@@ -23,10 +23,19 @@ const MARKDOWN = /\.(md|markdown)$/i;
  * only if it contains Markdown somewhere inside it.
  */
 export function buildDocumentationTree(entries: TreeEntry[]): DocumentationFolder {
+  return buildFileTree(entries, (path) => MARKDOWN.test(path));
+}
+
+/**
+ * Nests a repository's files into folders, keeping their real paths. With no
+ * filter, every file is kept, as in the investigation's Code Structure panel.
+ * A folder appears only if it contains a kept file somewhere inside it.
+ */
+export function buildFileTree(entries: TreeEntry[], keep: (path: string) => boolean = () => true): DocumentationFolder {
   const root: DocumentationFolder = { name: "", path: "", folders: [], files: [] };
 
   for (const entry of entries) {
-    if (entry.type !== "file" || !MARKDOWN.test(entry.path)) continue;
+    if (entry.type !== "file" || !keep(entry.path)) continue;
     const parts = entry.path.split("/");
     const fileName = parts.pop()!;
     let folder = root;

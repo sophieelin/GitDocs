@@ -80,34 +80,20 @@ No formers are needed.
 
 # Phase E3: Repository endpoints (backend step 4.7)
 
-**Diff:** `src/compositions/Repositories.ts`, `design/compositions/Repositories.md`
+**Changed on 2026-10-17:** there is no ConnectingRepositories concept, so these are **not sync-engine endpoints**. They are two plain routes, answered in `src/http.ts` before sync-engine's handler, using the `GitHubApi` adapter and `buildDocumentationTree`. There is no connect, disconnect, or list: the user types `owner/name`, and the browser remembers recent repositories in `localStorage`, per username (`plan-vue.md` V4.1). The old E3.1 former is removed.
 
-| Endpoint | Input | Output | Errors |
-| -------- | ----- | ------ | ------ |
-| `/repositories/connect` | session, owner, name | repository | `REPOSITORY_NOT_FOUND`, `ALREADY_CONNECTED` |
-| `/repositories/disconnect` | session, repository | (empty) | `REPOSITORY_NOT_CONNECTED` |
-| `/repositories/list` | session | repositories (former) | — |
-| `/repositories/commits` | session, repository | commits | `REPOSITORY_NOT_CONNECTED`, `GITHUB_UNAVAILABLE` |
-| `/repositories/tree` | session, repository, sha | tree, truncated | `REPOSITORY_NOT_CONNECTED`, `COMMIT_NOT_FOUND` |
+**Diff:** `src/github/routes.ts`, `src/http.ts`, `tests/http/github.test.ts`
 
-`/repositories/disconnect` is added to the backend plan's list, because step 4.4 implements disconnect.
+| Route | Input | Output | Errors |
+| ----- | ----- | ------ | ------ |
+| `/api/github/commits` | session, owner, name | commits (sha, message), newest first | 401 `UNAUTHORIZED`, 404 `NOT_FOUND` (no such public repository), 503 `GITHUB_UNAVAILABLE` |
+| `/api/github/tree` | session, owner, name, sha | tree (nested folders of Markdown files), truncated | 401 `UNAUTHORIZED`, 404 `NOT_FOUND` (no such repository or commit), 503 `GITHUB_UNAVAILABLE` |
 
-## E3.1 Former: the user's repositories
+- Both routes take JSON `POST` requests, like the sync-engine endpoints, and answer errors in the same `{ "error": "…" }` shape. Malformed input is 400 `INVALID_REQUEST`.
+- Both need a signed-in session, checked with Sessioning, like every endpoint except sign-in.
+- The GitHub fetcher is passed to `createHandler`, so tests use `StubGitHubFetcher`.
 
-```ts
-const RepositoriesOf = former("the repositories of (user)", ({ user }, { repository, owner, name }) =>
-  form({
-    repositories: each(ConnectingRepositories._connections({ user }).is({ repository, owner, name }))
-      .form({ repository, owner, name }),
-  }),
-);
-```
-
-An empty list is a valid answer, not an error.
-
-`/repositories/commits` and `/repositories/tree` return their concept action's result directly, because they read from GitHub through the fetcher, not from stored state. They use the `(user) has connected (repository)` view.
-
-**Verify:** Tests use the fake fetcher. Then use `curl` against a real public repository.
+**Verify:** Tests with the stub fetcher. Then use `curl` against `sophieelin/PaperNet`.
 
 # Phase E4: Proposal endpoints (backend step 5.9)
 
@@ -115,7 +101,7 @@ An empty list is a valid answer, not an error.
 
 | Endpoint | Input | Output | Errors |
 | -------- | ----- | ------ | ------ |
-| `/proposals/create` | session, repository, sha, currentStructure, rationale | proposal | `REPOSITORY_NOT_CONNECTED` |
+| `/proposals/create` | session, owner, name, sha, currentStructure, rationale | proposal | to decide in Phase 5 (there is no "connected repository" check any more) |
 | `/proposals/modify` | session, proposal, proposedStructure, rationale | (empty) | `NOT_PROPOSAL_AUTHOR`, `NOT_DRAFT` |
 | `/proposals/submit` | session, proposal | (empty) | `NOT_PROPOSAL_AUTHOR`, `NOT_DRAFT` |
 | `/proposals/discard` | session, proposal | (empty) | `NOT_PROPOSAL_AUTHOR`, `NOT_DRAFT` |

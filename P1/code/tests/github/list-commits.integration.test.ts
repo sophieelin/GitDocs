@@ -19,7 +19,7 @@ describe.skipIf(!enabled)("GitHubApi.listCommits against GitHub", () => {
   });
 
   test("refuses a repository that does not exist", async () => {
-    await expect(api.listCommits({ owner: "octocat", name: "no-such-repo-gittrace" })).rejects.toBeInstanceOf(
+    await expect(api.listCommits({ owner: "octocat", name: "no-such-repo-gitdocs" })).rejects.toBeInstanceOf(
       GitHubNotFound,
     );
   });

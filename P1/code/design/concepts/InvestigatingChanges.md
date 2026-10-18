@@ -2,122 +2,69 @@
 
 ## Purpose
 
-Identify documentation that may need reconsideration when a set of commits
-changes the structure or responsibilities of the system.
+Give a commit that may have changed the structure or responsibilities of the
+system one shared place where its documentation is looked at, so developers
+reason about the same commit together instead of each starting from scratch.
 
 ## Principle
 
-After investigating a set of commits, the investigation records potentially
-affected documentation and evidence connecting the commits to that
-documentation. If the investigator later finds that a document was flagged by
-mistake or a piece of evidence does not hold up, they remove it before
-completing the investigation.
+Ari opens an investigation of commit `d8ab205` in `sophieelin/PaperNet` and
+receives investigation `inv-1`, recorded as opened by Ari. It is listed among
+PaperNet's investigations. When Ari opens the same commit again, and when Bo
+opens it later, both receive `inv-1` rather than a second investigation, and it
+still shows Ari as the one who opened it. Opening commit `6d4a4c6` creates a
+second investigation, listed before the first because it was opened later.
+Another repository's list does not include either. Opening a commit that is not
+a full commit SHA is refused.
 
 ## Types
 
 ```types
-external Commit
-  A repository commit.
-external Documentation
-  A documentation item.
-external Evidence
-  Supporting information such as code references, repository history, issue
-  discussions, or documentation links.
-external Investigator
-  A developer or an AI agent investigating the commits.
-Status is OPEN or COMPLETE
-  The lifecycle states an investigation may occupy.
+external User
+  The developer who opens an investigation.
 ```
 
 ## State
 
 ```state
 a set of Investigations with
-  a commits set of Commits
-  an author Investigator
-  an affectedDocumentation set of Documentation
-  an evidence set of Evidence
-  a status Status
-  unique commits and author
+  an owner String
+  a name String
+  a commit String
+  an investigator User
+  an openedAt DateTime
+  unique owner and name and commit
+  Rule: owner and name are compared without regard to letter case, as on GitHub; commit is a full 40-character SHA in lowercase.
 ```
 
 ## Actions
 
 ```actions
-identify(commits: Commits, investigator: Investigator) : returns (investigation: Investigation)
-  where no investigation has the commits and investigator as author
+open(investigator: User, owner: String, name: String, commit: String, at: DateTime) : returns (investigation: Investigation)
+  where owner or name is empty
   then
-    add a new investigation with commits, investigator as author, empty affectedDocumentation and evidence, and status OPEN
+    refuses INVALID_REPOSITORY "A repository needs an owner and a name."
+  where commit is not a full 40-character commit SHA
+  then
+    refuses INVALID_COMMIT "An investigation needs a full commit SHA."
+  where an investigation of commit in that repository already exists
+  then
     returns investigation
-  where some investigation has the commits and investigator as author
+  where no investigation of commit in that repository exists
   then
-    refuses INVESTIGATION_EXISTS "This investigator already has an investigation for these commits."
-
-associate(investigation: Investigation, documentation: Documentation) : returns ()
-  where investigation is in Investigations and documentation is not in its affectedDocumentation
-  then
-    add documentation to the investigation's affectedDocumentation
-    returns
-  where investigation is not in Investigations
-  then
-    refuses ASSOCIATE_INVESTIGATION_NOT_FOUND "There is no such investigation."
-  where documentation is in the investigation's affectedDocumentation
-  then
-    refuses DOCUMENTATION_ALREADY_ASSOCIATED "This documentation is already associated with the investigation."
-
-dissociate(investigation: Investigation, documentation: Documentation) : returns ()
-  where investigation is in Investigations, its status is OPEN, and documentation is in its affectedDocumentation
-  then
-    remove documentation from the investigation's affectedDocumentation
-    returns
-  where investigation is not in Investigations
-  then
-    refuses DISSOCIATE_INVESTIGATION_NOT_FOUND "There is no such investigation."
-  where the investigation's status is COMPLETE
-  then
-    refuses DISSOCIATE_INVESTIGATION_COMPLETE "A completed investigation can no longer be changed."
-  where documentation is not in the investigation's affectedDocumentation
-  then
-    refuses DOCUMENTATION_NOT_ASSOCIATED "This documentation is not associated with the investigation."
-
-record(investigation: Investigation, evidence: Evidence) : returns ()
-  where investigation is in Investigations
-  then
-    add evidence to the investigation's evidence
-    returns
-  where investigation is not in Investigations
-  then
-    refuses RECORD_INVESTIGATION_NOT_FOUND "There is no such investigation."
-
-retract(investigation: Investigation, evidence: Evidence) : returns ()
-  where investigation is in Investigations, its status is OPEN, and evidence is in its evidence
-  then
-    remove evidence from the investigation's evidence
-    returns
-  where investigation is not in Investigations
-  then
-    refuses RETRACT_INVESTIGATION_NOT_FOUND "There is no such investigation."
-  where the investigation's status is COMPLETE
-  then
-    refuses RETRACT_INVESTIGATION_COMPLETE "A completed investigation can no longer be changed."
-  where evidence is not in the investigation's evidence
-  then
-    refuses EVIDENCE_NOT_RECORDED "This evidence is not recorded on the investigation."
-
-complete(investigation: Investigation) : returns ()
-  where investigation is in Investigations and its status is OPEN
-  then
-    set the investigation's status to COMPLETE
-    returns
-  where investigation is not in Investigations
-  then
-    refuses COMPLETE_INVESTIGATION_NOT_FOUND "There is no such investigation."
-  where the investigation's status is COMPLETE
-  then
-    refuses INVESTIGATION_ALREADY_COMPLETE "This investigation is already complete."
+    add a new investigation with owner, name, commit, investigator, and at as its openedAt
+    returns investigation
 ```
 
 ## Queries
 
 ```queries
+_get(investigation: Investigation) : optional (investigation: Investigation, owner: String, name: String, commit: String, investigator: User, openedAt: DateTime)
+  answers the investigation's repository, commit, who opened it, and when
+  answers no row for an unknown investigation
+
+_forRepository(owner: String, name: String) : many (investigation: Investigation, commit: String, investigator: User, openedAt: DateTime)
+  answers every investigation in the repository, compared without regard to letter case
+  orders rows by openedAt, the most recently opened first
+  answers no rows for a repository with no investigations
 ```
