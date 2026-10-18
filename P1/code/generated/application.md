@@ -27,7 +27,7 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 
 #### Instances
 
-- `Authenticating` — instance of `Authenticating` — [GitTrace Application Types](../design/types.md), line 9.
+- `Authenticating` — instance of `Authenticating` — [GitDocs Application Types](../design/types.md), line 9.
 
 ### Sessioning
 
@@ -47,8 +47,8 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 
 #### Instances
 
-- `Sessioning` — instance of `Sessioning` — [GitTrace Application Types](../design/types.md), line 11.
-  - `Subject` is `Authenticating.Account` — [GitTrace Application Types](../design/types.md), line 12.
+- `Sessioning` — instance of `Sessioning` — [GitDocs Application Types](../design/types.md), line 11.
+  - `Subject` is `Authenticating.Account` — [GitDocs Application Types](../design/types.md), line 12.
 
 ## Reactions
 

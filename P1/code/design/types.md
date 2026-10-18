@@ -1,4 +1,4 @@
-# GitTrace Application Types
+# GitDocs Application Types
 
 Every concept instance the application selects, with its external types bound.
 

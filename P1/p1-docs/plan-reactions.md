@@ -1,8 +1,8 @@
-# GitTrace Reactions and Views Plan
+# GitDocs Reactions and Views Plan
 
 ## Goal
 
-Plan the composition layer that connects GitTrace's concepts:
+Plan the composition layer that connects GitDocs's concepts:
 
 - **Reactions** state one application decision each: when one concept's action happens, ask another concept to act.
 - **Views** are named, read-only lookups over concept queries. Endpoints and reactions use them for authorization and policy, such as "this user owns this proposal."

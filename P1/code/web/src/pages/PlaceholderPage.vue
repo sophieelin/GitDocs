@@ -8,7 +8,7 @@ const route = useRoute();
 <template>
   <section>
     <h2>{{ route.meta.title }}</h2>
-    <p class="note">Placeholder. This screen is built in {{ route.meta.step }}.</p>
+    <p v-if="route.meta.step" class="note">Placeholder. This screen is built in {{ route.meta.step }}.</p>
     <dl v-if="Object.keys(route.params).length">
       <template v-for="(value, name) in route.params" :key="name">
         <dt>{{ name }}</dt>

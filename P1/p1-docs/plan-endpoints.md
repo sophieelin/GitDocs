@@ -1,4 +1,4 @@
-# GitTrace Endpoints and Formers Plan
+# GitDocs Endpoints and Formers Plan
 
 ## Goal
 

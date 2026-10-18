@@ -1,8 +1,8 @@
-# GitTrace MVP: TypeScript, MongoDB, GitHub API, and Vue
+# GitDocs MVP: TypeScript, MongoDB, GitHub API, and Vue
 
 ## Goal
 
-Build GitTrace incrementally using TypeScript, MongoDB, the GitHub REST API, sync-engine, and Vue.
+Build GitDocs incrementally using TypeScript, MongoDB, the GitHub REST API, sync-engine, and Vue.
 
 The MVP supports this workflow:
 
@@ -68,7 +68,7 @@ Start with the part of the product that retrieves real repository data. Keep it 
 
 **Diff:** `src/github/GitHubFetcher.ts`
 
-Define the operations needed by GitTrace:
+Define the operations needed by GitDocs:
 
 - List commits for a repository.
 - Retrieve the file tree at a specific commit SHA.
@@ -155,7 +155,7 @@ Implement the same interface with fixed test data: the `sophieelin/my-repo` repo
 
 **Verify:** The unit tests work offline, and the real integration tests work separately.
 
-**Phase completion:** GitTrace can retrieve real commits and a documentation tree for a selected commit.
+**Phase completion:** GitDocs can retrieve real commits and a documentation tree for a selected commit.
 
 # Phase 2: Shared backend scaffolding ✅ Done (2.4 moved to 3.4 and 4.2)
 
@@ -204,7 +204,7 @@ Moved to 3.4 (`{ db }`) and 4.2 (`{ github }`). No concepts existed yet, so ther
 
 # Phase 3: Slice 1 — Sign in
 
-**At the end:** you can open GitTrace in a browser, register, sign in, reload, and stay signed in.
+**At the end:** you can open GitDocs in a browser, register, sign in, reload, and stay signed in.
 
 ## 3.1 Copy the specifications
 
@@ -256,7 +256,7 @@ Implement session creation, current-user lookup, and sign-out.
 
 **Diff:** see `plan-vue.md` V1.1–V1.2.
 
-**Verify:** `bun run dev` shows a "GitTrace" page, and each route shows a placeholder.
+**Verify:** `bun run dev` shows a "GitDocs" page, and each route shows a placeholder.
 
 ## 3.8 API client, session, and errors
 

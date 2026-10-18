@@ -1,4 +1,4 @@
-# GitTrace Vue Frontend Plan
+# GitDocs Vue Frontend Plan
 
 ## Goal
 
@@ -41,7 +41,7 @@ Build a Vue 3 frontend that uses the backend endpoints in `plan-endpoints.md` to
 - Add `vue-tsc --noEmit` to `check`, or as a separate `check:web` script.
 - Delete the old `web/server.ts` reference.
 
-**Verify:** `bun run dev` serves a page that says "GitTrace," and `bun run check` passes.
+**Verify:** `bun run dev` serves a page that says "GitDocs," and `bun run check` passes.
 
 ## V1.2 Router and layout
 

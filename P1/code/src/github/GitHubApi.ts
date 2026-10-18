@@ -78,7 +78,7 @@ export class GitHubApi implements GitHubFetcher {
     const headers: Record<string, string> = {
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "GitTrace",
+      "User-Agent": "GitDocs",
     };
     if (this.token) headers.Authorization = `Bearer ${this.token}`;
     // TODO: retry unsuccessful responses (5xx, rate limits, network errors) with backoff.

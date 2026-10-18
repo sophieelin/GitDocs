@@ -9,7 +9,7 @@ await connectDb();
 
 const handler = createHandler(assembleApplication({ db }));
 const server = Bun.serve({ hostname: "127.0.0.1", port, fetch: handler });
-console.log(`GitTrace backend listening on http://127.0.0.1:${server.port}/api`);
+console.log(`GitDocs backend listening on http://127.0.0.1:${server.port}/api`);
 
 async function shutdown(): Promise<void> {
   await server.stop();
