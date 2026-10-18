@@ -13,4 +13,7 @@ export interface GitHubFetcher {
 
   /** The commit `sha`: its message, author, date, and every file it changed. */
   getCommit(repository: RepositoryRef, sha: string): Promise<CommitDetails>;
+
+  /** The text of the file at `path` as it was at `sha`. */
+  getFile(repository: RepositoryRef, sha: string, path: string): Promise<string>;
 }

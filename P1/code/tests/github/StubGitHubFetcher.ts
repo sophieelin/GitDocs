@@ -16,6 +16,8 @@ export interface StubRepository {
   trees: Record<string, TreeEntry[]>;
   /** The files each commit changed. A commit with none listed changed nothing. */
   changes?: Record<string, ChangedFile[]>;
+  /** File text by path, the same at every commit. A file not listed reads as `# <path>`. */
+  files?: Record<string, string>;
 }
 
 /** The author and date every stub commit reports. */
@@ -50,6 +52,17 @@ export class StubGitHubFetcher implements GitHubFetcher {
     if (!commit) throw new CommitNotFound(`Commit ${sha} does not exist in this repository.`);
     const files = (found.changes?.[sha] ?? []).map((file) => ({ ...file }));
     return { sha, message: commit.message, ...stubAuthor, files, truncated: false };
+  }
+
+  async getFile(repository: RepositoryRef, sha: string, path: string): Promise<string> {
+    this.calls.push(`getFile ${key(repository)} ${sha} ${path}`);
+    const found = this.find(repository);
+    const entries = found.trees[sha];
+    if (!entries) throw new CommitNotFound(`Commit ${sha} does not exist in this repository.`);
+    if (!entries.some((entry) => entry.type === "file" && entry.path === path)) {
+      throw new GitHubNotFound("The repository is private or does not exist, or the commit does not exist.");
+    }
+    return found.files?.[path] ?? `# ${path}\n`;
   }
 
   private find(repository: RepositoryRef): StubRepository {

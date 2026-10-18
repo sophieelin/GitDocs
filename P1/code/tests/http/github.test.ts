@@ -134,6 +134,34 @@ describe("/github/commit", () => {
   });
 });
 
+describe("/github/file", () => {
+  test("returns a documentation file's text at a commit", async () => {
+    const { status, body } = await api.post("/github/file", { session, ...myRepo, sha: myRepoCommits.refactor, path: "docs/api/user.md" });
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ path: "docs/api/user.md", text: "# docs/api/user.md\n", truncated: false });
+  });
+
+  test("a file that is not at that commit is a 404", async () => {
+    expect(await api.post("/github/file", { session, ...myRepo, sha: myRepoCommits.refactor, path: "docs/missing.md" })).toEqual({
+      status: 404,
+      body: { error: "NOT_FOUND" },
+    });
+  });
+
+  test("only reads documentation, by a plain relative path", async () => {
+    const sha = myRepoCommits.refactor;
+    expect((await api.post("/github/file", { session, ...myRepo, sha, path: "src/models/user.py" })).status).toBe(400);
+    expect((await api.post("/github/file", { session, ...myRepo, sha, path: "../secrets.md" })).status).toBe(400);
+    expect((await api.post("/github/file", { session, ...myRepo, sha, path: "/README.md" })).status).toBe(400);
+    expect((await api.post("/github/file", { session, ...myRepo, sha })).status).toBe(400);
+  });
+
+  test("needs an active session", async () => {
+    expect((await api.post("/github/file", { session: "invented", ...myRepo, sha: myRepoCommits.initial, path: "README.md" })).status).toBe(401);
+  });
+});
+
 describe("both routes", () => {
   test("need an active session", async () => {
     await api.post("/auth/sign-out", { session });

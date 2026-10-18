@@ -1,9 +1,8 @@
 import { registerConcept } from "@mit-sdg/sync-engine/assembly";
 import type { Db } from "mongodb";
 import {
-  InvalidAffectedDocumentation,
   InvalidCommit,
-  InvalidEvidence,
+  InvalidHighlights,
   InvalidRepository,
   InvalidTitle,
   InvestigatingChangesConcept,
@@ -17,8 +16,7 @@ export const investigatingChanges = registerConcept({
     INVALID_REPOSITORY: InvalidRepository,
     INVALID_COMMIT: InvalidCommit,
     INVALID_TITLE: InvalidTitle,
-    INVALID_AFFECTED_DOCUMENTATION: InvalidAffectedDocumentation,
-    INVALID_EVIDENCE: InvalidEvidence,
+    INVALID_HIGHLIGHTS: InvalidHighlights,
   },
   floors: {
     mongo: ({ db }: { db: Db }) => new InvestigatingChangesConcept(db),

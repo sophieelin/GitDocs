@@ -3,32 +3,29 @@
 ## Purpose
 
 Record, for a commit that may have changed the structure or responsibilities of
-the system, which documentation needs to change and why, together with the
-evidence for it, so a restructuring starts from a stated case instead of a
-hunch.
+the system, which passages of the documentation no longer hold and why, so a
+restructuring starts from a stated case instead of a hunch.
 
 ## Principle
 
 Ari reads commit `d8ab205` in `sophieelin/PaperNet` and submits investigation
-`inv-1` titled "Agents moved under lib/": `csail_hack/README.md` is affected
-because it still describes the old layout, and the evidence is "lib/agents/
-gained its own README in this commit". The investigation lists that file with
-its reason and that evidence item, and records Ari as its investigator. Bo
-submits a second investigation of the same commit with a different title; both
-are listed for that commit and among PaperNet's investigations, the most
-recently submitted first. Another repository's list includes neither. A
-submission with no title, no affected documentation, or no evidence is refused,
-and nothing is recorded.
+`inv-1` titled "Agents moved under lib/", with one highlight: lines 12 to 18 of
+`csail_hack/README.md`, commented "Still describes agents/ at the top level;
+they moved under lib/ in this commit". The investigation lists that highlight
+with its lines and comment, and records Ari as its investigator. Bo submits a
+second investigation of the same commit with a different title; both are listed
+for that commit and among PaperNet's investigations, the most recently
+submitted first. Another repository's list includes neither. A submission with
+no title, or with no highlight, or with a highlight that has no comment or no
+valid range of lines, is refused, and nothing is recorded.
 
 ## Types
 
 ```types
 external User
   The developer who submits an investigation.
-opaque AffectedList
-  The documentation files that need to change, each a path with a reason; paths are distinct.
-opaque EvidenceList
-  Short evidence texts, in the order given; a text may include a link.
+opaque HighlightList
+  Highlighted passages, in the order given: each a documentation file's path, a range of lines in it from and to (1-based, from at most to), and a comment saying why those lines do not work.
 ```
 
 ## State
@@ -43,21 +40,19 @@ a set of Investigations with
   a submittedAt DateTime
   Rule: owner and name are compared without regard to letter case, as on GitHub; commit is a full 40-character SHA in lowercase.
 
-a seq of AffectedDocuments with
+a seq of Highlights with
   an investigation Investigation
   a path String
-  a reason String
-  unique investigation and path
-
-a seq of EvidenceItems with
-  an investigation Investigation
-  a text String
+  a from Number
+  a to Number
+  a comment String
+  Rule: from and to are line numbers in the file at the investigation's commit, counted from 1, and from is at most to.
 ```
 
 ## Actions
 
 ```actions
-submit(investigator: User, owner: String, name: String, commit: String, title: String, affected: AffectedList, evidence: EvidenceList, at: DateTime) : returns (investigation: Investigation)
+submit(investigator: User, owner: String, name: String, commit: String, title: String, highlights: HighlightList, at: DateTime) : returns (investigation: Investigation)
   where owner or name is empty
   then
     refuses INVALID_REPOSITORY "A repository needs an owner and a name."
@@ -67,16 +62,13 @@ submit(investigator: User, owner: String, name: String, commit: String, title: S
   where title is empty or longer than 120 characters
   then
     refuses INVALID_TITLE "An investigation needs a title of at most 120 characters."
-  where affected is empty, or a path or reason is empty, or a path is repeated
+  where highlights is empty, or a highlight has an empty path or comment, or its lines are not whole numbers from 1 with from at most to
   then
-    refuses INVALID_AFFECTED_DOCUMENTATION "Name at least one affected documentation file, each once, with a reason."
-  where evidence is empty, or an item is empty
-  then
-    refuses INVALID_EVIDENCE "Give at least one piece of evidence."
+    refuses INVALID_HIGHLIGHTS "Highlight at least one passage, each with its lines and a comment."
   where every part is valid
   then
     add a new investigation with owner, name, commit, investigator, title, and at as its submittedAt
-    add each affected path with its reason, and each evidence item in order
+    add each highlight with its path, from, to, and comment, in order
     returns investigation
 ```
 
@@ -87,12 +79,8 @@ _get(investigation: Investigation) : optional (investigation: Investigation, own
   answers the investigation's repository, commit, investigator, title, and when it was submitted
   answers no row for an unknown investigation
 
-_affected(investigation: Investigation) : many (path: String, reason: String)
-  answers the investigation's affected documentation in the order it was given
-  answers no rows for an unknown investigation
-
-_evidence(investigation: Investigation) : many (text: String)
-  answers the investigation's evidence in the order it was given
+_highlights(investigation: Investigation) : many (path: String, from: Number, to: Number, comment: String)
+  answers the investigation's highlights in the order they were given
   answers no rows for an unknown investigation
 
 _forRepository(owner: String, name: String) : many (investigation: Investigation, commit: String, investigator: User, title: String, submittedAt: DateTime)

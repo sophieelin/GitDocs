@@ -40,8 +40,7 @@ beforeEach(async () => {
     ...paperNet,
     commit,
     title: "Agents moved under lib/",
-    affected: [{ path: readme.path, reason: "Hard to find this deep." }],
-    evidence: ["lib/agents/ gained its own README in this commit"],
+    highlights: [{ path: readme.path, from: 1, to: 4, comment: "Hard to find this deep." }],
   });
   investigation = submitted.body.investigation as string;
 });

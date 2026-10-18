@@ -14,6 +14,11 @@ Ari starts proposal `p-1`, "Organize the agents docs", from investigation
 documentation structure as it was at that commit and starts with the same
 structure as its proposal. Ari moves `csail_hack/lib/agents/README.md` to the
 root in the proposed structure and saves; the current structure is unchanged.
+Ari selects text in `README.md` from the 5th character of line 3 to the 12th
+character of line 5 and comments, "This section should move with the agents
+docs"; the proposal lists that comment with its lines and characters, and Ari
+can remove it again. A comment with no text, or with no valid range of text, is
+refused.
 Submitting without a rationale is refused. Ari writes the rationale and submits,
 and the proposal is pending approval. Further edits are refused, as are Bo's
 attempts to edit or submit it. A draft Ari no longer wants can be discarded.
@@ -52,6 +57,17 @@ a set of Restructurings with
   an updatedAt DateTime
   Rule: owner and name are compared without regard to letter case, as on GitHub; commit is a full 40-character SHA in lowercase.
   Rule: currentStructure never changes after the proposal is created.
+
+a seq of Comments with
+  a restructuring Restructuring
+  a path String
+  a from Number
+  a to Number
+  a start Number
+  an end Number
+  a text String
+  Rule: from and to are line numbers in the file at the restructuring's commit, counted from 1, and from is at most to.
+  Rule: the comment is on the text from character start of line from up to, but not including, character end of line to, counting characters from 0; on one line, start is less than end.
 ```
 
 ## Actions
@@ -91,6 +107,44 @@ modify(restructuring: Restructuring, author: User, title: String, proposedStruct
   where the author's draft is valid
   then
     set the restructuring's title, proposedStructure, and rationale, and at as its updatedAt
+    returns
+
+comment(restructuring: Restructuring, author: User, path: String, from: Number, to: Number, start: Number, end: Number, text: String, at: DateTime) : returns (comment: Comment)
+  where restructuring is not in Restructurings
+  then
+    refuses PROPOSAL_NOT_FOUND "There is no such proposal."
+  where author is not the restructuring's author
+  then
+    refuses NOT_PROPOSAL_AUTHOR "Only the proposal's author can change it."
+  where the restructuring's status is not DRAFT
+  then
+    refuses NOT_DRAFT "Only a draft proposal can be changed."
+  where path or text is empty, from and to are not whole numbers from 1 with from at most to, start and end are not whole numbers from 0, or the comment is on one line and start is not less than end
+  then
+    refuses INVALID_COMMENT "A comment needs a file, the text it is on, and some text."
+  where the author's comment is valid
+  then
+    add a new comment on restructuring with path, from, to, start, end, and text
+    set at as the restructuring's updatedAt
+    returns comment
+
+uncomment(restructuring: Restructuring, author: User, comment: Comment, at: DateTime) : returns ()
+  where restructuring is not in Restructurings
+  then
+    refuses PROPOSAL_NOT_FOUND "There is no such proposal."
+  where author is not the restructuring's author
+  then
+    refuses NOT_PROPOSAL_AUTHOR "Only the proposal's author can change it."
+  where the restructuring's status is not DRAFT
+  then
+    refuses NOT_DRAFT "Only a draft proposal can be changed."
+  where comment is not one of the restructuring's comments
+  then
+    refuses COMMENT_NOT_FOUND "There is no such comment on this proposal."
+  where the comment is on the author's draft
+  then
+    remove comment
+    set at as the restructuring's updatedAt
     returns
 
 submit(restructuring: Restructuring, author: User, at: DateTime) : returns ()
@@ -145,6 +199,10 @@ approve(restructuring: Restructuring, at: DateTime) : returns ()
 _get(restructuring: Restructuring) : optional (restructuring: Restructuring, author: User, investigation: Investigation, owner: String, name: String, commit: String, title: String, rationale: String, status: Status, currentStructure: DocumentationTree, proposedStructure: DocumentationTree, createdAt: DateTime, updatedAt: DateTime)
   answers the proposal with both of its structures
   answers no row for an unknown or discarded proposal
+
+_comments(restructuring: Restructuring) : many (comment: Comment, path: String, from: Number, to: Number, start: Number, end: Number, text: String)
+  answers the proposal's comments in the order they were added
+  answers no rows for an unknown or discarded proposal
 
 _forRepository(owner: String, name: String) : many (restructuring: Restructuring, author: User, investigation: Investigation, commit: String, title: String, status: Status, updatedAt: DateTime)
   answers every proposal in the repository, without its structures, compared without regard to letter case

@@ -127,9 +127,19 @@ export class GitHubApi implements GitHubFetcher {
     };
   }
 
-  private async request(path: string): Promise<Response> {
+  async getFile(repository: RepositoryRef, sha: string, path: string): Promise<string> {
+    if (!SHA.test(sha)) throw new InvalidCommitSha(`"${sha}" is not a commit SHA.`);
+    const encoded = path.split("/").map(encodeURIComponent).join("/");
+    // The raw media type answers the file's bytes rather than base64 inside JSON.
+    const response = await this.request(`${repoPath(repository)}/contents/${encoded}?ref=${sha}`, "application/vnd.github.raw+json");
+    if (response.status === 422) throw new CommitNotFound(`Commit ${sha} does not exist in this repository.`);
+    if (!response.ok) await this.parse(response);
+    return await response.text();
+  }
+
+  private async request(path: string, accept = "application/vnd.github+json"): Promise<Response> {
     const headers: Record<string, string> = {
-      Accept: "application/vnd.github+json",
+      Accept: accept,
       "X-GitHub-Api-Version": "2022-11-28",
       "User-Agent": "GitDocs",
     };

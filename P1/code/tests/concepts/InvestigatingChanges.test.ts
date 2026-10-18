@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import {
-  InvalidAffectedDocumentation,
   InvalidCommit,
-  InvalidEvidence,
+  InvalidHighlights,
   InvalidRepository,
   InvalidTitle,
   InvestigatingChangesConcept,
@@ -37,8 +36,14 @@ const valid = {
   ...paperNet,
   commit: d8ab205,
   title: "Agents moved under lib/",
-  affected: [{ path: "csail_hack/README.md", reason: "Still describes the old layout." }],
-  evidence: ["lib/agents/ gained its own README in this commit"],
+  highlights: [
+    {
+      path: "csail_hack/README.md",
+      from: 12,
+      to: 18,
+      comment: "Still describes agents/ at the top level; they moved under lib/ in this commit",
+    },
+  ],
 };
 
 describe("InvestigatingChanges", () => {
@@ -49,8 +54,7 @@ describe("InvestigatingChanges", () => {
     expect(await investigating._get({ investigation: "inv-1" })).toEqual([
       { investigation: "inv-1", ...paperNet, commit: d8ab205, investigator: "ari", title: "Agents moved under lib/", submittedAt: morning },
     ]);
-    expect(await investigating._affected({ investigation: "inv-1" })).toEqual(valid.affected);
-    expect(await investigating._evidence({ investigation: "inv-1" })).toEqual([{ text: valid.evidence[0] }]);
+    expect(await investigating._highlights({ investigation: "inv-1" })).toEqual(valid.highlights);
 
     await investigating.submit({ investigator: "bob", ...valid, title: "A second reading", at: noon });
     expect(await investigating._forCommit({ ...paperNet, commit: d8ab205 })).toEqual([
@@ -75,27 +79,23 @@ describe("InvestigatingChanges", () => {
     expect((await investigating._forCommit({ owner: "sophieelin", name: "papernet", commit: d8ab205 })).length).toBe(1);
   });
 
-  test("keeps affected documentation and evidence in the order given, trimmed", async () => {
+  test("keeps highlights in the order given, with comments trimmed, and allows several per file", async () => {
     const investigating = new InvestigatingChangesConcept(testDb.db, ids("inv-1"));
     await investigating.submit({
       investigator: "ari",
       ...valid,
-      affected: [
-        { path: "b.md", reason: "  second  " },
-        { path: "a.md", reason: "first" },
+      highlights: [
+        { path: "b.md", from: 3, to: 3, comment: "  second  " },
+        { path: "a.md", from: 1, to: 9, comment: "first" },
+        { path: "b.md", from: 2, to: 5, comment: "overlaps the other" },
       ],
-      evidence: ["one", "  two  ", "https://github.com/sophieelin/PaperNet/pull/1"],
       at: morning,
     });
 
-    expect(await investigating._affected({ investigation: "inv-1" })).toEqual([
-      { path: "b.md", reason: "second" },
-      { path: "a.md", reason: "first" },
-    ]);
-    expect((await investigating._evidence({ investigation: "inv-1" })).map((e) => e.text)).toEqual([
-      "one",
-      "two",
-      "https://github.com/sophieelin/PaperNet/pull/1",
+    expect(await investigating._highlights({ investigation: "inv-1" })).toEqual([
+      { path: "b.md", from: 3, to: 3, comment: "second" },
+      { path: "a.md", from: 1, to: 9, comment: "first" },
+      { path: "b.md", from: 2, to: 5, comment: "overlaps the other" },
     ]);
   });
 
@@ -106,20 +106,12 @@ describe("InvestigatingChanges", () => {
       [{ commit: "d8ab205" }, InvalidCommit],
       [{ title: "  " }, InvalidTitle],
       [{ title: "x".repeat(121) }, InvalidTitle],
-      [{ affected: [] }, InvalidAffectedDocumentation],
-      [{ affected: [{ path: "a.md", reason: "" }] }, InvalidAffectedDocumentation],
-      [{ affected: [{ path: "", reason: "why" }] }, InvalidAffectedDocumentation],
-      [
-        {
-          affected: [
-            { path: "a.md", reason: "one" },
-            { path: "a.md", reason: "two" },
-          ],
-        },
-        InvalidAffectedDocumentation,
-      ],
-      [{ evidence: [] }, InvalidEvidence],
-      [{ evidence: ["fine", " "] }, InvalidEvidence],
+      [{ highlights: [] }, InvalidHighlights],
+      [{ highlights: [{ path: "a.md", from: 1, to: 2, comment: " " }] }, InvalidHighlights],
+      [{ highlights: [{ path: "", from: 1, to: 2, comment: "why" }] }, InvalidHighlights],
+      [{ highlights: [{ path: "a.md", from: 0, to: 2, comment: "why" }] }, InvalidHighlights],
+      [{ highlights: [{ path: "a.md", from: 5, to: 4, comment: "why" }] }, InvalidHighlights],
+      [{ highlights: [{ path: "a.md", from: 1.5, to: 4, comment: "why" }] }, InvalidHighlights],
     ];
     for (const [change, refusal] of cases) {
       await expect(investigating.submit({ investigator: "ari", ...valid, ...change, at: morning })).rejects.toThrow(refusal);
@@ -131,8 +123,7 @@ describe("InvestigatingChanges", () => {
     const investigating = new InvestigatingChangesConcept(testDb.db);
 
     expect(await investigating._get({ investigation: "missing" })).toEqual([]);
-    expect(await investigating._affected({ investigation: "missing" })).toEqual([]);
-    expect(await investigating._evidence({ investigation: "missing" })).toEqual([]);
+    expect(await investigating._highlights({ investigation: "missing" })).toEqual([]);
   });
 
   test("an investigation saved by the earlier open action reads as untitled", async () => {
@@ -150,6 +141,6 @@ describe("InvestigatingChanges", () => {
     expect(await investigating._get({ investigation: "old-1" })).toEqual([
       { investigation: "old-1", ...paperNet, commit: d8ab205, investigator: "ari", title: "Untitled investigation", submittedAt: morning },
     ]);
-    expect(await investigating._affected({ investigation: "old-1" })).toEqual([]);
+    expect(await investigating._highlights({ investigation: "old-1" })).toEqual([]);
   });
 });

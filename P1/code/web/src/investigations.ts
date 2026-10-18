@@ -2,9 +2,12 @@ import { api } from "./api.ts";
 import type { RepositoryRef } from "./repository.ts";
 import { sessionInput } from "./session.ts";
 
-export interface AffectedDocument {
+/** Lines `from` to `to` (1-based) of one documentation file, and why they do not work. */
+export interface Highlight {
   path: string;
-  reason: string;
+  from: number;
+  to: number;
+  comment: string;
 }
 
 /**
@@ -14,7 +17,7 @@ export interface AffectedDocument {
 export function submitInvestigation(
   repository: RepositoryRef,
   commit: string,
-  submission: { title: string; affected: AffectedDocument[]; evidence: string[] },
+  submission: { title: string; highlights: Highlight[] },
 ) {
   return api.investigations.submit({ ...sessionInput(), ...repository, commit, ...submission });
 }

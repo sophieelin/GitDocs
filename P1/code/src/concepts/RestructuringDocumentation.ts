@@ -9,8 +9,25 @@ export class NotProposalAuthor extends Error {}
 export class NotDraft extends Error {}
 export class RationaleMissing extends Error {}
 export class ProposalNotPending extends Error {}
+export class InvalidComment extends Error {}
+export class CommentNotFound extends Error {}
 
 export type Status = "DRAFT" | "PENDING_APPROVAL" | "APPROVED";
+
+/**
+ * The author's comment on text in one file at the proposal's commit: from
+ * character `start` of line `from` up to, not including, character `end` of
+ * line `to`. Lines count from 1, characters from 0.
+ */
+export interface Comment {
+  comment: string;
+  path: string;
+  from: number;
+  to: number;
+  start: number;
+  end: number;
+  text: string;
+}
 
 type RestructuringDoc = {
   _id: string;
@@ -28,10 +45,23 @@ type RestructuringDoc = {
   status: Status;
   createdAt: Date;
   updatedAt: Date;
+  /** In the order added. Proposals saved before comments existed have none. */
+  comments?: Comment[];
 };
 
 const SHA = /^[0-9a-f]{40}$/i;
 const MAX_TITLE = 120;
+const MAX_COMMENT = 2000;
+const MAX_COMMENTS = 200;
+const MAX_LINE = 1_000_000;
+
+function isLine(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= MAX_LINE;
+}
+
+function isColumn(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= MAX_LINE;
+}
 /** The most folders and files a structure may hold, so one proposal stays well under Mongo's document limit. */
 const MAX_ENTRIES = 10_000;
 
@@ -163,6 +193,73 @@ export class RestructuringDocumentationConcept {
     return {};
   }
 
+  async comment({
+    restructuring,
+    author,
+    path,
+    from,
+    to,
+    start,
+    end,
+    text,
+    at,
+  }: {
+    restructuring: string;
+    author: string;
+    path: string;
+    from: number;
+    to: number;
+    start: number;
+    end: number;
+    text: string;
+    at: Date;
+  }): Promise<{ comment: string }> {
+    const draft = await this.#authorsDraft(restructuring, author);
+    if (
+      !isText(path, 1000) ||
+      !isText(text, MAX_COMMENT) ||
+      !isLine(from) ||
+      !isLine(to) ||
+      from > to ||
+      !isColumn(start) ||
+      !isColumn(end) ||
+      (from === to && start >= end) ||
+      (draft.comments?.length ?? 0) >= MAX_COMMENTS
+    ) {
+      throw new InvalidComment("A comment needs a file, the text it is on, and some text.");
+    }
+    const comment = this.freshID();
+    const { matchedCount } = await this.restructurings.updateOne(
+      { _id: restructuring, author, status: "DRAFT" },
+      { $push: { comments: { comment, path, from, to, start, end, text: text.trim() } }, $set: { updatedAt: at } },
+    );
+    if (matchedCount === 0) await this.#authorsDraft(restructuring, author);
+    return { comment };
+  }
+
+  async uncomment({
+    restructuring,
+    author,
+    comment,
+    at,
+  }: {
+    restructuring: string;
+    author: string;
+    comment: string;
+    at: Date;
+  }): Promise<Record<string, never>> {
+    // Matching on the comment too means a missing one changes nothing, not even updatedAt.
+    const { matchedCount } = await this.restructurings.updateOne(
+      { _id: restructuring, author, status: "DRAFT", "comments.comment": comment },
+      { $pull: { comments: { comment } }, $set: { updatedAt: at } },
+    );
+    if (matchedCount === 0) {
+      await this.#authorsDraft(restructuring, author);
+      throw new CommentNotFound("There is no such comment on this proposal.");
+    }
+    return {};
+  }
+
   async submit({ restructuring, author, at }: { restructuring: string; author: string; at: Date }): Promise<Record<string, never>> {
     // One conditional update, so only one of two simultaneous submits can succeed.
     const { matchedCount } = await this.restructurings.updateOne(
@@ -215,8 +312,13 @@ export class RestructuringDocumentationConcept {
   > {
     const found = await this.restructurings.findOne({ _id: restructuring });
     if (!found) return [];
-    const { _id, repository: _key, ...fields } = found;
+    const { _id, repository: _key, comments: _comments, ...fields } = found;
     return [{ restructuring: _id, ...fields }];
+  }
+
+  async _comments({ restructuring }: { restructuring: string }): Promise<Comment[]> {
+    const found = await this.restructurings.findOne({ _id: restructuring }, { projection: { comments: 1 } });
+    return (found?.comments ?? []).map(({ comment, path, from, to, start, end, text }) => ({ comment, path, from, to, start, end, text }));
   }
 
   async _forRepository({ owner, name }: { owner: string; name: string }): Promise<

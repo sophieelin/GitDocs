@@ -12,8 +12,11 @@ import { each, form, former, is, no, now, view, where, whether } from "@mit-sdg/
 import { concepts } from "../concepts.ts";
 import { TheReviewOf } from "./Policy.ts";
 import {
+  commentOnProposalInput,
   createProposalInput,
   modifyProposalInput,
+  proposalCommentOutput,
+  uncommentProposalInput,
   proposalIdentityOutput,
   proposalIdInput,
   proposalOutput,
@@ -70,6 +73,13 @@ const ProposalDetail = former(
       review,
       reviewer,
       decision,
+      comment,
+      path,
+      from,
+      to,
+      start,
+      end,
+      text,
     },
   ) =>
     where(
@@ -105,6 +115,15 @@ const ProposalDetail = former(
       proposedStructure,
       createdAt,
       updatedAt,
+      comments: each(RestructuringDocumentation._comments({ restructuring: proposal }).is({ comment, path, from, to, start, end, text })).form({
+        comment,
+        path,
+        from,
+        to,
+        start,
+        end,
+        text,
+      }),
     }),
 );
 
@@ -276,6 +295,43 @@ const DiscardProposal = endpoint(
   },
 );
 
+const CommentOnProposal = endpoint(
+  "/proposals/comment",
+  // The request says `file`, because the boundary owns a request's `path`.
+  ({ session, user, proposal, file, from, to, start, end, text, at, comment }) =>
+    receive({ session, proposal, file, from, to, start, end, text })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(
+        where(now(at))
+          .then(
+            RestructuringDocumentation.comment({ restructuring: proposal, author: user, path: file, from, to, start, end, text, at }).responds({
+              comment,
+            }),
+          )
+          .then(respond({ proposal, comment })),
+      ),
+  {
+    input: { required: ["session", "proposal", "file", "from", "to", "start", "end", "text"] },
+    validators: { input: commentOnProposalInput, output: proposalCommentOutput },
+  },
+);
+
+const UncommentProposal = endpoint(
+  "/proposals/uncomment",
+  ({ session, user, proposal, comment, at }) =>
+    receive({ session, proposal, comment })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(
+        where(now(at))
+          .then(RestructuringDocumentation.uncomment({ restructuring: proposal, author: user, comment, at }).responds({}))
+          .then(respond({ proposal })),
+      ),
+  {
+    input: { required: ["session", "proposal", "comment"] },
+    validators: { input: uncommentProposalInput, output: proposalIdentityOutput },
+  },
+);
+
 const GetProposal = endpoint(
   "/proposals/get",
   ({ session, user, proposal }) =>
@@ -329,7 +385,7 @@ const ListProposalsUnderReview = endpoint(
 export { ProposalDetail };
 
 export const composition = {
-  Writing: { CreateProposal, ModifyProposal, SubmitProposal, DiscardProposal },
+  Writing: { CreateProposal, ModifyProposal, CommentOnProposal, UncommentProposal, SubmitProposal, DiscardProposal },
   Reading: {
     GetProposal,
     ListProposals,

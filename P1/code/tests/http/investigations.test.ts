@@ -16,8 +16,7 @@ const sampleSubmission = {
   ...paperNet,
   commit: firstCommit,
   title: "Agents moved under lib/",
-  affected: [{ path: "csail_hack/README.md", reason: "Still describes the old layout." }],
-  evidence: ["lib/agents/ gained its own README in this commit"],
+  highlights: [{ path: "csail_hack/README.md", from: 12, to: 18, comment: "Still describes the old layout." }],
 };
 
 beforeAll(async () => {
@@ -55,8 +54,7 @@ describe("/investigations/submit", () => {
       commit: firstCommit,
       investigator: "ari",
       title: sampleSubmission.title,
-      affected: sampleSubmission.affected,
-      evidence: [{ text: sampleSubmission.evidence[0] }],
+      highlights: sampleSubmission.highlights,
     });
     const submittedAt = new Date((body.investigation as { submittedAt: string }).submittedAt).getTime();
     expect(Math.abs(submittedAt - Date.now())).toBeLessThan(60_000);
@@ -74,12 +72,14 @@ describe("/investigations/submit", () => {
     ]);
   });
 
-  test("refuses a missing title, affected documentation, or evidence with a 400, and records nothing", async () => {
+  test("refuses a missing title, no highlights, or a highlight without a comment or valid lines with a 400, and records nothing", async () => {
+    const path = "csail_hack/README.md";
     for (const changes of [
       { title: "" },
-      { affected: [] },
-      { affected: [{ path: "csail_hack/README.md", reason: "" }] },
-      { evidence: [] },
+      { highlights: [] },
+      { highlights: [{ path, from: 12, to: 18, comment: "" }] },
+      { highlights: [{ path, from: 18, to: 12, comment: "Backwards." }] },
+      { highlights: [{ path, from: 0, to: 2, comment: "Line zero." }] },
       { commit: "d8ab205" },
     ]) {
       expect(await submit(ari, changes)).toEqual({ status: 400, body: { error: "INVALID_REQUEST" } });

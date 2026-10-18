@@ -1,6 +1,6 @@
 /**
  * Investigations of a repository's commits: submitting one, reading one with its
- * affected documentation and evidence, and listing a repository's or a commit's.
+ * highlights, and listing a repository's or a commit's.
  *
  * Every endpoint resolves the session first, so the investigator is always the
  * signed-in account, never a name the request supplies. The repository is a
@@ -22,10 +22,10 @@ import {
 
 const { InvestigatingChanges, Sessioning } = concepts;
 
-/** One investigation, with its affected documentation and evidence in the order given. */
+/** One investigation, with its highlights in the order given. */
 const InvestigationDetail = former(
-  "an investigation with its affected documentation and evidence",
-  ({ investigation }, { owner, name, commit, investigator, title, submittedAt, path, reason, text }) =>
+  "an investigation with its highlights",
+  ({ investigation }, { owner, name, commit, investigator, title, submittedAt, path, from, to, comment }) =>
     where(
       InvestigatingChanges._get({ investigation }).is({ investigation, owner, name, commit, investigator, title, submittedAt }),
     ).form({
@@ -36,8 +36,12 @@ const InvestigationDetail = former(
       investigator,
       title,
       submittedAt,
-      affected: each(InvestigatingChanges._affected({ investigation }).is({ path, reason })).form({ path, reason }),
-      evidence: each(InvestigatingChanges._evidence({ investigation }).is({ text })).form({ text }),
+      highlights: each(InvestigatingChanges._highlights({ investigation }).is({ path, from, to, comment })).form({
+        path,
+        from,
+        to,
+        comment,
+      }),
     }),
 );
 
@@ -69,20 +73,20 @@ const CommitInvestigations = former(
 
 const SubmitInvestigation = endpoint(
   "/investigations/submit",
-  ({ session, user, owner, name, commit, title, affected, evidence, at, investigation }) =>
-    receive({ session, owner, name, commit, title, affected, evidence })
+  ({ session, user, owner, name, commit, title, highlights, at, investigation }) =>
+    receive({ session, owner, name, commit, title, highlights })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
         where(now(at))
           .then(
-            InvestigatingChanges.submit({ investigator: user, owner, name, commit, title, affected, evidence, at }).responds({
+            InvestigatingChanges.submit({ investigator: user, owner, name, commit, title, highlights, at }).responds({
               investigation,
             }),
           )
           .then(respond({ investigation })),
       ),
   {
-    input: { required: ["session", "owner", "name", "commit", "title", "affected", "evidence"] },
+    input: { required: ["session", "owner", "name", "commit", "title", "highlights"] },
     validators: { input: submitInvestigationInput, output: submittedInvestigationOutput },
   },
 );

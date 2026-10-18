@@ -73,32 +73,31 @@ function hasRepository(value: Record<string, unknown>): boolean {
 
 /**
  * The shape of a submission. The concept checks the rules (a title, at least one
- * affected file with a reason, at least one evidence item); this only rejects
+ * highlight, each with a valid range of lines and a comment); this only rejects
  * values a real request should never carry.
  */
 export const submitInvestigationInput = validator(
   (value) =>
-    hasOnly(value, ["session", "owner", "name", "commit", "title", "affected", "evidence"]) &&
+    hasOnly(value, ["session", "owner", "name", "commit", "title", "highlights"]) &&
     hasSession(value) &&
     hasRepository(value) &&
     text(value.commit, 64) &&
     typeof value.title === "string" &&
     value.title.length <= 200 &&
-    Array.isArray(value.affected) &&
-    value.affected.length <= 100 &&
-    value.affected.every(
+    Array.isArray(value.highlights) &&
+    value.highlights.length <= 200 &&
+    value.highlights.every(
       (item) =>
         record(item) &&
-        hasOnly(item, ["path", "reason"]) &&
+        hasOnly(item, ["path", "from", "to", "comment"]) &&
         typeof item.path === "string" &&
         item.path.length <= 500 &&
-        typeof item.reason === "string" &&
-        item.reason.length <= 2000,
-    ) &&
-    Array.isArray(value.evidence) &&
-    value.evidence.length <= 100 &&
-    value.evidence.every((item) => typeof item === "string" && item.length <= 2000),
-  "an investigation needs bounded strings, an affected list of paths with reasons, and an evidence list of texts",
+        typeof item.from === "number" &&
+        typeof item.to === "number" &&
+        typeof item.comment === "string" &&
+        item.comment.length <= 2000,
+    ),
+  "an investigation needs bounded strings and a highlight list of paths, line ranges, and comments",
 );
 
 export const investigationIdInput = validator(
@@ -127,16 +126,21 @@ export const investigationOutput = validator(
     return (
       hasOnly(value, ["investigation"]) &&
       record(detail) &&
-      hasOnly(detail, ["investigation", "owner", "name", "commit", "investigator", "title", "submittedAt", "affected", "evidence"]) &&
+      hasOnly(detail, ["investigation", "owner", "name", "commit", "investigator", "title", "submittedAt", "highlights"]) &&
       ["investigation", "owner", "name", "commit", "investigator", "title"].every((key) => typeof detail[key] === "string") &&
       detail.submittedAt instanceof Date &&
-      Array.isArray(detail.affected) &&
-      detail.affected.every((item) => record(item) && typeof item.path === "string" && typeof item.reason === "string") &&
-      Array.isArray(detail.evidence) &&
-      detail.evidence.every((item) => record(item) && typeof item.text === "string")
+      Array.isArray(detail.highlights) &&
+      detail.highlights.every(
+        (item) =>
+          record(item) &&
+          typeof item.path === "string" &&
+          typeof item.from === "number" &&
+          typeof item.to === "number" &&
+          typeof item.comment === "string",
+      )
     );
   },
-  "response must contain an investigation with its affected documentation and evidence",
+  "response must contain an investigation with its highlights",
 );
 
 /** A list of investigation summaries under `key`, each with the given fields plus title and Date submitted. */
@@ -197,6 +201,30 @@ export const modifyProposalInput = validator(
   "session and proposal must be bounded strings, title and rationale strings, and proposedStructure a documentation folder",
 );
 
+/** The concept checks the lines and text; this only rejects values a real request should never carry. */
+export const commentOnProposalInput = validator(
+  (value) =>
+    hasOnly(value, ["session", "proposal", "file", "from", "to", "start", "end", "text"]) &&
+    hasSession(value) &&
+    text(value.proposal, 128) &&
+    typeof value.file === "string" &&
+    value.file.length <= 1000 &&
+    ["from", "to", "start", "end"].every((key) => typeof value[key] === "number") &&
+    typeof value.text === "string" &&
+    value.text.length <= 2000,
+  "session and proposal must be bounded strings, file and text strings, and from, to, start, and end numbers",
+);
+
+export const uncommentProposalInput = validator(
+  (value) => hasOnly(value, ["session", "proposal", "comment"]) && hasSession(value) && text(value.proposal, 128) && text(value.comment, 128),
+  "session, proposal, and comment must be bounded strings",
+);
+
+export const proposalCommentOutput = validator(
+  (value) => hasOnly(value, ["proposal", "comment"]) && typeof value.proposal === "string" && typeof value.comment === "string",
+  "response must contain the proposal's and the new comment's identities",
+);
+
 export const proposalIdInput = validator(
   (value) => hasOnly(value, ["session", "proposal"]) && hasSession(value) && text(value.proposal, 128),
   "session and proposal must be bounded strings",
@@ -241,6 +269,7 @@ function isProposalDetail(detail: unknown): boolean {
       "review",
       "reviewer",
       "decision",
+      "comments",
     ]) &&
     ["proposal", "author", "investigation", "owner", "name", "commit", "title", "rationale", "status"].every(
       (key) => typeof detail[key] === "string",
@@ -249,7 +278,14 @@ function isProposalDetail(detail: unknown): boolean {
     hasStructure(detail.currentStructure) &&
     hasStructure(detail.proposedStructure) &&
     detail.createdAt instanceof Date &&
-    detail.updatedAt instanceof Date
+    detail.updatedAt instanceof Date &&
+    Array.isArray(detail.comments) &&
+    detail.comments.every(
+      (item) =>
+        record(item) &&
+        ["comment", "path", "text"].every((key) => typeof item[key] === "string") &&
+        ["from", "to", "start", "end"].every((key) => typeof item[key] === "number"),
+    )
   );
 }
 

@@ -1,7 +1,7 @@
-import type { CommitResponse, CommitsResponse, TreeResponse } from "../../src/github/routes.ts";
+import type { CommitResponse, CommitsResponse, FileResponse, TreeResponse } from "../../src/github/routes.ts";
 import { sessionInput } from "./session.ts";
 
-export type { CommitResponse, CommitsResponse, TreeResponse };
+export type { CommitResponse, CommitsResponse, FileResponse, TreeResponse };
 export type { ChangedFile } from "../../src/github/types.ts";
 export type { DocumentationFolder, DocumentationFile } from "../../src/github/documentationTree.ts";
 
@@ -36,6 +36,10 @@ export function readTree(owner: string, name: string, sha: string) {
 
 export function readCommit(owner: string, name: string, sha: string) {
   return post<CommitResponse>("commit", { owner, name, sha });
+}
+
+export function readFile(owner: string, name: string, sha: string, path: string) {
+  return post<FileResponse>("file", { owner, name, sha, path });
 }
 
 /** Messages shared by every screen that calls these routes. */

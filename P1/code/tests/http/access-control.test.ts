@@ -31,8 +31,7 @@ beforeEach(async () => {
     name: "PaperNet",
     commit: "6d4a4c6" + "b".repeat(33),
     title: "Agents moved under lib/",
-    affected: [{ path: "README.md", reason: "Out of date." }],
-    evidence: ["The commit moved the agents."],
+    highlights: [{ path: "README.md", from: 3, to: 3, comment: "Out of date." }],
   });
   const created = await api.post("/proposals/create", {
     session: a,

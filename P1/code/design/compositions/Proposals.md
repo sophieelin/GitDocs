@@ -39,10 +39,30 @@ Proposals.Writing.SubmitProposal at /proposals/submit
 Proposals.Writing.DiscardProposal at /proposals/discard
 ```
 
+While the proposal is a draft, its author may
+[comment on text in a file](reaction:Proposals.Writing.CommentOnProposal) at
+the proposal's commit, naming the `file`, the first and last lines (`from` and
+`to`), where the text starts on the first line and ends on the last (`start`
+and `end`, counting characters from 0), and the comment's text, and
+[remove a comment](reaction:Proposals.Writing.UncommentProposal) again. The
+request names the file `file`, because the boundary owns a request's `path`.
+As with saving, RestructuringDocumentation itself refuses anyone but the author
+and anything but a draft. A comment with no text or no valid range of lines is
+`INVALID_COMMENT` (as is no valid range of text), and removing one the proposal does not have is
+`COMMENT_NOT_FOUND`. A comment is saved at once, without waiting for the draft
+to be saved. Commenting answers the proposal's and the new comment's
+identities; removing answers the proposal's.
+
+```endpoints
+Proposals.Writing.CommentOnProposal at /proposals/comment
+Proposals.Writing.UncommentProposal at /proposals/uncomment
+```
+
 A current account may [read a proposal](reaction:Proposals.Reading.GetProposal).
 The answer is [the proposal with its current and proposed structures](former:Proposals.Reading.ProposalDetail):
 its author, investigation, repository, commit, title, rationale, status, both
-structures, and when it was created and last changed, together with
+structures, when it was created and last changed, and its comments in the
+order they were added, together with
 [its review](view:Policy.TheReviewOf)'s identity, reviewer, and decision, which
 are empty while it has none. Who may read it follows three views, one per
 branch, because a condition cannot say "or":

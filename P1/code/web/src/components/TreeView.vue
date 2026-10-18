@@ -7,14 +7,15 @@ import type { DocumentationFolder } from "../github.ts";
  * files first, so a file is never separated from its folder by a subtree, then
  * each subfolder, which collapses when clicked. Calls itself for each subfolder.
  *
- * With `selectable`, each file has a checkbox and clicking it emits `toggle`.
- * Files in `marked` are highlighted (selected, or affected by an investigation).
+ * With `openable`, each file name is a button that emits `open`, and the
+ * `active` file is shown as open. Files in `marked` are highlighted (affected
+ * by an investigation).
  */
-const props = withDefaults(defineProps<{ folder: DocumentationFolder; selectable?: boolean; marked?: string[] }>(), {
-  selectable: false,
-  marked: () => [],
-});
-const emit = defineEmits<{ toggle: [path: string] }>();
+const props = withDefaults(
+  defineProps<{ folder: DocumentationFolder; openable?: boolean; active?: string | null; marked?: string[] }>(),
+  { openable: false, active: null, marked: () => [] },
+);
+const emit = defineEmits<{ open: [path: string] }>();
 
 const collapsed = ref(new Set<string>());
 
@@ -32,11 +33,16 @@ function isMarked(path: string): boolean {
 
 <template>
   <ul class="tree">
-    <li v-for="file in folder.files" :key="file.path" class="file" :class="{ marked: isMarked(file.path) }" :title="file.path">
-      <label v-if="selectable" class="pick">
-        <input type="checkbox" :checked="isMarked(file.path)" :data-path="file.path" @change="emit('toggle', file.path)" />
+    <li
+      v-for="file in folder.files"
+      :key="file.path"
+      class="file"
+      :class="{ marked: isMarked(file.path), active: active === file.path }"
+      :title="file.path"
+    >
+      <button v-if="openable" type="button" class="open" :data-path="file.path" @click="emit('open', file.path)">
         {{ file.name }}
-      </label>
+      </button>
       <template v-else>{{ file.name }}</template>
     </li>
     <li v-for="child in folder.folders" :key="child.path" class="folder">
@@ -52,10 +58,11 @@ function isMarked(path: string): boolean {
       <TreeView
         v-if="!collapsed.has(child.path)"
         :folder="child"
-        :selectable="selectable"
+        :openable="openable"
+        :active="active"
         :marked="marked"
         class="nested"
-        @toggle="(path) => emit('toggle', path)"
+        @open="(path) => emit('open', path)"
       />
     </li>
   </ul>
@@ -90,11 +97,24 @@ li {
   font-weight: 600;
 }
 
-.pick {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.file.active {
+  outline: 2px solid var(--accent);
+  border-radius: 4px;
+}
+
+.open {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
+}
+
+.open:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .name {

@@ -36,6 +36,14 @@ export interface TreeResponse {
   truncated: boolean;
 }
 
+/** One documentation file's text at a commit. */
+export interface FileResponse {
+  path: string;
+  text: string;
+  /** True when the file was longer than `MAX_FILE_CHARS` and only its start is in `text`. */
+  truncated: boolean;
+}
+
 export interface GitHubRoutesOptions {
   github: GitHubFetcher;
   /** Resolves a session to its username, or `undefined` when it is not active. */
@@ -44,23 +52,30 @@ export interface GitHubRoutesOptions {
 }
 
 const MAX_BODY_CHARS = 10_000;
+const MAX_PATH_CHARS = 1_024;
+/** A documentation file longer than this is cut, so one huge file cannot fill the page. */
+const MAX_FILE_CHARS = 200_000;
 
 /** Answers the GitHub routes, and returns `undefined` for every other path. */
 export function createGitHubRoutes({ github, currentUser, basePath }: GitHubRoutesOptions) {
   const commitsPath = `${basePath}/github/commits`;
   const treePath = `${basePath}/github/tree`;
   const commitPath = `${basePath}/github/commit`;
+  const filePath = `${basePath}/github/file`;
 
   return async (request: Request): Promise<Response | undefined> => {
     const path = new URL(request.url).pathname;
-    if (path !== commitsPath && path !== treePath && path !== commitPath) return undefined;
+    if (path !== commitsPath && path !== treePath && path !== commitPath && path !== filePath) return undefined;
     if (request.method !== "POST") return error("INVALID_REQUEST", 400);
 
     const input = await readJson(request);
     const keys = path === commitsPath ? ["session", "owner", "name"] : ["session", "owner", "name", "sha"];
-    if (!record(input) || !hasOnly(input, keys) || !keys.every((key) => boundedString(input[key]))) {
+    const allKeys = path === filePath ? [...keys, "path"] : keys;
+    if (!record(input) || !hasOnly(input, allKeys) || !keys.every((key) => boundedString(input[key]))) {
       return error("INVALID_REQUEST", 400);
     }
+    // Only documentation is read, since only the investigation page asks for a file's text.
+    if (path === filePath && !documentationPath(input.path)) return error("INVALID_REQUEST", 400);
 
     if ((await currentUser(input.session as string)) === undefined) return error("UNAUTHORIZED", 401);
 
@@ -78,6 +93,14 @@ export function createGitHubRoutes({ github, currentUser, basePath }: GitHubRout
             (file) => isDocumentation(file.path) || (file.previousPath !== undefined && isDocumentation(file.previousPath)),
           ),
         } satisfies CommitResponse);
+      }
+      if (path === filePath) {
+        const text = await github.getFile(repository, input.sha as string, input.path as string);
+        return json({
+          path: input.path as string,
+          text: text.slice(0, MAX_FILE_CHARS),
+          truncated: text.length > MAX_FILE_CHARS,
+        } satisfies FileResponse);
       }
       const tree = await github.getTree(repository, input.sha as string);
       return json({
@@ -116,6 +139,17 @@ async function readJson(request: Request): Promise<unknown> {
 
 function boundedString(value: unknown): boolean {
   return typeof value === "string" && value.length > 0 && value.length <= 128;
+}
+
+function documentationPath(value: unknown): boolean {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_PATH_CHARS &&
+    !value.startsWith("/") &&
+    !value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") &&
+    isDocumentation(value)
+  );
 }
 
 function json(body: unknown, status = 200): Response {

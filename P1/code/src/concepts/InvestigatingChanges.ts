@@ -3,12 +3,14 @@ import type { Collection, Db } from "mongodb";
 export class InvalidRepository extends Error {}
 export class InvalidCommit extends Error {}
 export class InvalidTitle extends Error {}
-export class InvalidAffectedDocumentation extends Error {}
-export class InvalidEvidence extends Error {}
+export class InvalidHighlights extends Error {}
 
-export interface AffectedDocument {
+/** Lines `from` to `to` (1-based, inclusive) of one documentation file, and why they do not work. */
+export interface Highlight {
   path: string;
-  reason: string;
+  from: number;
+  to: number;
+  comment: string;
 }
 
 type InvestigationDoc = {
@@ -21,14 +23,14 @@ type InvestigationDoc = {
   investigator: string;
   title: string;
   submittedAt: Date;
-  affected: AffectedDocument[];
-  evidence: string[];
+  highlights: Highlight[];
 };
 
 const SHA = /^[0-9a-f]{40}$/i;
 const MAX_TITLE = 120;
 const MAX_TEXT = 2000;
-const MAX_ITEMS = 100;
+const MAX_HIGHLIGHTS = 200;
+const MAX_LINE = 1_000_000;
 
 function repositoryKey(owner: string, name: string): string {
   return `${owner}/${name}`.toLowerCase();
@@ -38,10 +40,18 @@ function isText(value: unknown, max = MAX_TEXT): value is string {
   return typeof value === "string" && value.trim() !== "" && value.length <= max;
 }
 
+function isLine(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= MAX_LINE;
+}
+
+function isHighlight(item: Partial<Highlight> | undefined): item is Highlight {
+  return isText(item?.path, 500) && isLine(item?.from) && isLine(item?.to) && item.from <= item.to && isText(item?.comment);
+}
+
 /**
- * Investigations written and submitted by developers: for one commit, which
- * documentation needs to change and why, and the evidence. A commit can have
- * many; each is read-only once submitted.
+ * Investigations written and submitted by developers: for one commit, the
+ * passages of the documentation that no longer hold, each with a comment on
+ * why. A commit can have many; each is read-only once submitted.
  */
 export class InvestigatingChangesConcept {
   private readonly investigations: Collection<InvestigationDoc>;
@@ -59,8 +69,7 @@ export class InvestigatingChangesConcept {
     name,
     commit,
     title,
-    affected,
-    evidence,
+    highlights,
     at,
   }: {
     investigator: string;
@@ -68,34 +77,24 @@ export class InvestigatingChangesConcept {
     name: string;
     commit: string;
     title: string;
-    affected: AffectedDocument[];
-    evidence: string[];
+    highlights: Highlight[];
     at: Date;
   }) {
     if (!isText(owner, 100) || !isText(name, 100)) throw new InvalidRepository("A repository needs an owner and a name.");
     if (!SHA.test(commit)) throw new InvalidCommit("An investigation needs a full commit SHA.");
     if (!isText(title, MAX_TITLE)) throw new InvalidTitle("An investigation needs a title of at most 120 characters.");
-
-    const paths = new Set<string>();
-    const affectedValid =
-      Array.isArray(affected) &&
-      affected.length > 0 &&
-      affected.length <= MAX_ITEMS &&
-      affected.every((item) => {
-        if (!isText(item?.path, 500) || !isText(item?.reason) || paths.has(item.path)) return false;
-        paths.add(item.path);
-        return true;
-      });
-    if (!affectedValid) {
-      throw new InvalidAffectedDocumentation("Name at least one affected documentation file, each once, with a reason.");
-    }
-    if (!Array.isArray(evidence) || evidence.length === 0 || evidence.length > MAX_ITEMS || !evidence.every((text) => isText(text))) {
-      throw new InvalidEvidence("Give at least one piece of evidence.");
+    if (
+      !Array.isArray(highlights) ||
+      highlights.length === 0 ||
+      highlights.length > MAX_HIGHLIGHTS ||
+      !highlights.every((item) => isHighlight(item))
+    ) {
+      throw new InvalidHighlights("Highlight at least one passage, each with its lines and a comment.");
     }
 
     const investigation = this.freshID();
-    // One document holds the investigation with its affected documentation and
-    // evidence, so a submission is recorded completely or not at all.
+    // One document holds the investigation with its highlights, so a
+    // submission is recorded completely or not at all.
     await this.investigations.insertOne({
       _id: investigation,
       owner,
@@ -105,8 +104,7 @@ export class InvestigatingChangesConcept {
       investigator,
       title: title.trim(),
       submittedAt: at,
-      affected: affected.map(({ path, reason }) => ({ path, reason: reason.trim() })),
-      evidence: evidence.map((text) => text.trim()),
+      highlights: highlights.map(({ path, from, to, comment }) => ({ path, from, to, comment: comment.trim() })),
     });
     return { investigation };
   }
@@ -126,14 +124,10 @@ export class InvestigatingChangesConcept {
     return found ? [this.#summary(found)] : [];
   }
 
-  async _affected({ investigation }: { investigation: string }): Promise<AffectedDocument[]> {
+  /** Investigations saved before highlights existed have none. */
+  async _highlights({ investigation }: { investigation: string }): Promise<Highlight[]> {
     const found = await this.investigations.findOne({ _id: investigation });
-    return (found?.affected ?? []).map(({ path, reason }) => ({ path, reason }));
-  }
-
-  async _evidence({ investigation }: { investigation: string }): Promise<Array<{ text: string }>> {
-    const found = await this.investigations.findOne({ _id: investigation });
-    return (found?.evidence ?? []).map((text) => ({ text }));
+    return (found?.highlights ?? []).map(({ path, from, to, comment }) => ({ path, from, to, comment }));
   }
 
   async _forRepository({ owner, name }: { owner: string; name: string }): Promise<

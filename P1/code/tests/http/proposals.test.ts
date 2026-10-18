@@ -41,8 +41,7 @@ beforeEach(async () => {
     ...paperNet,
     commit,
     title: "Agents moved under lib/",
-    affected: [{ path: readme.path, reason: "Hard to find this deep." }],
-    evidence: ["lib/agents/ gained its own README in this commit"],
+    highlights: [{ path: readme.path, from: 1, to: 4, comment: "Hard to find this deep." }],
   });
   investigation = submitted.body.investigation as string;
 });
@@ -166,6 +165,74 @@ describe("/proposals/discard", () => {
     await submit(ari, proposal);
 
     expect((await api.post("/proposals/discard", { session: ari, proposal })).status).toBe(409);
+  });
+});
+
+describe("/proposals/comment and /proposals/uncomment", () => {
+  function comment(session: string, proposal: string, changes: Record<string, unknown> = {}) {
+    return api.post("/proposals/comment", {
+      session,
+      proposal,
+      file: readme.path,
+      from: 2,
+      to: 3,
+      start: 4,
+      end: 11,
+      text: "This should move with the agents docs.",
+      ...changes,
+    });
+  }
+
+  test("the author comments on text in a file, sees the comment in the proposal, and removes it", async () => {
+    const proposal = await create(ari);
+
+    const added = await comment(ari, proposal);
+    expect(added.status).toBe(200);
+    const id = added.body.comment as string;
+    expect(added.body).toEqual({ proposal, comment: id });
+    expect((await get(ari, proposal)).body.proposal).toMatchObject({
+      comments: [{ comment: id, path: readme.path, from: 2, to: 3, start: 4, end: 11, text: "This should move with the agents docs." }],
+    });
+
+    expect(await api.post("/proposals/uncomment", { session: ari, proposal, comment: id })).toEqual({ status: 200, body: { proposal } });
+    expect((await get(ari, proposal)).body.proposal).toMatchObject({ comments: [] });
+    expect((await api.post("/proposals/uncomment", { session: ari, proposal, comment: id })).status).toBe(404);
+  });
+
+  test("a comment with no text or no valid range of text is a 400", async () => {
+    const proposal = await create(ari);
+    const bad = [
+      { text: "  " },
+      { from: 0 },
+      { from: 4, to: 3 },
+      { to: 2.5 },
+      { start: -1 },
+      { end: 1.5 },
+      // On one line, the text must not end before it starts.
+      { from: 3, to: 3, start: 6, end: 6 },
+      { start: undefined },
+      { path: readme.path },
+    ];
+    for (const changes of bad) {
+      expect((await comment(ari, proposal, changes)).status).toBe(400);
+    }
+    expect((await get(ari, proposal)).body.proposal).toMatchObject({ comments: [] });
+  });
+
+  test("only the author comments, and only on a draft", async () => {
+    const proposal = await create(ari);
+    expect((await comment(bob, proposal)).status).toBe(403);
+    expect((await comment(ari, "missing")).status).toBe(404);
+
+    const id = (await comment(ari, proposal)).body.comment as string;
+    expect((await api.post("/proposals/uncomment", { session: bob, proposal, comment: id })).status).toBe(403);
+
+    await modify(ari, proposal);
+    await submit(ari, proposal);
+    expect((await comment(ari, proposal)).status).toBe(409);
+    expect((await api.post("/proposals/uncomment", { session: ari, proposal, comment: id })).status).toBe(409);
+    // The reviewer reads the comments.
+    expect(((await get(bob, proposal)).body.proposal as { comments: unknown[] }).comments).toHaveLength(1);
   });
 });
 

@@ -3,22 +3,25 @@ import { computed, ref, watch } from "vue";
 import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import EditableTree, { type Picked } from "../components/EditableTree.vue";
 import ErrorBanner from "../components/ErrorBanner.vue";
+import MarkdownPanel from "../components/MarkdownPanel.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import TreeView from "../components/TreeView.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
 import type { DocumentationFolder } from "../github.ts";
-import { formatDate } from "../investigations.ts";
+import { formatDate, getInvestigation, type Highlight } from "../investigations.ts";
 import {
+  commentOnProposal,
   discardProposal,
   getProposal,
   modifyProposal,
   proposalErrorMessages,
   submitProposal,
+  uncommentProposal,
 } from "../proposals.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
 import { useSession } from "../session.ts";
-import { createFolder, folderPaths, move, removeFolder, rename, type Edit } from "../tree/edit.ts";
+import { folderPaths, move, removeFolder, rename, type Edit } from "../tree/edit.ts";
 
 /**
  * The proposal editor, as in UI sketch 3: the current structure, read-only,
@@ -47,7 +50,6 @@ const dirty = computed(() => proposed.value !== null && current.value !== saved.
 const selected = ref<Picked | null>(null);
 const newName = ref("");
 const moveTarget = ref("");
-const newFolderName = ref("");
 const editError = ref<string | null>(null);
 
 /** The username of the account asked to review the proposal on submit. */
@@ -84,6 +86,7 @@ async function load() {
   }
   loadError.value = null;
   proposal.value = found.proposal;
+  if (notes.value === null) void loadNotes(found.proposal.investigation, found.proposal.currentStructure);
   // Coming back to the tab must not throw away edits that are not saved yet.
   if (dirty.value) return;
   title.value = found.proposal.title;
@@ -92,8 +95,53 @@ async function load() {
   saved.value = current.value;
 }
 
+/** The investigation's highlights, shown on the Markdown while the author restructures. */
+const notes = ref<Highlight[] | null>(null);
+/** The current-structure file whose Markdown is shown. */
+const reading = ref<string | null>(null);
+
+async function loadNotes(investigation: string, currentStructure: DocumentationFolder) {
+  const found = await getInvestigation(investigation);
+  notes.value = "error" in found ? [] : found.investigation.highlights;
+  // The first highlighted file is shown at once; with none, the root README is.
+  const readme = currentStructure.files.find((file) => /^readme\.md$/i.test(file.name));
+  reading.value ??= notes.value[0]?.path ?? readme?.path ?? null;
+}
+
+const notedFiles = computed(() => [
+  ...new Set([...(notes.value ?? []), ...(proposal.value?.comments ?? [])].map((item) => item.path)),
+]);
+const readingNotes = computed(() => (notes.value ?? []).filter((item) => item.path === reading.value));
+const readingComments = computed(() => (proposal.value?.comments ?? []).filter((item) => item.path === reading.value));
+
+const commentErrorMessages = {
+  ...proposalErrorMessages,
+  INVALID_REQUEST: "Select some text in this file, and write a comment on it.",
+};
+
+/** Saves a comment on the file being read at once, then rereads the proposal to show it. */
+async function addComment(comment: { from: number; to: number; start: number; end: number; text: string }): Promise<string | null> {
+  if (!reading.value) return null;
+  const result = await commentOnProposal(id.value, { file: reading.value, ...comment });
+  if ("error" in result) return handleEndedSession(result.error) ? null : errorMessage(result.error, commentErrorMessages);
+  await load();
+  return null;
+}
+
+async function removeComment(comment: string): Promise<string | null> {
+  const result = await uncommentProposal(id.value, comment);
+  if ("error" in result && result.error !== "NOT_FOUND") {
+    return handleEndedSession(result.error) ? null : errorMessage(result.error, commentErrorMessages);
+  }
+  // A comment already gone is shown as gone.
+  await load();
+  return null;
+}
+
 useRefreshOnFocus(load);
 watch(id, () => {
+  notes.value = null;
+  reading.value = null;
   proposal.value = null;
   proposed.value = null;
   saved.value = "";
@@ -121,14 +169,6 @@ const moveTargets = computed(() => {
   return folderPaths(proposed.value).filter(
     (folder) => folder !== parent && !(kind === "folder" && (folder === path || folder.startsWith(`${path}/`))),
   );
-});
-
-/** The folder a new folder goes in: the selected folder, the selected file's folder, or the root. */
-const newFolderParent = computed(() => {
-  const picked = selected.value;
-  if (!picked) return "";
-  if (picked.kind === "folder") return picked.path;
-  return picked.path.includes("/") ? picked.path.slice(0, picked.path.lastIndexOf("/")) : "";
 });
 
 function apply(edit: Edit, nowSelected: Picked | null): boolean {
@@ -162,14 +202,6 @@ function moveSelected() {
 function removeSelected() {
   if (!proposed.value || !selected.value) return;
   apply(removeFolder(proposed.value, selected.value.path), null);
-}
-
-function addFolder() {
-  if (!proposed.value) return;
-  const parent = newFolderParent.value;
-  if (apply(createFolder(proposed.value, parent, newFolderName.value), { path: join(parent, newFolderName.value.trim()), kind: "folder" })) {
-    newFolderName.value = "";
-  }
 }
 
 function folderLabel(path: string): string {
@@ -270,8 +302,16 @@ function isEmpty(folder: DocumentationFolder): boolean {
       <div class="structures">
         <div class="card scroll">
           <h2>Current Structure</h2>
+          <p class="muted hint">Click a file to read and comment on its Markdown below. Files with highlights or comments are shaded.</p>
           <p v-if="isEmpty(proposal.currentStructure)" class="muted">There are no Markdown files at this commit.</p>
-          <TreeView v-else :folder="proposal.currentStructure" />
+          <TreeView
+            v-else
+            :folder="proposal.currentStructure"
+            openable
+            :active="reading"
+            :marked="notedFiles"
+            @open="(path) => (reading = path)"
+          />
         </div>
         <div class="card scroll">
           <h2>Proposed Structure</h2>
@@ -279,6 +319,19 @@ function isEmpty(folder: DocumentationFolder): boolean {
           <EditableTree :folder="proposed" :selected="selected" @select="(picked) => (selected = picked)" />
         </div>
       </div>
+
+      <MarkdownPanel
+        v-if="reading"
+        class="card markdown"
+        :owner="proposal.owner"
+        :name="proposal.name"
+        :commit="proposal.commit"
+        :path="reading"
+        :highlights="readingNotes"
+        :comments="readingComments"
+        :add="addComment"
+        :remove="removeComment"
+      />
 
       <div class="card toolbar">
         <template v-if="selected">
@@ -301,10 +354,7 @@ function isEmpty(folder: DocumentationFolder): boolean {
             Remove empty folder
           </button>
         </template>
-        <form class="tool" @submit.prevent="addFolder">
-          <input v-model="newFolderName" name="new-folder" :aria-label="`New folder in ${folderLabel(newFolderParent)}`" :placeholder="`New folder in ${folderLabel(newFolderParent)}`" />
-          <button type="submit" class="button secondary">Add folder</button>
-        </form>
+        <p v-else class="muted picked">Select a file or folder in the Proposed Structure to rename or move it.</p>
         <ErrorBanner :message="editError" />
       </div>
 
@@ -373,6 +423,10 @@ function isEmpty(folder: DocumentationFolder): boolean {
 .hint {
   margin: -8px 0 12px;
   font-size: 14px;
+}
+
+.markdown {
+  margin-bottom: 20px;
 }
 
 .toolbar {

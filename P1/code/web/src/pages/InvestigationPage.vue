@@ -2,18 +2,19 @@
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ErrorBanner from "../components/ErrorBanner.vue";
+import SourceView from "../components/SourceView.vue";
 import TreeView from "../components/TreeView.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
-import { gitHubErrorMessages, readTree, type TreeResponse } from "../github.ts";
-import { formatDate, getInvestigation } from "../investigations.ts";
+import { gitHubErrorMessages, readFile, readTree, type TreeResponse } from "../github.ts";
+import { formatDate, getInvestigation, type Highlight } from "../investigations.ts";
 import { createProposal } from "../proposals.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
 
 /**
- * One submitted investigation, read-only, as in sketch 2: its title, the
- * affected documentation with reasons, the evidence, and the code and
- * documentation structures at its commit with the affected files highlighted.
+ * One submitted investigation, read-only: its title, each highlighted file's
+ * source at its commit with the highlighted lines shaded and their comments,
+ * and the code and documentation structures with the highlighted files marked.
  */
 const route = useRoute();
 const repository = useCurrentRepository();
@@ -26,12 +27,43 @@ type Detail = {
   investigator: string;
   title: string;
   submittedAt: string;
-  affected: { path: string; reason: string }[];
-  evidence: { text: string }[];
+  highlights: Highlight[];
 };
 const investigation = ref<Detail | null>(null);
 const structures = ref<TreeResponse | null>(null);
 const error = ref<string | null>(null);
+
+/** Each file's text at the investigation's commit once read, or why it could not be read. */
+type FileText = { text: string; truncated: boolean } | { error: string };
+const texts = ref<Record<string, FileText>>({});
+/** The documentation file whose Markdown is shown. */
+const active = ref<string | null>(null);
+
+/** The highlighted files, each once, in the order first highlighted. */
+function filesOf(detail: Detail): string[] {
+  return [...new Set(detail.highlights.map((item) => item.path))];
+}
+
+async function loadText(detail: Detail, path: string) {
+  const answer = await readFile(detail.owner, detail.name, detail.commit, path);
+  if ("error" in answer) {
+    if (handleEndedSession(answer.error)) return;
+    texts.value = {
+      ...texts.value,
+      [path]: { error: errorMessage(answer.error, { ...gitHubErrorMessages, NOT_FOUND: "This file is not in the repository at this commit." }) },
+    };
+    return;
+  }
+  texts.value = { ...texts.value, [path]: { text: answer.text, truncated: answer.truncated } };
+}
+
+/** Shows a documentation file's Markdown at the investigation's commit. */
+function open(path: string) {
+  active.value = path;
+  if (investigation.value && !texts.value[path]) void loadText(investigation.value, path);
+}
+
+const activeText = computed(() => (active.value ? texts.value[active.value] : undefined));
 
 function sameRepository(a: { owner: string; name: string }, b: { owner: string; name: string }): boolean {
   return a.owner.toLowerCase() === b.owner.toLowerCase() && a.name.toLowerCase() === b.name.toLowerCase();
@@ -51,6 +83,9 @@ async function load() {
     return;
   }
   investigation.value = found.investigation;
+  // The first highlighted file is shown at once; with none, the root README is, once the tree is read.
+  const first = filesOf(found.investigation)[0];
+  if (active.value === null && first) open(first);
 
   const tree = await readTree(found.investigation.owner, found.investigation.name, found.investigation.commit);
   if ("error" in tree) {
@@ -61,24 +96,28 @@ async function load() {
   }
   error.value = null;
   structures.value = tree;
+  const readme = tree.tree.files.find((file) => /^readme\.md$/i.test(file.name));
+  if (active.value === null && readme) open(readme.path);
 }
 
 useRefreshOnFocus(load);
 watch([id, repository], () => {
   investigation.value = null;
   structures.value = null;
+  texts.value = {};
+  active.value = null;
   error.value = null;
   void load();
 });
 
-const affectedPaths = computed(() => investigation.value?.affected.map((item) => item.path) ?? []);
+const affectedPaths = computed(() => (investigation.value ? filesOf(investigation.value) : []));
 
-/** Splits evidence text so links can be shown as links, without rendering any HTML from it. */
-function parts(text: string): { text: string; href?: string }[] {
-  return text
-    .split(/(https?:\/\/[^\s]+)/g)
-    .filter((part) => part !== "")
-    .map((part) => (/^https?:\/\//.test(part) ? { text: part, href: part } : { text: part }));
+function highlightsOf(path: string): Highlight[] {
+  return investigation.value?.highlights.filter((item) => item.path === path) ?? [];
+}
+
+function lineLabel({ from, to }: { from: number; to: number }): string {
+  return from === to ? `Line ${from}` : `Lines ${from}–${to}`;
 }
 
 function isEmpty(folder: TreeResponse["tree"]): boolean {
@@ -147,48 +186,53 @@ async function startProposal() {
       </form>
     </div>
 
-    <div v-if="investigation" class="findings">
-      <div class="card">
-        <h2>Affected documentation</h2>
-        <p v-if="investigation.affected.length === 0" class="muted">None recorded.</p>
-        <ul class="affected">
-          <li v-for="item in investigation.affected" :key="item.path">
-            <code>{{ item.path }}</code>
-            <p>{{ item.reason }}</p>
-          </li>
-        </ul>
-      </div>
-      <div class="card">
-        <h2>Evidence</h2>
-        <p v-if="investigation.evidence.length === 0" class="muted">None recorded.</p>
-        <ul class="evidence">
-          <li v-for="(item, index) in investigation.evidence" :key="index">
-            <template v-for="(part, partIndex) in parts(item.text)" :key="partIndex">
-              <a v-if="part.href" :href="part.href" target="_blank" rel="noopener noreferrer">{{ part.text }}</a>
-              <template v-else>{{ part.text }}</template>
-            </template>
-          </li>
-        </ul>
-      </div>
-    </div>
-
     <p v-if="structures?.truncated" class="warning" role="status">
       This repository is very large, and GitHub returned only part of it. Some files may be missing.
     </p>
-    <div v-if="investigation && !error" class="structures">
-      <div class="card scroll">
-        <h2>Code Structure</h2>
+    <template v-if="investigation && !error">
+      <p v-if="investigation.highlights.length === 0" class="muted">
+        This investigation has no highlights: it was saved before highlights existed.
+      </p>
+      <div class="workspace">
+        <div class="card scroll">
+          <h2>Documentation Structure</h2>
+          <p class="muted hint">Click a file to see its Markdown. Highlighted files are shaded.</p>
+          <p v-if="!structures" class="muted">Loading the documentation at this commit from GitHub…</p>
+          <p v-else-if="isEmpty(structures.tree)" class="muted">There are no Markdown files at this commit.</p>
+          <TreeView v-else :folder="structures.tree" openable :active="active" :marked="affectedPaths" @open="open" />
+        </div>
+
+        <div class="card source-panel">
+          <template v-if="active">
+            <h2><code>{{ active }}</code></h2>
+            <div class="file-body">
+              <div>
+                <p v-if="!activeText" class="muted">Loading the Markdown at this commit from GitHub…</p>
+                <p v-else-if="'error' in activeText" class="muted">{{ activeText.error }}</p>
+                <template v-else>
+                  <SourceView :text="activeText.text" :highlights="highlightsOf(active)" />
+                  <p v-if="activeText.truncated" class="muted">This file is very long; only its beginning is shown.</p>
+                </template>
+              </div>
+              <ul v-if="highlightsOf(active).length > 0" class="highlights">
+                <li v-for="(item, index) in highlightsOf(active)" :key="index">
+                  <strong>{{ lineLabel(item) }}</strong>
+                  <p>{{ item.comment }}</p>
+                </li>
+              </ul>
+            </div>
+          </template>
+          <p v-else class="muted">Click a documentation file on the left to see its Markdown here.</p>
+        </div>
+      </div>
+
+      <details class="card code">
+        <summary>Code Structure</summary>
         <p v-if="!structures" class="muted">Loading the code at this commit from GitHub…</p>
         <p v-else-if="isEmpty(structures.code)" class="muted">There are no files at this commit.</p>
         <TreeView v-else :folder="structures.code" />
-      </div>
-      <div class="card scroll">
-        <h2>Documentation Structure</h2>
-        <p v-if="!structures" class="muted">Loading the documentation at this commit from GitHub…</p>
-        <p v-else-if="isEmpty(structures.tree)" class="muted">There are no Markdown files at this commit.</p>
-        <TreeView v-else :folder="structures.tree" :marked="affectedPaths" />
-      </div>
-    </div>
+      </details>
+    </template>
   </section>
 </template>
 
@@ -250,56 +294,65 @@ async function startProposal() {
   cursor: pointer;
 }
 
-.findings {
+/* The tree on the left, the open file's Markdown beside it. */
+.workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr);
   gap: 20px;
   align-items: start;
   margin-bottom: 20px;
 }
 
-.affected,
-.evidence {
+.hint {
+  margin: -8px 0 12px;
+  font-size: 14px;
+}
+
+.source-panel h2 code {
+  color: var(--accent);
+}
+
+/* The Markdown, with its comments beside it. */
+.file-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+}
+
+.highlights {
+  width: 260px;
+}
+
+.code summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.highlights {
+  display: grid;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.affected li + li,
-.evidence li + li {
-  margin-top: 12px;
+.highlights li {
+  padding: 8px 12px;
+  border-left: 3px solid #f59e0b;
+  background: #fffbeb;
 }
 
-.affected code {
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.affected p {
+.highlights p {
   margin: 4px 0 0;
   color: var(--ink-soft);
-}
-
-.evidence li {
-  padding-left: 14px;
-  border-left: 3px solid var(--accent-soft);
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-.evidence a {
-  color: var(--accent);
-}
-
-.structures {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
-}
-
-/* A large repository's code tree can be long; each panel scrolls on its own. */
+/* A large repository's tree can be long; it scrolls on its own. */
 .scroll {
-  max-height: 65vh;
+  max-height: 80vh;
   overflow: auto;
 }
 

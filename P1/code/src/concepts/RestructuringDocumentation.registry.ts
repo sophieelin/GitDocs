@@ -1,6 +1,8 @@
 import { registerConcept } from "@mit-sdg/sync-engine/assembly";
 import type { Db } from "mongodb";
 import {
+  CommentNotFound,
+  InvalidComment,
   InvalidProposalSource,
   InvalidProposalTitle,
   InvalidStructure,
@@ -25,6 +27,8 @@ export const restructuringDocumentation = registerConcept({
     NOT_DRAFT: NotDraft,
     RATIONALE_MISSING: RationaleMissing,
     PROPOSAL_NOT_PENDING: ProposalNotPending,
+    INVALID_COMMENT: InvalidComment,
+    COMMENT_NOT_FOUND: CommentNotFound,
   },
   floors: {
     mongo: ({ db }: { db: Db }) => new RestructuringDocumentationConcept(db),

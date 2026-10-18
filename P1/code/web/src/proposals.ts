@@ -23,6 +23,21 @@ export function submitProposal(proposal: string, reviewer: string) {
   return api.proposals.submit({ ...sessionInput(), proposal, reviewer });
 }
 
+/**
+ * Comments on text in `file` at the proposal's commit, from character `start`
+ * of line `from` to character `end` of line `to`; saved at once, not on Save.
+ */
+export function commentOnProposal(
+  proposal: string,
+  comment: { file: string; from: number; to: number; start: number; end: number; text: string },
+) {
+  return api.proposals.comment({ ...sessionInput(), proposal, ...comment });
+}
+
+export function uncommentProposal(proposal: string, comment: string) {
+  return api.proposals.uncomment({ ...sessionInput(), proposal, comment });
+}
+
 export function discardProposal(proposal: string) {
   return api.proposals.discard({ ...sessionInput(), proposal });
 }

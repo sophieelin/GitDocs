@@ -82,13 +82,12 @@ export type ApplicationWire = {
     };
     output: {
       "investigation": {
-        "affected": {
-          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_affected"]>>>, ["path"]>>;
-          "reason": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_affected"]>>>, ["reason"]>>;
-        }[];
         "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
-        "evidence": {
-          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_evidence"]>>>, ["text"]>>;
+        "highlights": {
+          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["comment"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
         }[];
         "investigation": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigation"]>]>>;
         "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
@@ -121,9 +120,8 @@ export type ApplicationWire = {
   };
   "/investigations/submit": {
     input: {
-      "affected": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["affected"]>>;
       "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["commit"]>>;
-      "evidence": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["evidence"]>>;
+      "highlights": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["highlights"]>>;
       "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["name"]>>;
       "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["owner"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
@@ -132,7 +130,24 @@ export type ApplicationWire = {
     output: {
       "investigation": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>>, ["investigation"]>>;
     };
-    error: { error: AppWideError | "INVALID_AFFECTED_DOCUMENTATION" | "INVALID_COMMIT" | "INVALID_EVIDENCE" | "INVALID_INPUT" | "INVALID_REPOSITORY" | "INVALID_TITLE" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_COMMIT" | "INVALID_HIGHLIGHTS" | "INVALID_INPUT" | "INVALID_REPOSITORY" | "INVALID_TITLE" | "UNKNOWN_SESSION" };
+  };
+  "/proposals/comment": {
+    input: {
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["end"]>>;
+      "file": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["path"]>>;
+      "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["from"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["restructuring"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["start"]>>;
+      "text": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["text"]>>;
+      "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["to"]>>;
+    };
+    output: {
+      "comment": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>>, ["comment"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["restructuring"]>>;
+    };
+    error: { error: AppWideError | "INVALID_COMMENT" | "INVALID_INPUT" | "NOT_DRAFT" | "NOT_PROPOSAL_AUTHOR" | "PROPOSAL_NOT_FOUND" | "UNKNOWN_SESSION" };
   };
   "/proposals/create": {
     input: {
@@ -164,6 +179,15 @@ export type ApplicationWire = {
     output: {
       "proposal": {
         "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
+        "comments": {
+          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+        }[];
         "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
         "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
         "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
@@ -183,6 +207,15 @@ export type ApplicationWire = {
     } | {
       "proposal": {
         "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
+        "comments": {
+          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+        }[];
         "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
         "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
         "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
@@ -254,6 +287,17 @@ export type ApplicationWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "INVALID_REVIEWER" | "NOT_DRAFT" | "NOT_PROPOSAL_AUTHOR" | "PROPOSAL_NOT_FOUND" | "RATIONALE_MISSING" | "REVIEW_EXISTS" | "UNKNOWN_SESSION" };
   };
+  "/proposals/uncomment": {
+    input: {
+      "comment": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["comment"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["restructuring"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["restructuring"]>>;
+    };
+    error: { error: AppWideError | "COMMENT_NOT_FOUND" | "INVALID_INPUT" | "NOT_DRAFT" | "NOT_PROPOSAL_AUTHOR" | "PROPOSAL_NOT_FOUND" | "UNKNOWN_SESSION" };
+  };
   "/proposals/under-review": {
     input: {
       "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>[0], ["name"]>>;
@@ -282,6 +326,15 @@ export type ApplicationWire = {
     output: {
       "proposal": {
         "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
+        "comments": {
+          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+        }[];
         "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
         "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
         "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
@@ -312,6 +365,15 @@ export type ApplicationWire = {
         "openedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["openedAt"]>>;
         "proposal": {
           "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
+          "comments": {
+            "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
+            "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
+            "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
+            "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
+            "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
+            "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
+            "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+          }[];
           "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
           "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
           "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
@@ -408,13 +470,12 @@ export type ApplicationWireHttp = {
     };
     output: {
       "investigation": {
-        "affected": {
-          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_affected"]>>>, ["path"]>>;
-          "reason": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_affected"]>>>, ["reason"]>>;
-        }[];
         "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
-        "evidence": {
-          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_evidence"]>>>, ["text"]>>;
+        "highlights": {
+          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["comment"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
         }[];
         "investigation": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigation"]>]>>;
         "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
@@ -447,9 +508,8 @@ export type ApplicationWireHttp = {
   };
   "/investigations/submit": {
     input: {
-      "affected": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["affected"]>>;
       "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["commit"]>>;
-      "evidence": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["evidence"]>>;
+      "highlights": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["highlights"]>>;
       "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["name"]>>;
       "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["owner"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
@@ -459,6 +519,23 @@ export type ApplicationWireHttp = {
       "investigation": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>>, ["investigation"]>>;
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/proposals/comment": {
+    input: {
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["end"]>>;
+      "file": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["path"]>>;
+      "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["from"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["restructuring"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["start"]>>;
+      "text": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["text"]>>;
+      "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["to"]>>;
+    };
+    output: {
+      "comment": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>>, ["comment"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["restructuring"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
   "/proposals/create": {
     input: {
@@ -490,6 +567,15 @@ export type ApplicationWireHttp = {
     output: {
       "proposal": {
         "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
+        "comments": {
+          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+        }[];
         "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
         "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
         "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
@@ -509,6 +595,15 @@ export type ApplicationWireHttp = {
     } | {
       "proposal": {
         "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
+        "comments": {
+          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+        }[];
         "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
         "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
         "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
@@ -580,6 +675,17 @@ export type ApplicationWireHttp = {
     };
     error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
+  "/proposals/uncomment": {
+    input: {
+      "comment": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["comment"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["restructuring"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["restructuring"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
   "/proposals/under-review": {
     input: {
       "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>[0], ["name"]>>;
@@ -608,6 +714,15 @@ export type ApplicationWireHttp = {
     output: {
       "proposal": {
         "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
+        "comments": {
+          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+        }[];
         "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
         "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
         "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
@@ -638,6 +753,15 @@ export type ApplicationWireHttp = {
         "openedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["openedAt"]>>;
         "proposal": {
           "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
+          "comments": {
+            "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
+            "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
+            "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
+            "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
+            "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
+            "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
+            "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+          }[];
           "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
           "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
           "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;

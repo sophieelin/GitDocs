@@ -1,13 +1,14 @@
 # Investigations
 
 An investigation is a developer's written case about one commit of a
-repository: which documentation needs to change, why, and the evidence. The
+repository: the passages of the documentation that no longer hold, each with a
+comment on why. The
 repository is a shared workspace, so its investigations belong to everyone who
 opens it, and each request is resolved through its active session first.
 
 A current account may [submit an investigation of a commit](reaction:Investigations.Submitting.SubmitInvestigation)
-with a title, the affected documentation files each with a reason, and the
-evidence. The application supplies the signed-in username as the investigator
+with a title and its highlights: each a documentation file, a range of its
+lines at that commit, and a comment on why those lines do not work. The application supplies the signed-in username as the investigator
 and the moment of the request as when it was submitted, so a caller can choose
 neither. Nothing is recorded before this request: opening the draft in the
 browser saves nothing. A commit can have many investigations, and a submitted
@@ -18,9 +19,9 @@ Investigations.Submitting.SubmitInvestigation at /investigations/submit
 ```
 
 A current account may [read an investigation](reaction:Investigations.Reading.GetInvestigation).
-The answer is [the investigation with its affected documentation and evidence](former:Investigations.Reading.InvestigationDetail):
+The answer is [the investigation with its highlights](former:Investigations.Reading.InvestigationDetail):
 its repository, commit, investigator, title, and when it was submitted, then
-each affected file with its reason and each evidence item, in the order given.
+each highlight with its file, lines, and comment, in the order given.
 An investigation that does not exist answers `INVESTIGATION_NOT_FOUND`, rather
 than leaving the request unanswered.
 
