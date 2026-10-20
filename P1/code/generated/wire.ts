@@ -56,7 +56,28 @@ export type ApplicationWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
-  "/investigations/for-commit": {
+  "/proposals/apply": {
+    input: {
+      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["commit"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["investigation"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["investigation"]>>;
+    };
+    error: { error: AppWideError | "INVALID_COMMIT" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_APPROVED" | "NOT_INVESTIGATOR" | "UNKNOWN_SESSION" };
+  };
+  "/proposals/discard": {
+    input: {
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["discard"]>[0], ["investigation"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["discard"]>[0], ["investigation"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "UNKNOWN_SESSION" };
+  };
+  "/proposals/for-commit": {
     input: {
       "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>[0], ["commit"]>>;
       "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>[0], ["name"]>>;
@@ -65,41 +86,113 @@ export type ApplicationWire = {
     };
     output: {
       "commit": {
-        "investigations": {
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigation"]>>;
-          "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigator"]>>;
-          "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["submittedAt"]>>;
+        "drafts": {
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigation"]>>;
           "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["updatedAt"]>>;
         }[];
+        "submitted": ({
+          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigator"]>>;
+          "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigation"]>>;
+          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["status"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["updatedAt"]>>;
+        })[];
       };
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
-  "/investigations/get": {
+  "/proposals/get": {
     input: {
-      "investigation": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
-      "investigation": {
+      "proposal": {
+        "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
+        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+        "commands": {
+          "command": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_commands"]>>>, ["command"]>>;
+        }[];
         "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["createdAt"]>>;
+        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["currentStructure"]>>;
+        "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
         "highlights": {
-          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["comment"]>>;
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
           "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+          "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
           "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
           "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
         }[];
-        "investigation": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigation"]>]>>;
-        "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
         "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+        "operations": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["operations"]>>;
         "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
-        "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["submittedAt"]>>;
+        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>]>>;
+        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["proposedStructure"]>>;
+        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["rationale"]>>;
+        "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
+        "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
+        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["status"]>>;
         "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
+      };
+    } | {
+      "proposal": {
+        "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
+        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+        "commands": {
+          "command": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_commands"]>>>, ["command"]>>;
+        }[];
+        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["createdAt"]>>;
+        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["currentStructure"]>>;
+        "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
+        "highlights": {
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+          "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
+        }[];
+        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+        "operations": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["operations"]>>;
+        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>]>>;
+        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["proposedStructure"]>>;
+        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["rationale"]>>;
+        "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
+        "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
+        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["status"]>>;
+        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
       };
     };
     error: { error: AppWideError | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "UNKNOWN_SESSION" };
   };
-  "/investigations/list": {
+  "/proposals/highlight": {
+    input: {
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["end"]>>;
+      "file": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["path"]>>;
+      "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["from"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["start"]>>;
+      "text": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["text"]>>;
+      "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["to"]>>;
+    };
+    output: {
+      "highlight": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>>, ["highlight"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>>;
+    };
+    error: { error: AppWideError | "INVALID_HIGHLIGHT" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "UNKNOWN_SESSION" };
+  };
+  "/proposals/list": {
     input: {
       "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>[0], ["name"]>>;
       "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>[0], ["owner"]>>;
@@ -107,216 +200,92 @@ export type ApplicationWire = {
     };
     output: {
       "repository": {
-        "investigations": {
-          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["commit"]>>;
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigation"]>>;
-          "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigator"]>>;
-          "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["submittedAt"]>>;
-          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["title"]>>;
-        }[];
-      };
-    };
-    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
-  };
-  "/investigations/submit": {
-    input: {
-      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["commit"]>>;
-      "highlights": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["highlights"]>>;
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["name"]>>;
-      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["owner"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["title"]>>;
-    };
-    output: {
-      "investigation": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>>, ["investigation"]>>;
-    };
-    error: { error: AppWideError | "INVALID_COMMIT" | "INVALID_HIGHLIGHTS" | "INVALID_INPUT" | "INVALID_REPOSITORY" | "INVALID_TITLE" | "UNKNOWN_SESSION" };
-  };
-  "/proposals/comment": {
-    input: {
-      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["end"]>>;
-      "file": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["path"]>>;
-      "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["from"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["restructuring"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["start"]>>;
-      "text": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["text"]>>;
-      "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["to"]>>;
-    };
-    output: {
-      "comment": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>>, ["comment"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["restructuring"]>>;
-    };
-    error: { error: AppWideError | "INVALID_COMMENT" | "INVALID_INPUT" | "NOT_DRAFT" | "NOT_PROPOSAL_AUTHOR" | "PROPOSAL_NOT_FOUND" | "UNKNOWN_SESSION" };
-  };
-  "/proposals/create": {
-    input: {
-      "currentStructure": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["create"]>[0], ["currentStructure"]>>;
-      "investigation": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["create"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["create"]>[0], ["title"]>>;
-    };
-    output: {
-      "proposal": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["create"]>>, ["restructuring"]>>;
-    };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_PROPOSAL_SOURCE" | "INVALID_PROPOSAL_TITLE" | "INVALID_STRUCTURE" | "INVESTIGATION_NOT_FOUND" | "UNKNOWN_SESSION" };
-  };
-  "/proposals/discard": {
-    input: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["discard"]>[0], ["restructuring"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-    };
-    output: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["discard"]>[0], ["restructuring"]>>;
-    };
-    error: { error: AppWideError | "INVALID_INPUT" | "NOT_DRAFT" | "NOT_PROPOSAL_AUTHOR" | "PROPOSAL_NOT_FOUND" | "UNKNOWN_SESSION" };
-  };
-  "/proposals/get": {
-    input: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-    };
-    output: {
-      "proposal": {
-        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
-        "comments": {
-          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
-          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
-          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
-          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
-          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
-          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
-          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
-        }[];
-        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
-        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
-        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
-        "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
-        "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["investigation"]>>;
-        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["name"]>>;
-        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["owner"]>>;
-        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>]>>;
-        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["proposedStructure"]>>;
-        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["rationale"]>>;
-        "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
-        "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
-        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["status"]>>;
-        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["title"]>>;
-        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["updatedAt"]>>;
-      };
-    } | {
-      "proposal": {
-        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
-        "comments": {
-          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
-          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
-          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
-          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
-          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
-          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
-          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
-        }[];
-        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
-        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
-        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
-        "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
-        "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["investigation"]>>;
-        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["name"]>>;
-        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["owner"]>>;
-        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>]>>;
-        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["proposedStructure"]>>;
-        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["rationale"]>>;
-        "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
-        "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
-        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["status"]>>;
-        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["title"]>>;
-        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["updatedAt"]>>;
-      };
-    };
-    error: { error: AppWideError | "INVALID_INPUT" | "PROPOSAL_NOT_FOUND" | "UNKNOWN_SESSION" };
-  };
-  "/proposals/list": {
-    input: {
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>[0], ["name"]>>;
-      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>[0], ["owner"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-    };
-    output: {
-      "repository": {
         "drafts": {
-          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["commit"]>>;
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["investigation"]>>;
-          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["restructuring"]>>;
-          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["title"]>>;
-          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["updatedAt"]>>;
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["commit"]>>;
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigation"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["updatedAt"]>>;
         }[];
-        "submitted": {
-          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["author"]>>;
-          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["commit"]>>;
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["investigation"]>>;
-          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["restructuring"]>>;
-          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["status"]>>;
-          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["title"]>>;
-          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["updatedAt"]>>;
-        }[];
+        "submitted": ({
+          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigator"]>>;
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["commit"]>>;
+          "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigation"]>>;
+          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["status"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["updatedAt"]>>;
+        })[];
       };
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
   "/proposals/modify": {
     input: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["restructuring"]>>;
-      "proposedStructure": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["proposedStructure"]>>;
-      "rationale": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["rationale"]>>;
+      "operations": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["operations"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["investigation"]>>;
+      "rationale": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["rationale"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["title"]>>;
+      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["title"]>>;
     };
     output: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["restructuring"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["investigation"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_PROPOSAL_TITLE" | "INVALID_STRUCTURE" | "NOT_DRAFT" | "NOT_PROPOSAL_AUTHOR" | "PROPOSAL_NOT_FOUND" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_OPERATIONS" | "INVALID_TITLE" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "UNKNOWN_SESSION" };
+  };
+  "/proposals/start": {
+    input: {
+      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["commit"]>>;
+      "currentStructure": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["currentStructure"]>>;
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["name"]>>;
+      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["owner"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["title"]>>;
+    };
+    output: {
+      "proposal": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>>, ["investigation"]>>;
+    };
+    error: { error: AppWideError | "INVALID_COMMIT" | "INVALID_INPUT" | "INVALID_REPOSITORY" | "INVALID_STRUCTURE" | "INVALID_TITLE" | "UNKNOWN_SESSION" };
   };
   "/proposals/submit": {
     input: {
-      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>]>>;
-      "reviewer": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["_registered"]>[0], ["username"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["reviewer"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>]>>;
+      "reviewer": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["_registered"]>[0], ["username"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["reviewer"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_REVIEWER" | "NOT_DRAFT" | "NOT_PROPOSAL_AUTHOR" | "PROPOSAL_NOT_FOUND" | "RATIONALE_MISSING" | "REVIEW_EXISTS" | "UNKNOWN_SESSION" };
-  };
-  "/proposals/uncomment": {
-    input: {
-      "comment": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["comment"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["restructuring"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-    };
-    output: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["restructuring"]>>;
-    };
-    error: { error: AppWideError | "COMMENT_NOT_FOUND" | "INVALID_INPUT" | "NOT_DRAFT" | "NOT_PROPOSAL_AUTHOR" | "PROPOSAL_NOT_FOUND" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_REVIEWER" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "NO_CHANGES" | "RATIONALE_MISSING" | "REVIEW_EXISTS" | "UNKNOWN_SESSION" };
   };
   "/proposals/under-review": {
     input: {
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>[0], ["name"]>>;
-      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>[0], ["owner"]>>;
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>[0], ["name"]>>;
+      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>[0], ["owner"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
       "repository": {
         "proposals": {
-          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["author"]>>;
-          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["commit"]>>;
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["investigation"]>>;
-          "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["restructuring"]>]>>;
-          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["title"]>>;
-          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["updatedAt"]>>;
+          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigator"]>>;
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["commit"]>>;
+          "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigation"]>]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["updatedAt"]>>;
         }[];
       };
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/proposals/unhighlight": {
+    input: {
+      "highlight": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["highlight"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["investigation"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["investigation"]>>;
+    };
+    error: { error: AppWideError | "HIGHLIGHT_NOT_FOUND" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "UNKNOWN_SESSION" };
   };
   "/reviews/approve": {
     input: {
@@ -325,34 +294,38 @@ export type ApplicationWire = {
     };
     output: {
       "proposal": {
-        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
-        "comments": {
-          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
-          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
-          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
-          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
-          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
-          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
-          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+        "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
+        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+        "commands": {
+          "command": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_commands"]>>>, ["command"]>>;
         }[];
-        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
-        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
-        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
+        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["createdAt"]>>;
+        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["currentStructure"]>>;
         "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
-        "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["investigation"]>>;
-        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["name"]>>;
-        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["owner"]>>;
-        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["proposal"]>]>>;
-        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["proposedStructure"]>>;
-        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["rationale"]>>;
+        "highlights": {
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+          "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
+        }[];
+        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+        "operations": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["operations"]>>;
+        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["proposal"]>]>>;
+        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["proposedStructure"]>>;
+        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["rationale"]>>;
         "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
         "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
-        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["status"]>>;
-        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["title"]>>;
-        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["updatedAt"]>>;
+        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["status"]>>;
+        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
       };
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "NOT_REVIEWER" | "PROPOSAL_NOT_FOUND" | "PROPOSAL_NOT_PENDING" | "REVIEW_NOT_FOUND" | "REVIEW_NOT_PENDING" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "INVESTIGATION_NOT_PENDING" | "NOT_REVIEWER" | "REVIEW_NOT_FOUND" | "REVIEW_NOT_PENDING" | "UNKNOWN_SESSION" };
   };
   "/reviews/get": {
     input: {
@@ -364,31 +337,35 @@ export type ApplicationWire = {
         "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["decision"]>>;
         "openedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["openedAt"]>>;
         "proposal": {
-          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
-          "comments": {
-            "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
-            "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
-            "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
-            "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
-            "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
-            "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
-            "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+          "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
+          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+          "commands": {
+            "command": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_commands"]>>>, ["command"]>>;
           }[];
-          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
-          "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
-          "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+          "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["createdAt"]>>;
+          "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["currentStructure"]>>;
           "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["investigation"]>>;
-          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["name"]>>;
-          "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["owner"]>>;
-          "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["proposal"]>]>>;
-          "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["proposedStructure"]>>;
-          "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["rationale"]>>;
+          "highlights": {
+            "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
+            "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+            "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+            "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+            "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
+            "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
+            "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
+          }[];
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+          "operations": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["operations"]>>;
+          "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+          "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["proposal"]>]>>;
+          "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["proposedStructure"]>>;
+          "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["rationale"]>>;
           "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
           "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
-          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["status"]>>;
-          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["title"]>>;
-          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["updatedAt"]>>;
+          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["status"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
         };
         "review": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>[0], ["review"]>>;
         "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["reviewer"]>>;
@@ -444,7 +421,28 @@ export type ApplicationWireHttp = {
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
-  "/investigations/for-commit": {
+  "/proposals/apply": {
+    input: {
+      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["commit"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["investigation"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["investigation"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/proposals/discard": {
+    input: {
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["discard"]>[0], ["investigation"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["discard"]>[0], ["investigation"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/proposals/for-commit": {
     input: {
       "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>[0], ["commit"]>>;
       "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>[0], ["name"]>>;
@@ -453,41 +451,113 @@ export type ApplicationWireHttp = {
     };
     output: {
       "commit": {
-        "investigations": {
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigation"]>>;
-          "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigator"]>>;
-          "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["submittedAt"]>>;
+        "drafts": {
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigation"]>>;
           "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["updatedAt"]>>;
         }[];
+        "submitted": ({
+          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigator"]>>;
+          "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["investigation"]>>;
+          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["status"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forCommit"]>>>, ["updatedAt"]>>;
+        })[];
       };
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
-  "/investigations/get": {
+  "/proposals/get": {
     input: {
-      "investigation": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
-      "investigation": {
+      "proposal": {
+        "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
+        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+        "commands": {
+          "command": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_commands"]>>>, ["command"]>>;
+        }[];
         "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["createdAt"]>>;
+        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["currentStructure"]>>;
+        "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
         "highlights": {
-          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["comment"]>>;
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
           "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+          "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
           "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
           "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
         }[];
-        "investigation": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigation"]>]>>;
-        "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
         "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+        "operations": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["operations"]>>;
         "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
-        "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["submittedAt"]>>;
+        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>]>>;
+        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["proposedStructure"]>>;
+        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["rationale"]>>;
+        "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
+        "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
+        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["status"]>>;
         "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
+      };
+    } | {
+      "proposal": {
+        "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
+        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+        "commands": {
+          "command": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_commands"]>>>, ["command"]>>;
+        }[];
+        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["createdAt"]>>;
+        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["currentStructure"]>>;
+        "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
+        "highlights": {
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+          "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
+        }[];
+        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+        "operations": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["operations"]>>;
+        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>]>>;
+        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["proposedStructure"]>>;
+        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["rationale"]>>;
+        "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
+        "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
+        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["status"]>>;
+        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
       };
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
-  "/investigations/list": {
+  "/proposals/highlight": {
+    input: {
+      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["end"]>>;
+      "file": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["path"]>>;
+      "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["from"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["start"]>>;
+      "text": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["text"]>>;
+      "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["to"]>>;
+    };
+    output: {
+      "highlight": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>>, ["highlight"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/proposals/list": {
     input: {
       "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>[0], ["name"]>>;
       "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>[0], ["owner"]>>;
@@ -495,179 +565,56 @@ export type ApplicationWireHttp = {
     };
     output: {
       "repository": {
-        "investigations": {
-          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["commit"]>>;
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigation"]>>;
-          "investigator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigator"]>>;
-          "submittedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["submittedAt"]>>;
-          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["title"]>>;
-        }[];
-      };
-    };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
-  };
-  "/investigations/submit": {
-    input: {
-      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["commit"]>>;
-      "highlights": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["highlights"]>>;
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["name"]>>;
-      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["owner"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["title"]>>;
-    };
-    output: {
-      "investigation": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>>, ["investigation"]>>;
-    };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
-  };
-  "/proposals/comment": {
-    input: {
-      "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["end"]>>;
-      "file": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["path"]>>;
-      "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["from"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["restructuring"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-      "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["start"]>>;
-      "text": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["text"]>>;
-      "to": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["to"]>>;
-    };
-    output: {
-      "comment": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>>, ["comment"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["comment"]>[0], ["restructuring"]>>;
-    };
-    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
-  };
-  "/proposals/create": {
-    input: {
-      "currentStructure": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["create"]>[0], ["currentStructure"]>>;
-      "investigation": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["create"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["create"]>[0], ["title"]>>;
-    };
-    output: {
-      "proposal": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["create"]>>, ["restructuring"]>>;
-    };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
-  };
-  "/proposals/discard": {
-    input: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["discard"]>[0], ["restructuring"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-    };
-    output: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["discard"]>[0], ["restructuring"]>>;
-    };
-    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
-  };
-  "/proposals/get": {
-    input: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-    };
-    output: {
-      "proposal": {
-        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
-        "comments": {
-          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
-          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
-          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
-          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
-          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
-          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
-          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
-        }[];
-        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
-        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
-        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
-        "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
-        "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["investigation"]>>;
-        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["name"]>>;
-        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["owner"]>>;
-        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>]>>;
-        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["proposedStructure"]>>;
-        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["rationale"]>>;
-        "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
-        "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
-        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["status"]>>;
-        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["title"]>>;
-        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["updatedAt"]>>;
-      };
-    } | {
-      "proposal": {
-        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
-        "comments": {
-          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
-          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
-          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
-          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
-          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
-          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
-          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
-        }[];
-        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
-        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
-        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
-        "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
-        "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["investigation"]>>;
-        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["name"]>>;
-        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["owner"]>>;
-        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>]>>;
-        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["proposedStructure"]>>;
-        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["rationale"]>>;
-        "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
-        "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
-        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["status"]>>;
-        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["title"]>>;
-        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["updatedAt"]>>;
-      };
-    };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
-  };
-  "/proposals/list": {
-    input: {
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>[0], ["name"]>>;
-      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>[0], ["owner"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-    };
-    output: {
-      "repository": {
         "drafts": {
-          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["commit"]>>;
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["investigation"]>>;
-          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["restructuring"]>>;
-          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["title"]>>;
-          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["updatedAt"]>>;
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["commit"]>>;
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigation"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["updatedAt"]>>;
         }[];
-        "submitted": {
-          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["author"]>>;
-          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["commit"]>>;
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["investigation"]>>;
-          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["restructuring"]>>;
-          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["status"]>>;
-          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["title"]>>;
-          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_forRepository"]>>>, ["updatedAt"]>>;
-        }[];
+        "submitted": ({
+          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigator"]>>;
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["commit"]>>;
+          "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
+          "proposal": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigation"]>>;
+          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["status"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["updatedAt"]>>;
+        })[];
       };
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/proposals/modify": {
     input: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["restructuring"]>>;
-      "proposedStructure": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["proposedStructure"]>>;
-      "rationale": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["rationale"]>>;
+      "operations": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["operations"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["investigation"]>>;
+      "rationale": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["rationale"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["title"]>>;
+      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["title"]>>;
     };
     output: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["modify"]>[0], ["restructuring"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["investigation"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
+  "/proposals/start": {
+    input: {
+      "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["commit"]>>;
+      "currentStructure": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["currentStructure"]>>;
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["name"]>>;
+      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["owner"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+      "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["title"]>>;
+    };
+    output: {
+      "proposal": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>>, ["investigation"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
   "/proposals/submit": {
     input: {
-      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>]>>;
-      "reviewer": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["_registered"]>[0], ["username"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["reviewer"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>]>>;
+      "reviewer": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["_registered"]>[0], ["username"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["reviewer"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
@@ -675,36 +622,35 @@ export type ApplicationWireHttp = {
     };
     error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
-  "/proposals/uncomment": {
-    input: {
-      "comment": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["comment"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["restructuring"]>>;
-      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
-    };
-    output: {
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["uncomment"]>[0], ["restructuring"]>>;
-    };
-    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
-  };
   "/proposals/under-review": {
     input: {
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>[0], ["name"]>>;
-      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>[0], ["owner"]>>;
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>[0], ["name"]>>;
+      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>[0], ["owner"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
       "repository": {
         "proposals": {
-          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["author"]>>;
-          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["commit"]>>;
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["investigation"]>>;
-          "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["restructuring"]>]>>;
-          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["title"]>>;
-          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_pendingApproval"]>>>, ["updatedAt"]>>;
+          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigator"]>>;
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["commit"]>>;
+          "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["investigation"]>]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_forRepository"]>>>, ["updatedAt"]>>;
         }[];
       };
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/proposals/unhighlight": {
+    input: {
+      "highlight": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["highlight"]>>;
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["investigation"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["investigation"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
   "/reviews/approve": {
     input: {
@@ -713,31 +659,35 @@ export type ApplicationWireHttp = {
     };
     output: {
       "proposal": {
-        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
-        "comments": {
-          "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
-          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
-          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
-          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
-          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
-          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
-          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+        "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
+        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+        "commands": {
+          "command": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_commands"]>>>, ["command"]>>;
         }[];
-        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
-        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
-        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
+        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["createdAt"]>>;
+        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["currentStructure"]>>;
         "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
-        "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["investigation"]>>;
-        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["name"]>>;
-        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["owner"]>>;
-        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["proposal"]>]>>;
-        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["proposedStructure"]>>;
-        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["rationale"]>>;
+        "highlights": {
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+          "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
+        }[];
+        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+        "operations": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["operations"]>>;
+        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["proposal"]>]>>;
+        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["proposedStructure"]>>;
+        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["rationale"]>>;
         "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
         "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
-        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["status"]>>;
-        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["title"]>>;
-        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["updatedAt"]>>;
+        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["status"]>>;
+        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
       };
     };
     error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
@@ -752,31 +702,35 @@ export type ApplicationWireHttp = {
         "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["decision"]>>;
         "openedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["openedAt"]>>;
         "proposal": {
-          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["author"]>>;
-          "comments": {
-            "comment": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["comment"]>>;
-            "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["end"]>>;
-            "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["from"]>>;
-            "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["path"]>>;
-            "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["start"]>>;
-            "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["text"]>>;
-            "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_comments"]>>>, ["to"]>>;
+          "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
+          "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+          "commands": {
+            "command": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_commands"]>>>, ["command"]>>;
           }[];
-          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["commit"]>>;
-          "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["createdAt"]>>;
-          "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["currentStructure"]>>;
+          "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+          "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["createdAt"]>>;
+          "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["currentStructure"]>>;
           "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
-          "investigation": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["investigation"]>>;
-          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["name"]>>;
-          "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["owner"]>>;
-          "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>[0], ["restructuring"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["proposal"]>]>>;
-          "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["proposedStructure"]>>;
-          "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["rationale"]>>;
+          "highlights": {
+            "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
+            "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+            "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+            "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+            "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
+            "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
+            "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
+          }[];
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+          "operations": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["operations"]>>;
+          "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+          "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["proposal"]>]>>;
+          "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["proposedStructure"]>>;
+          "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["rationale"]>>;
           "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
           "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
-          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["status"]>>;
-          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["title"]>>;
-          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["RestructuringDocumentation"]["_get"]>>>, ["updatedAt"]>>;
+          "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["status"]>>;
+          "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+          "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
         };
         "review": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>[0], ["review"]>>;
         "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["reviewer"]>>;

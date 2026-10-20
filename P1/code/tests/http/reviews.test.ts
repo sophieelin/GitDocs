@@ -11,19 +11,19 @@ let api: ReturnType<typeof testApi>;
 let ari: string;
 let bob: string;
 let cyd: string;
-let investigation: string;
 
 // Example inputs for these tests only.
 const paperNet = { owner: "sophieelin", name: "PaperNet" };
 const commit = "6d4a4c6" + "b".repeat(33);
-const readme = { name: "README.md", path: "csail_hack/lib/agents/README.md" };
+const readme = { name: "README.md", path: "csail_hack/README.md" };
 const currentStructure = {
   name: "",
   path: "",
   files: [],
   folders: [{ name: "csail_hack", path: "csail_hack", files: [readme], folders: [] }],
 };
-const proposedStructure = { name: "", path: "", files: [readme], folders: [] };
+/** Moves the README to the root. */
+const operations = [{ kind: "move", from: readme.path, to: "README.md" }];
 
 beforeAll(async () => {
   testDb = await openTestDb();
@@ -35,14 +35,6 @@ beforeEach(async () => {
   ari = await api.register("ari");
   bob = await api.register("bob");
   cyd = await api.register("cyd");
-  const submitted = await api.post("/investigations/submit", {
-    session: ari,
-    ...paperNet,
-    commit,
-    title: "Agents moved under lib/",
-    highlights: [{ path: readme.path, from: 1, to: 4, comment: "Hard to find this deep." }],
-  });
-  investigation = submitted.body.investigation as string;
 });
 
 afterAll(async () => {
@@ -51,10 +43,10 @@ afterAll(async () => {
 
 /** A saved draft by the account with `session`. */
 async function draft(session: string, title = "Organize the agents docs"): Promise<string> {
-  const created = await api.post("/proposals/create", { session, investigation, title, currentStructure });
-  if (created.status !== 200) throw new Error(`create failed: ${created.status} ${JSON.stringify(created.body)}`);
-  const proposal = created.body.proposal as string;
-  await api.post("/proposals/modify", { session, proposal, title, proposedStructure, rationale: "Easier to find." });
+  const started = await api.post("/proposals/start", { session, ...paperNet, commit, title, currentStructure });
+  if (started.status !== 200) throw new Error(`start failed: ${started.status} ${JSON.stringify(started.body)}`);
+  const proposal = started.body.proposal as string;
+  await api.post("/proposals/modify", { session, proposal, title, operations, rationale: "Easier to find." });
   return proposal;
 }
 
@@ -82,7 +74,7 @@ async function reviewOf(proposal: string) {
 test("the MVP cycle: ari submits for bob, bob approves, and ari sees Approved", async () => {
   const proposal = await draft(ari);
   expect(await submit(ari, proposal, "bob")).toEqual({ status: 200, body: { proposal } });
-  expect(await detail(proposal)).toMatchObject({ status: "PENDING_APPROVAL", reviewer: "bob", decision: "PENDING" });
+  expect(await detail(proposal)).toMatchObject({ status: "SUBMITTED", reviewer: "bob", decision: "PENDING" });
 
   const queue = await api.post("/proposals/under-review", { session: bob, ...paperNet });
   expect(queue.body.repository).toMatchObject({ proposals: [{ proposal, author: "ari" }] });
@@ -137,7 +129,7 @@ describe("/reviews/get", () => {
       review,
       reviewer: "bob",
       decision: "PENDING",
-      proposal: { proposal, author: "ari", status: "PENDING_APPROVAL", currentStructure, proposedStructure, review, reviewer: "bob" },
+      proposal: { proposal, author: "ari", status: "SUBMITTED", currentStructure, operations, review, reviewer: "bob", commands: [] },
     });
   });
 
@@ -150,7 +142,7 @@ describe("/reviews/approve", () => {
   test("only the named reviewer can approve", async () => {
     const { proposal, review } = await submitted(ari, "bob");
     expect(await api.post("/reviews/approve", { session: cyd, review })).toEqual({ status: 403, body: { error: "FORBIDDEN" } });
-    expect((await detail(proposal)).status).toBe("PENDING_APPROVAL");
+    expect((await detail(proposal)).status).toBe("SUBMITTED");
   });
 
   test("approving twice is a 409, and a missing review is a 404", async () => {
@@ -179,7 +171,7 @@ describe("/proposals/under-review", () => {
     expect(forBob.status).toBe(200);
     expect(forBob.body.repository).toEqual({
       proposals: [
-        expect.objectContaining({ proposal: first.proposal, author: "ari", investigation, commit, title: "First" }),
+        expect.objectContaining({ proposal: first.proposal, author: "ari", commit, title: "First" }),
         expect.objectContaining({ proposal: second.proposal, author: "cyd", title: "Second" }),
       ],
     });

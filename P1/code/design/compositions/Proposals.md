@@ -111,7 +111,8 @@ Both follow the same rule as reading one:
 [the proposals of the repository](former:Proposals.Reading.RepositoryProposals)
 and [the proposals of the commit](former:Proposals.Reading.CommitProposals)
 that the requester may see are every submitted proposal, with its author,
-status, and review decision, and the requester's own
+status, and [review decision](former:Proposals.Reading.ReviewDecision), empty
+while it has no review, and the requester's own
 drafts, each the most recently changed first. Another account's drafts are not
 listed. The two are separate lists, because a condition cannot say "or".
 

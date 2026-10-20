@@ -1,129 +1,154 @@
 /**
- * Restructuring proposals: starting one from a submitted investigation, saving
- * the draft, submitting it, discarding it, and reading one.
+ * Proposals: starting one of a commit, saving the draft, highlighting text,
+ * submitting or discarding it, marking it applied, and reading one or a list.
+ * A proposal is an investigation together with its review, and its identity is
+ * the investigation's.
  *
  * Every endpoint resolves the session first, so the author is always the
- * signed-in account. Changing a proposal needs no view, because the concept
- * refuses anyone but its author. Reading does: a draft is visible only to its
- * author, and a submitted proposal to every signed-in account.
+ * signed-in account. Changing a proposal needs no view, because
+ * InvestigatingChanges refuses anyone but its author. Reading does: a draft is
+ * visible only to its author, and a submitted proposal to every signed-in account.
  */
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { each, form, former, is, no, now, view, where, whether } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 import { TheReviewOf } from "./Policy.ts";
 import {
-  commentOnProposalInput,
-  createProposalInput,
+  applyProposalInput,
+  commitInput,
+  commitProposalsOutput,
+  highlightProposalInput,
   modifyProposalInput,
-  proposalCommentOutput,
-  uncommentProposalInput,
+  proposalHighlightOutput,
   proposalIdentityOutput,
   proposalIdInput,
   proposalOutput,
   repositoryInput,
   repositoryProposalsOutput,
   reviewQueueOutput,
+  startProposalInput,
   submitProposalInput,
+  unhighlightProposalInput,
 } from "./validators.ts";
 
-const { Authenticating, InvestigatingChanges, RestructuringDocumentation, ReviewingDocumentation, Sessioning } = concepts;
+const { Authenticating, InvestigatingChanges, ReviewingDocumentation, Sessioning } = concepts;
 
-/** Every status after a draft: pending approval or approved. */
-const SUBMITTED = ["PENDING_APPROVAL", "APPROVED"];
+/** Every status after a draft. */
+const SUBMITTED = ["SUBMITTED", "APPROVED", "APPLIED"];
+
+/** The statuses in which a proposal gives its git commands. */
+const APPROVED = ["APPROVED", "APPLIED"];
 
 const ProposalIsSubmitted = view(
   "(proposal) is submitted",
   ({ proposal }, _outputs, { status }) =>
-    where(RestructuringDocumentation._get({ restructuring: proposal }).is({ status }), is.among(status, SUBMITTED)),
+    where(InvestigatingChanges._get({ investigation: proposal }).is({ status }), is.among(status, SUBMITTED)),
+).holds();
+
+const ProposalIsApproved = view(
+  "(proposal) is approved",
+  ({ proposal }, _outputs, { status }) =>
+    where(InvestigatingChanges._get({ investigation: proposal }).is({ status }), is.among(status, APPROVED)),
 ).holds();
 
 const ProposalIsDraftByUser = view(
   "(proposal) is a draft by (user)",
   ({ proposal, user }, _outputs, _bindings) =>
-    where(RestructuringDocumentation._get({ restructuring: proposal }).is({ status: "DRAFT", author: user })),
+    where(InvestigatingChanges._get({ investigation: proposal }).is({ status: "DRAFT", investigator: user })),
 ).holds();
 
 const ProposalIsDraftByOther = view(
   "(proposal) is a draft by someone other than (user)",
   ({ proposal, user }, _outputs, _bindings) =>
     where(
-      RestructuringDocumentation._get({ restructuring: proposal }).is({ status: "DRAFT" }),
-      RestructuringDocumentation._get({ restructuring: proposal }).is.not({ author: user }),
+      InvestigatingChanges._get({ investigation: proposal }).is({ status: "DRAFT" }),
+      InvestigatingChanges._get({ investigation: proposal }).is.not({ investigator: user }),
     ),
 ).holds();
 
-/** One proposal with both of its structures, and its review if it has one (`null` fields if not). */
+/** The decision of a proposal's review, for the rows of a list. */
+const ReviewDecision = former("the review decision of (proposal)", ({ proposal }, { decision }) =>
+  where(TheReviewOf({ proposal }).is({ decision })).form({ decision }),
+).optional();
+
+/**
+ * One proposal with both of its structures, its changes, and its highlights in
+ * the order added, and its review if it has one (`null` fields if not). The
+ * git commands are listed only once the proposal is approved.
+ */
 const ProposalDetail = former(
   "a proposal with its current and proposed structures",
   (
     { proposal },
     {
       author,
-      investigation,
       owner,
       name,
       commit,
       title,
       rationale,
       status,
+      appliedCommit,
       currentStructure,
+      operations,
       proposedStructure,
       createdAt,
       updatedAt,
       review,
       reviewer,
       decision,
-      comment,
+      highlight,
       path,
       from,
       to,
       start,
       end,
       text,
+      command,
     },
   ) =>
     where(
-      RestructuringDocumentation._get({ restructuring: proposal }).is({
-        author,
-        investigation,
+      InvestigatingChanges._get({ investigation: proposal }).is({
+        investigator: author,
         owner,
         name,
         commit,
         title,
         rationale,
         status,
+        appliedCommit,
         currentStructure,
+        operations,
         proposedStructure,
         createdAt,
         updatedAt,
       }),
       whether(TheReviewOf({ proposal }).is({ review, reviewer, decision })),
     ).form({
-      review,
-      reviewer,
-      decision,
       proposal,
       author,
-      investigation,
       owner,
       name,
       commit,
       title,
       rationale,
       status,
+      appliedCommit,
       currentStructure,
+      operations,
       proposedStructure,
       createdAt,
       updatedAt,
-      comments: each(RestructuringDocumentation._comments({ restructuring: proposal }).is({ comment, path, from, to, start, end, text })).form({
-        comment,
-        path,
-        from,
-        to,
-        start,
-        end,
-        text,
-      }),
+      review,
+      reviewer,
+      decision,
+      highlights: each(
+        InvestigatingChanges._highlights({ investigation: proposal }).is({ highlight, path, from, to, start, end, text }),
+      ).form({ highlight, path, from, to, start, end, text }),
+      // Empty until the proposal is approved, so no one acts on a change that has not been reviewed.
+      commands: each(InvestigatingChanges._commands({ investigation: proposal }).is({ command }))
+        .where(ProposalIsApproved({ proposal }))
+        .form({ command }),
     }),
 );
 
@@ -133,13 +158,12 @@ const ProposalDetail = former(
  */
 const RepositoryProposals = former(
   "the proposals of a repository that (user) may see",
-  ({ owner, name, user }, { proposal, author, investigation, commit, title, status, updatedAt }) =>
+  ({ owner, name, user }, { proposal, author, commit, title, status, updatedAt }) =>
     form({
       submitted: each(
-        RestructuringDocumentation._forRepository({ owner, name }).is({
-          restructuring: proposal,
-          author,
-          investigation,
+        InvestigatingChanges._forRepository({ owner, name }).is({
+          investigation: proposal,
+          investigator: author,
           commit,
           title,
           status,
@@ -148,12 +172,12 @@ const RepositoryProposals = former(
       )
         .where(is.among(status, SUBMITTED))
         .arranged(updatedAt, "descending")
-        .form({ proposal, author, investigation, commit, title, status, updatedAt }),
+        .form({ proposal, author, commit, title, status, updatedAt })
+        .splicing(whether(ReviewDecision({ proposal }))),
       drafts: each(
-        RestructuringDocumentation._forRepository({ owner, name }).is({
-          restructuring: proposal,
-          author: user,
-          investigation,
+        InvestigatingChanges._forRepository({ owner, name }).is({
+          investigation: proposal,
+          investigator: user,
           commit,
           title,
           status: "DRAFT",
@@ -161,75 +185,96 @@ const RepositoryProposals = former(
         }),
       )
         .arranged(updatedAt, "descending")
-        .form({ proposal, investigation, commit, title, updatedAt }),
+        .form({ proposal, commit, title, updatedAt }),
     }),
 );
 
-/** A repository's proposals pending approval whose author named `user` as reviewer, the longest waiting first. */
+/** The same as RepositoryProposals, for one commit's proposals. */
+const CommitProposals = former(
+  "the proposals of a commit that (user) may see",
+  ({ owner, name, commit, user }, { proposal, author, title, status, updatedAt }) =>
+    form({
+      submitted: each(
+        InvestigatingChanges._forCommit({ owner, name, commit }).is({
+          investigation: proposal,
+          investigator: author,
+          title,
+          status,
+          updatedAt,
+        }),
+      )
+        .where(is.among(status, SUBMITTED))
+        .arranged(updatedAt, "descending")
+        .form({ proposal, author, title, status, updatedAt })
+        .splicing(whether(ReviewDecision({ proposal }))),
+      drafts: each(
+        InvestigatingChanges._forCommit({ owner, name, commit }).is({
+          investigation: proposal,
+          investigator: user,
+          title,
+          status: "DRAFT",
+          updatedAt,
+        }),
+      )
+        .arranged(updatedAt, "descending")
+        .form({ proposal, title, updatedAt }),
+    }),
+);
+
+/** A repository's submitted proposals whose author named `user` as reviewer, the longest waiting first. */
 const ReviewQueue = former(
   "the proposals of a repository waiting for (user)'s review",
-  ({ owner, name, user }, { proposal, author, investigation, commit, title, updatedAt }) =>
+  ({ owner, name, user }, { proposal, author, commit, title, updatedAt }) =>
     form({
       proposals: each(
-        RestructuringDocumentation._pendingApproval({ owner, name }).is({
-          restructuring: proposal,
-          author,
-          investigation,
+        InvestigatingChanges._forRepository({ owner, name }).is({
+          investigation: proposal,
+          investigator: author,
           commit,
           title,
+          status: "SUBMITTED",
           updatedAt,
         }),
       )
         .where(TheReviewOf({ proposal }).is({ reviewer: user }))
         .arranged(updatedAt, "ascending")
-        .form({ proposal, author, investigation, commit, title, updatedAt }),
+        .form({ proposal, author, commit, title, updatedAt }),
     }),
 );
 
-const CreateProposal = endpoint(
-  "/proposals/create",
-  ({ session, user, investigation, title, currentStructure, owner, name, commit, at, proposal }) =>
-    receive({ session, investigation, title, currentStructure })
+const StartProposal = endpoint(
+  "/proposals/start",
+  ({ session, user, owner, name, commit, title, currentStructure, at, proposal }) =>
+    receive({ session, owner, name, commit, title, currentStructure })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
-        where(InvestigatingChanges._get({ investigation }).is({ owner, name, commit }), now(at))
+        where(now(at))
           .then(
-            RestructuringDocumentation.create({
-              author: user,
-              investigation,
-              owner,
-              name,
-              commit,
-              title,
-              currentStructure,
-              at,
-            }).responds({ restructuring: proposal }),
+            InvestigatingChanges.start({ investigator: user, owner, name, commit, title, currentStructure, at }).responds({
+              investigation: proposal,
+            }),
           )
-          .then(respond({ proposal }))
-          .named("found"),
-        where(no(InvestigatingChanges._get({ investigation })))
-          .then(respond({ error: "INVESTIGATION_NOT_FOUND" }))
-          .named("missing"),
+          .then(respond({ proposal })),
       ),
   {
-    input: { required: ["session", "investigation", "title", "currentStructure"] },
-    validators: { input: createProposalInput, output: proposalIdentityOutput },
+    input: { required: ["session", "owner", "name", "commit", "title", "currentStructure"] },
+    validators: { input: startProposalInput, output: proposalIdentityOutput },
   },
 );
 
 const ModifyProposal = endpoint(
   "/proposals/modify",
-  ({ session, user, proposal, title, proposedStructure, rationale, at }) =>
-    receive({ session, proposal, title, proposedStructure, rationale })
+  ({ session, user, proposal, title, operations, rationale, at }) =>
+    receive({ session, proposal, title, operations, rationale })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
         where(now(at))
           .then(
-            RestructuringDocumentation.modify({
-              restructuring: proposal,
-              author: user,
+            InvestigatingChanges.modify({
+              investigation: proposal,
+              investigator: user,
               title,
-              proposedStructure,
+              operations,
               rationale,
               at,
             }).responds({}),
@@ -237,8 +282,53 @@ const ModifyProposal = endpoint(
           .then(respond({ proposal })),
       ),
   {
-    input: { required: ["session", "proposal", "title", "proposedStructure", "rationale"] },
+    input: { required: ["session", "proposal", "title", "operations", "rationale"] },
     validators: { input: modifyProposalInput, output: proposalIdentityOutput },
+  },
+);
+
+const HighlightProposal = endpoint(
+  "/proposals/highlight",
+  // The request says `file`, because the boundary owns a request's `path`.
+  ({ session, user, proposal, file, from, to, start, end, text, at, highlight }) =>
+    receive({ session, proposal, file, from, to, start, end, text })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(
+        where(now(at))
+          .then(
+            InvestigatingChanges.highlight({
+              investigation: proposal,
+              investigator: user,
+              path: file,
+              from,
+              to,
+              start,
+              end,
+              text,
+              at,
+            }).responds({ highlight }),
+          )
+          .then(respond({ proposal, highlight })),
+      ),
+  {
+    input: { required: ["session", "proposal", "file", "from", "to", "start", "end", "text"] },
+    validators: { input: highlightProposalInput, output: proposalHighlightOutput },
+  },
+);
+
+const UnhighlightProposal = endpoint(
+  "/proposals/unhighlight",
+  ({ session, user, proposal, highlight, at }) =>
+    receive({ session, proposal, highlight })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(
+        where(now(at))
+          .then(InvestigatingChanges.unhighlight({ investigation: proposal, investigator: user, highlight, at }).responds({}))
+          .then(respond({ proposal })),
+      ),
+  {
+    input: { required: ["session", "proposal", "highlight"] },
+    validators: { input: unhighlightProposalInput, output: proposalIdentityOutput },
   },
 );
 
@@ -256,24 +346,24 @@ const SubmitProposal = endpoint(
       .then(
         where(
           Authenticating._registered({ username: reviewer }).is({ registered: true }),
-          RestructuringDocumentation._get({ restructuring: proposal }).is.not({ author: reviewer }),
+          InvestigatingChanges._get({ investigation: proposal }).is.not({ investigator: reviewer }),
           now(at),
         )
-          .then(RestructuringDocumentation.submit({ restructuring: proposal, author: user, at }).responds({}))
+          .then(InvestigatingChanges.submit({ investigation: proposal, investigator: user, at }).responds({}))
           .then(ReviewingDocumentation.open({ proposal, reviewer, at }).responds({ review }))
           .then(respond({ proposal }))
           .named("allowed"),
-        where(RestructuringDocumentation._get({ restructuring: proposal }).is({ author: reviewer }))
+        where(InvestigatingChanges._get({ investigation: proposal }).is({ investigator: reviewer }))
           .then(respond({ error: "INVALID_REVIEWER" }))
           .named("own-reviewer"),
         where(
-          RestructuringDocumentation._get({ restructuring: proposal }),
+          InvestigatingChanges._get({ investigation: proposal }),
           Authenticating._registered({ username: reviewer }).is({ registered: false }),
         )
           .then(respond({ error: "INVALID_REVIEWER" }))
           .named("unknown-reviewer"),
-        where(no(RestructuringDocumentation._get({ restructuring: proposal })))
-          .then(respond({ error: "PROPOSAL_NOT_FOUND" }))
+        where(no(InvestigatingChanges._get({ investigation: proposal })))
+          .then(respond({ error: "INVESTIGATION_NOT_FOUND" }))
           .named("missing"),
       ),
   {
@@ -287,7 +377,7 @@ const DiscardProposal = endpoint(
   ({ session, user, proposal }) =>
     receive({ session, proposal })
       .then(Sessioning.current({ session }).responds({ subject: user }))
-      .then(RestructuringDocumentation.discard({ restructuring: proposal, author: user }).responds({}))
+      .then(InvestigatingChanges.discard({ investigation: proposal, investigator: user }).responds({}))
       .then(respond({ proposal })),
   {
     input: { required: ["session", "proposal"] },
@@ -295,40 +385,20 @@ const DiscardProposal = endpoint(
   },
 );
 
-const CommentOnProposal = endpoint(
-  "/proposals/comment",
-  // The request says `file`, because the boundary owns a request's `path`.
-  ({ session, user, proposal, file, from, to, start, end, text, at, comment }) =>
-    receive({ session, proposal, file, from, to, start, end, text })
+/** Records the commit that applied an approved proposal. The concept refuses anyone but the author. */
+const ApplyProposal = endpoint(
+  "/proposals/apply",
+  ({ session, user, proposal, commit, at }) =>
+    receive({ session, proposal, commit })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
         where(now(at))
-          .then(
-            RestructuringDocumentation.comment({ restructuring: proposal, author: user, path: file, from, to, start, end, text, at }).responds({
-              comment,
-            }),
-          )
-          .then(respond({ proposal, comment })),
-      ),
-  {
-    input: { required: ["session", "proposal", "file", "from", "to", "start", "end", "text"] },
-    validators: { input: commentOnProposalInput, output: proposalCommentOutput },
-  },
-);
-
-const UncommentProposal = endpoint(
-  "/proposals/uncomment",
-  ({ session, user, proposal, comment, at }) =>
-    receive({ session, proposal, comment })
-      .then(Sessioning.current({ session }).responds({ subject: user }))
-      .then(
-        where(now(at))
-          .then(RestructuringDocumentation.uncomment({ restructuring: proposal, author: user, comment, at }).responds({}))
+          .then(InvestigatingChanges.apply({ investigation: proposal, investigator: user, commit, at }).responds({}))
           .then(respond({ proposal })),
       ),
   {
-    input: { required: ["session", "proposal", "comment"] },
-    validators: { input: uncommentProposalInput, output: proposalIdentityOutput },
+    input: { required: ["session", "proposal", "commit"] },
+    validators: { input: applyProposalInput, output: proposalIdentityOutput },
   },
 );
 
@@ -346,10 +416,10 @@ const GetProposal = endpoint(
           .named("own-draft"),
         // Answered like a missing proposal, so others cannot tell that the draft exists.
         where(ProposalIsDraftByOther({ proposal, user }))
-          .then(respond({ error: "PROPOSAL_NOT_FOUND" }))
+          .then(respond({ error: "INVESTIGATION_NOT_FOUND" }))
           .named("others-draft"),
-        where(no(RestructuringDocumentation._get({ restructuring: proposal })))
-          .then(respond({ error: "PROPOSAL_NOT_FOUND" }))
+        where(no(InvestigatingChanges._get({ investigation: proposal })))
+          .then(respond({ error: "INVESTIGATION_NOT_FOUND" }))
           .named("missing"),
       ),
   {
@@ -370,6 +440,18 @@ const ListProposals = endpoint(
   },
 );
 
+const ListCommitProposals = endpoint(
+  "/proposals/for-commit",
+  ({ session, user, owner, name, commit }) =>
+    receive({ session, owner, name, commit })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(respond({ commit: CommitProposals({ owner, name, commit, user }) })),
+  {
+    input: { required: ["session", "owner", "name", "commit"] },
+    validators: { input: commitInput, output: commitProposalsOutput },
+  },
+);
+
 const ListProposalsUnderReview = endpoint(
   "/proposals/under-review",
   ({ session, user, owner, name }) =>
@@ -385,15 +467,20 @@ const ListProposalsUnderReview = endpoint(
 export { ProposalDetail };
 
 export const composition = {
-  Writing: { CreateProposal, ModifyProposal, CommentOnProposal, UncommentProposal, SubmitProposal, DiscardProposal },
+  Writing: { StartProposal, ModifyProposal, HighlightProposal, UnhighlightProposal, SubmitProposal, DiscardProposal },
+  Applying: { ApplyProposal },
   Reading: {
     GetProposal,
     ListProposals,
+    ListCommitProposals,
     ListProposalsUnderReview,
     ProposalDetail,
     RepositoryProposals,
+    CommitProposals,
     ReviewQueue,
+    ReviewDecision,
     ProposalIsSubmitted,
+    ProposalIsApproved,
     ProposalIsDraftByUser,
     ProposalIsDraftByOther,
   },

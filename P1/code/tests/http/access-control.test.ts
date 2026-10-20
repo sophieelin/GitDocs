@@ -14,7 +14,8 @@ let draft: string;
 
 // Example inputs for these tests only.
 const structure = { name: "", path: "", files: [{ name: "README.md", path: "README.md" }], folders: [] };
-const draftChanges = { title: "Organize the agents docs", proposedStructure: structure, rationale: "A's reasons." };
+const operations = [{ kind: "move", from: "README.md", to: "GUIDE.md" }];
+const draftChanges = { title: "Organize the agents docs", operations, rationale: "A's reasons." };
 
 beforeAll(async () => {
   testDb = await openTestDb();
@@ -25,21 +26,15 @@ beforeEach(async () => {
   api = testApi(testDb.db);
   a = await api.register("a-user");
   b = await api.register("b-user");
-  const investigation = await api.post("/investigations/submit", {
+  const started = await api.post("/proposals/start", {
     session: a,
     owner: "sophieelin",
     name: "PaperNet",
     commit: "6d4a4c6" + "b".repeat(33),
-    title: "Agents moved under lib/",
-    highlights: [{ path: "README.md", from: 3, to: 3, comment: "Out of date." }],
-  });
-  const created = await api.post("/proposals/create", {
-    session: a,
-    investigation: investigation.body.investigation,
     title: draftChanges.title,
     currentStructure: structure,
   });
-  draft = created.body.proposal as string;
+  draft = started.body.proposal as string;
   await api.post("/proposals/modify", { session: a, proposal: draft, ...draftChanges });
 });
 
@@ -58,7 +53,7 @@ describe("another account", () => {
     const before = await readBack();
 
     expect(
-      await api.post("/proposals/modify", { session: b, proposal: draft, title: "B's title", proposedStructure: structure, rationale: "B's reasons." }),
+      await api.post("/proposals/modify", { session: b, proposal: draft, title: "B's title", operations: [], rationale: "B's reasons." }),
     ).toEqual({ status: 403, body: { error: "FORBIDDEN" } });
     expect(await readBack()).toEqual(before);
   });
@@ -97,14 +92,14 @@ describe("reviews", () => {
     await submitFor("b-user");
     const { review } = await readBack();
     expect(await api.post("/reviews/approve", { session: a, review })).toEqual({ status: 403, body: { error: "FORBIDDEN" } });
-    expect((await readBack()).status).toBe("PENDING_APPROVAL");
+    expect((await readBack()).status).toBe("SUBMITTED");
   });
 
   test("C cannot approve the review A asked B for", async () => {
     await submitFor("b-user");
     const { review } = await readBack();
     expect(await api.post("/reviews/approve", { session: c, review })).toEqual({ status: 403, body: { error: "FORBIDDEN" } });
-    expect((await readBack()).status).toBe("PENDING_APPROVAL");
+    expect((await readBack()).status).toBe("SUBMITTED");
   });
 });
 
@@ -112,11 +107,19 @@ describe("no session or an ended session", () => {
   const requests = (session?: string) => {
     const withSession = (body: Record<string, unknown>) => (session === undefined ? body : { session, ...body });
     return [
+      [
+        "/proposals/start",
+        withSession({ owner: "sophieelin", name: "PaperNet", commit: "6d4a4c6" + "b".repeat(33), title: "Another", currentStructure: structure }),
+      ],
       ["/proposals/modify", withSession({ proposal: draft, ...draftChanges, title: "Changed" })],
+      ["/proposals/highlight", withSession({ proposal: draft, file: "README.md", from: 1, to: 1, start: 0, end: 3, text: "Why" })],
+      ["/proposals/unhighlight", withSession({ proposal: draft, highlight: "any" })],
       ["/proposals/submit", withSession({ proposal: draft, reviewer: "b-user" })],
       ["/proposals/discard", withSession({ proposal: draft })],
+      ["/proposals/apply", withSession({ proposal: draft, commit: "e1f2a3b" + "c".repeat(33) })],
       ["/proposals/get", withSession({ proposal: draft })],
       ["/proposals/list", withSession({ owner: "sophieelin", name: "PaperNet" })],
+      ["/proposals/for-commit", withSession({ owner: "sophieelin", name: "PaperNet", commit: "6d4a4c6" + "b".repeat(33) })],
       ["/proposals/under-review", withSession({ owner: "sophieelin", name: "PaperNet" })],
       ["/reviews/get", withSession({ review: "any" })],
       ["/reviews/approve", withSession({ review: "any" })],

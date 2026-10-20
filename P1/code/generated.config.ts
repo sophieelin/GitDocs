@@ -14,7 +14,6 @@ export default {
     documents: [
       new URL("./design/types.md", import.meta.url),
       new URL("./design/compositions/Sessions.md", import.meta.url),
-      new URL("./design/compositions/Investigations.md", import.meta.url),
       new URL("./design/compositions/Proposals.md", import.meta.url),
       new URL("./design/compositions/Policy.md", import.meta.url),
       new URL("./design/compositions/ReviewWorkflow.md", import.meta.url),
