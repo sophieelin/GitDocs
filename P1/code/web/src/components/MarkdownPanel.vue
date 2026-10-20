@@ -2,27 +2,17 @@
 import { ref, watch } from "vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
 import { gitHubErrorMessages, readFile } from "../github.ts";
-import type { Highlight } from "../investigations.ts";
+import type { Highlight } from "../proposals.ts";
 import ErrorBanner from "./ErrorBanner.vue";
 import SourceView, { type TextRange } from "./SourceView.vue";
 
-/** A proposal's own comment on text in the file shown, as in `TextRange`. */
-export interface TextComment {
-  comment: string;
-  from: number;
-  to: number;
-  start: number;
-  end: number;
-  text: string;
-}
-
 /**
- * One documentation file's Markdown at a commit, with the given highlights
- * shaded yellow and their comments beside it, and `comments` shaded green.
+ * One documentation file's Markdown at a commit, with the proposal's
+ * highlights in it shaded and their comments beside it.
  *
  * With `add`, text can be selected (drag over it, or click a line) and
- * commented on; with `remove`, each of `comments` can be removed. Each answers
- * an error message, or null once it is done.
+ * highlighted with a comment; with `remove`, each highlight can be removed.
+ * Each answers an error message, or null once it is done.
  */
 const props = withDefaults(
   defineProps<{
@@ -31,11 +21,10 @@ const props = withDefaults(
     commit: string;
     path: string;
     highlights: Highlight[];
-    comments?: TextComment[];
-    add?: (comment: Required<TextRange> & { text: string }) => Promise<string | null>;
-    remove?: (comment: string) => Promise<string | null>;
+    add?: (highlight: Required<TextRange> & { text: string }) => Promise<string | null>;
+    remove?: (highlight: string) => Promise<string | null>;
   }>(),
-  { comments: () => [], add: undefined, remove: undefined },
+  { add: undefined, remove: undefined },
 );
 
 const text = ref<{ text: string; truncated: boolean } | null>(null);
@@ -91,10 +80,10 @@ async function addComment() {
   cancel();
 }
 
-async function removeComment(comment: string) {
+async function removeHighlight(highlight: string) {
   if (!props.remove) return;
   busy.value = true;
-  commentError.value = await props.remove(comment);
+  commentError.value = await props.remove(highlight);
   busy.value = false;
 }
 
@@ -119,7 +108,7 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
 <template>
   <div class="panel">
     <h2><code>{{ path }}</code></h2>
-    <p v-if="add && text" class="muted hint">Select any text to comment on it, or click a line to comment on the whole line.</p>
+    <p v-if="add && text" class="muted hint">Select any text to highlight it, or click a line to highlight the whole line, and say why it no longer holds.</p>
     <div class="body">
       <div>
         <p v-if="error" class="muted">{{ error }}</p>
@@ -128,7 +117,6 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
           <SourceView
             :text="text.text"
             :highlights="highlights"
-            :comments="comments"
             :selectable="add !== undefined"
             :selection="selection"
             @select="(range) => (selection = range)"
@@ -136,7 +124,7 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
           <p v-if="text.truncated" class="muted">This file is very long; only its beginning is shown.</p>
         </template>
       </div>
-      <div v-if="highlights.length > 0 || comments.length > 0 || selection" class="notes">
+      <div v-if="highlights.length > 0 || selection" class="notes">
         <form v-if="selection" class="comment-box" @submit.prevent="addComment">
           <label>
             <span>{{ lineLabel(selection) }}</span>
@@ -144,21 +132,17 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
             <textarea v-model="draft" name="comment" rows="3" maxlength="2000" placeholder="What should change here, and why?" />
           </label>
           <div class="actions">
-            <button type="submit" class="button" :disabled="busy">Add comment</button>
+            <button type="submit" class="button" :disabled="busy">Add highlight</button>
             <button type="button" class="button secondary" :disabled="busy" @click="cancel">Cancel</button>
           </div>
         </form>
         <ErrorBanner :message="commentError" />
         <ul class="list">
-          <li v-for="item in comments" :key="item.comment" class="comment">
+          <li v-for="item in highlights" :key="item.highlight" class="highlight">
             <strong>{{ lineLabel(item) }}</strong>
             <q v-if="excerpt(item)" class="quote">{{ excerpt(item) }}</q>
             <p>{{ item.text }}</p>
-            <button v-if="remove" type="button" class="link" :disabled="busy" @click="removeComment(item.comment)">Remove</button>
-          </li>
-          <li v-for="(item, index) in highlights" :key="index" class="highlight">
-            <strong>{{ lineLabel(item) }}</strong> <span class="muted">· investigation</span>
-            <p>{{ item.comment }}</p>
+            <button v-if="remove" type="button" class="link" :disabled="busy" @click="removeHighlight(item.highlight)">Remove</button>
           </li>
         </ul>
       </div>
@@ -205,11 +189,6 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
 .highlight {
   border-left: 3px solid #f59e0b;
   background: #fffbeb;
-}
-
-.comment {
-  border-left: 3px solid #16a34a;
-  background: #f0fdf4;
 }
 
 .list p {

@@ -8,24 +8,25 @@ import StatusBadge from "../components/StatusBadge.vue";
 import TreeView from "../components/TreeView.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
 import type { DocumentationFolder } from "../github.ts";
-import { formatDate, getInvestigation, type Highlight } from "../investigations.ts";
 import {
-  commentOnProposal,
   discardProposal,
+  formatDate,
   getProposal,
+  highlightProposal,
   modifyProposal,
   proposalErrorMessages,
   submitProposal,
-  uncommentProposal,
+  unhighlightProposal,
 } from "../proposals.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
 import { useSession } from "../session.ts";
-import { folderPaths, move, removeFolder, rename, type Edit } from "../tree/edit.ts";
+import { createFile, createFolder, folderPaths, move, removeFolder, rename, type Edit, type Operation } from "../tree/edit.ts";
 
 /**
  * The proposal editor, as in UI sketch 3: the current structure, read-only,
- * next to the proposed structure, which the author reorganizes; then the title
+ * next to the proposed structure, which the author reorganizes; the Markdown
+ * of a file, where the author highlights what no longer holds; then the title
  * and rationale. Only the author of a draft edits it; anyone else, or a
  * submitted proposal, is sent to the proposal's page.
  */
@@ -42,9 +43,11 @@ const loadError = ref<string | null>(null);
 const title = ref("");
 const rationale = ref("");
 const proposed = ref<DocumentationFolder | null>(null);
+/** The changes that turn the current structure into `proposed`, in order; this is what is saved. */
+const operations = ref<Operation[]>([]);
 /** What was last loaded or saved, to tell whether there are unsaved changes. */
 const saved = ref("");
-const current = computed(() => JSON.stringify({ title: title.value, rationale: rationale.value, proposed: proposed.value }));
+const current = computed(() => JSON.stringify({ title: title.value, rationale: rationale.value, operations: operations.value }));
 const dirty = computed(() => proposed.value !== null && current.value !== saved.value);
 
 const selected = ref<Picked | null>(null);
@@ -86,64 +89,54 @@ async function load() {
   }
   loadError.value = null;
   proposal.value = found.proposal;
-  if (notes.value === null) void loadNotes(found.proposal.investigation, found.proposal.currentStructure);
+  // The first highlighted file is shown at once; with none, the root README is.
+  const readme = found.proposal.currentStructure.files.find((file) => /^readme\.md$/i.test(file.name));
+  reading.value ??= found.proposal.highlights[0]?.path ?? readme?.path ?? null;
   // Coming back to the tab must not throw away edits that are not saved yet.
   if (dirty.value) return;
   title.value = found.proposal.title;
   rationale.value = found.proposal.rationale;
   proposed.value = found.proposal.proposedStructure;
+  operations.value = found.proposal.operations;
   saved.value = current.value;
 }
 
-/** The investigation's highlights, shown on the Markdown while the author restructures. */
-const notes = ref<Highlight[] | null>(null);
 /** The current-structure file whose Markdown is shown. */
 const reading = ref<string | null>(null);
 
-async function loadNotes(investigation: string, currentStructure: DocumentationFolder) {
-  const found = await getInvestigation(investigation);
-  notes.value = "error" in found ? [] : found.investigation.highlights;
-  // The first highlighted file is shown at once; with none, the root README is.
-  const readme = currentStructure.files.find((file) => /^readme\.md$/i.test(file.name));
-  reading.value ??= notes.value[0]?.path ?? readme?.path ?? null;
-}
+const highlightedFiles = computed(() => [...new Set((proposal.value?.highlights ?? []).map((item) => item.path))]);
+const readingHighlights = computed(() => (proposal.value?.highlights ?? []).filter((item) => item.path === reading.value));
 
-const notedFiles = computed(() => [
-  ...new Set([...(notes.value ?? []), ...(proposal.value?.comments ?? [])].map((item) => item.path)),
-]);
-const readingNotes = computed(() => (notes.value ?? []).filter((item) => item.path === reading.value));
-const readingComments = computed(() => (proposal.value?.comments ?? []).filter((item) => item.path === reading.value));
-
-const commentErrorMessages = {
+const highlightErrorMessages = {
   ...proposalErrorMessages,
-  INVALID_REQUEST: "Select some text in this file, and write a comment on it.",
+  INVALID_REQUEST: "Select some text in this file, and say why it no longer holds.",
 };
 
-/** Saves a comment on the file being read at once, then rereads the proposal to show it. */
-async function addComment(comment: { from: number; to: number; start: number; end: number; text: string }): Promise<string | null> {
+/** Saves a highlight in the file being read at once, then rereads the proposal to show it. */
+async function addHighlight(highlight: { from: number; to: number; start: number; end: number; text: string }): Promise<string | null> {
   if (!reading.value) return null;
-  const result = await commentOnProposal(id.value, { file: reading.value, ...comment });
-  if ("error" in result) return handleEndedSession(result.error) ? null : errorMessage(result.error, commentErrorMessages);
+  const result = await highlightProposal(id.value, { file: reading.value, ...highlight });
+  if ("error" in result) return handleEndedSession(result.error) ? null : errorMessage(result.error, highlightErrorMessages);
   await load();
   return null;
 }
 
-async function removeComment(comment: string): Promise<string | null> {
-  const result = await uncommentProposal(id.value, comment);
+async function removeHighlight(highlight: string): Promise<string | null> {
+  const result = await unhighlightProposal(id.value, highlight);
   if ("error" in result && result.error !== "NOT_FOUND") {
-    return handleEndedSession(result.error) ? null : errorMessage(result.error, commentErrorMessages);
+    return handleEndedSession(result.error) ? null : errorMessage(result.error, highlightErrorMessages);
   }
-  // A comment already gone is shown as gone.
+  // A highlight already gone is shown as gone.
   await load();
   return null;
 }
 
 useRefreshOnFocus(load);
 watch(id, () => {
-  notes.value = null;
   reading.value = null;
   proposal.value = null;
   proposed.value = null;
+  operations.value = [];
   saved.value = "";
   selected.value = null;
   void load();
@@ -177,6 +170,7 @@ function apply(edit: Edit, nowSelected: Picked | null): boolean {
     return false;
   }
   proposed.value = edit.tree;
+  operations.value = [...operations.value, ...edit.operations];
   selected.value = nowSelected;
   return true;
 }
@@ -204,6 +198,34 @@ function removeSelected() {
   apply(removeFolder(proposed.value, selected.value.path), null);
 }
 
+/** Where a new file or folder goes: the selected folder, the selected file's folder, or the root. */
+function newEntryParent(): string {
+  if (!selected.value) return "";
+  const { path, kind } = selected.value;
+  if (kind === "folder") return path;
+  return path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+}
+
+/** The name typed for a new file or folder. */
+const newEntryName = ref("");
+
+function addEntry(kind: "file" | "folder") {
+  if (!proposed.value) return;
+  const parent = newEntryParent();
+  const name = newEntryName.value.trim();
+  const edit = kind === "file" ? createFile(proposed.value, parent, name) : createFolder(proposed.value, parent, name);
+  if (apply(edit, { path: join(parent, name), kind })) newEntryName.value = "";
+}
+
+/** Starts over from the current structure. The saved changes stay until the draft is saved again. */
+function resetChanges() {
+  if (!proposal.value || operations.value.length === 0) return;
+  if (!window.confirm("Undo every change to the proposed structure?")) return;
+  proposed.value = proposal.value.currentStructure;
+  operations.value = [];
+  selected.value = null;
+}
+
 function folderLabel(path: string): string {
   return path === "" ? "(root)" : `${path}/`;
 }
@@ -222,7 +244,7 @@ async function save(): Promise<boolean> {
   busy.value = true;
   const result = await modifyProposal(id.value, {
     title: title.value.trim(),
-    proposedStructure: proposed.value,
+    operations: operations.value,
     rationale: rationale.value,
   });
   busy.value = false;
@@ -250,6 +272,10 @@ async function submitForReview() {
     formError.value = "Name someone else as the reviewer. You cannot review your own proposal.";
     return;
   }
+  if (operations.value.length === 0) {
+    formError.value = "Change the proposed structure before submitting it.";
+    return;
+  }
   if (!(await save())) return;
   busy.value = true;
   const result = await submitProposal(id.value, name);
@@ -258,6 +284,7 @@ async function submitForReview() {
     if (!handleEndedSession(result.error)) {
       formError.value = errorMessage(result.error, {
         ...proposalErrorMessages,
+        CONFLICT: "This proposal needs a change to the structure and a rationale, and must still be a draft.",
         INVALID_REQUEST: `There is no other account named "${name}". Check the reviewer's username.`,
       });
     }
@@ -292,9 +319,9 @@ function isEmpty(folder: DocumentationFolder): boolean {
     <h1 class="page-title">Edit proposal</h1>
     <p v-if="proposal" class="page-subtitle">
       <StatusBadge :status="proposal.status" />
-      From
-      <RouterLink v-if="repository" :to="repositoryPath(repository, `/investigations/${proposal.investigation}`)">its investigation</RouterLink>
-      of commit <code>{{ proposal.commit.slice(0, 7) }}</code> · last saved {{ formatDate(proposal.updatedAt) }}
+      Investigating commit
+      <RouterLink v-if="repository" :to="repositoryPath(repository, `/commits/${proposal.commit}`)"><code>{{ proposal.commit.slice(0, 7) }}</code></RouterLink>
+      · last saved {{ formatDate(proposal.updatedAt) }}
     </p>
     <ErrorBanner :message="loadError" />
 
@@ -302,14 +329,14 @@ function isEmpty(folder: DocumentationFolder): boolean {
       <div class="structures">
         <div class="card scroll">
           <h2>Current Structure</h2>
-          <p class="muted hint">Click a file to read and comment on its Markdown below. Files with highlights or comments are shaded.</p>
+          <p class="muted hint">Click a file to read its Markdown below and highlight what no longer holds. Highlighted files are shaded.</p>
           <p v-if="isEmpty(proposal.currentStructure)" class="muted">There are no Markdown files at this commit.</p>
           <TreeView
             v-else
             :folder="proposal.currentStructure"
             openable
             :active="reading"
-            :marked="notedFiles"
+            :marked="highlightedFiles"
             @open="(path) => (reading = path)"
           />
         </div>
@@ -317,6 +344,10 @@ function isEmpty(folder: DocumentationFolder): boolean {
           <h2>Proposed Structure</h2>
           <p class="muted hint">Click a file or folder to rename or move it.</p>
           <EditableTree :folder="proposed" :selected="selected" @select="(picked) => (selected = picked)" />
+          <p class="muted changes">
+            {{ operations.length === 0 ? "No changes yet." : `${operations.length} ${operations.length === 1 ? "change" : "changes"}.` }}
+            <button v-if="operations.length > 0" type="button" class="link" @click="resetChanges">Start over</button>
+          </p>
         </div>
       </div>
 
@@ -327,10 +358,9 @@ function isEmpty(folder: DocumentationFolder): boolean {
         :name="proposal.name"
         :commit="proposal.commit"
         :path="reading"
-        :highlights="readingNotes"
-        :comments="readingComments"
-        :add="addComment"
-        :remove="removeComment"
+        :highlights="readingHighlights"
+        :add="addHighlight"
+        :remove="removeHighlight"
       />
 
       <div class="card toolbar">
@@ -355,6 +385,16 @@ function isEmpty(folder: DocumentationFolder): boolean {
           </button>
         </template>
         <p v-else class="muted picked">Select a file or folder in the Proposed Structure to rename or move it.</p>
+        <form class="tool" @submit.prevent="addEntry('file')">
+          <input
+            v-model="newEntryName"
+            name="new-entry"
+            :aria-label="`New file or folder in ${folderLabel(newEntryParent())}`"
+            :placeholder="`New in ${folderLabel(newEntryParent())}`"
+          />
+          <button type="submit" class="button secondary">New file</button>
+          <button type="button" class="button secondary" @click="addEntry('folder')">New folder</button>
+        </form>
         <ErrorBanner :message="editError" />
       </div>
 
@@ -427,6 +467,13 @@ function isEmpty(folder: DocumentationFolder): boolean {
 
 .markdown {
   margin-bottom: 20px;
+}
+
+.changes {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-size: 14px;
 }
 
 .toolbar {

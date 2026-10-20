@@ -12,7 +12,6 @@ const links = computed(() => {
   return [
     // The repository's Home is labelled with its name, such as "PaperNet".
     { to: repositoryPath(current), label: current.name, icon: "home", exact: true },
-    { to: repositoryPath(current, "/investigations"), label: "Investigations", icon: "document", exact: false },
     { to: repositoryPath(current, "/proposals"), label: "Proposals", icon: "bulb", exact: false },
     { to: repositoryPath(current, "/reviews"), label: "Reviews", icon: "review", exact: false },
   ];

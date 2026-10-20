@@ -3,8 +3,7 @@ import { computed, ref, watch } from "vue";
 import ErrorBanner from "../components/ErrorBanner.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
-import { formatDate } from "../investigations.ts";
-import { listProposals } from "../proposals.ts";
+import { formatDate, listProposals } from "../proposals.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
 import { useSession } from "../session.ts";
@@ -69,8 +68,8 @@ function itemPath(item: Item): string {
       <p v-if="!items" class="muted">Loading proposals…</p>
       <p v-else-if="items.length === 0" class="muted">
         No proposals yet. Open one of
-        <RouterLink v-if="repository" :to="repositoryPath(repository, '/investigations')">{{ name }}'s investigations</RouterLink>
-        and choose "Propose a restructuring".
+        <RouterLink v-if="repository" :to="repositoryPath(repository)">{{ name }}'s commits</RouterLink>
+        and choose "Investigate".
       </p>
       <ul v-else>
         <li v-for="item in items" :key="item.proposal">

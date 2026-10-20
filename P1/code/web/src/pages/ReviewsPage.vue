@@ -2,8 +2,7 @@
 import { computed, ref, watch } from "vue";
 import ErrorBanner from "../components/ErrorBanner.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
-import { formatDate } from "../investigations.ts";
-import { listReviewQueue } from "../proposals.ts";
+import { formatDate, listReviewQueue } from "../proposals.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
 

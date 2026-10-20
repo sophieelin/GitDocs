@@ -6,8 +6,9 @@ const props = defineProps<{ status: string }>();
 
 const labels: Record<string, string> = {
   DRAFT: "Draft",
-  PENDING_APPROVAL: "Pending Approval",
+  SUBMITTED: "Under review",
   APPROVED: "Approved",
+  APPLIED: "Applied",
 };
 
 const label = computed(() => labels[props.status] ?? props.status);
@@ -29,7 +30,7 @@ const label = computed(() => labels[props.status] ?? props.status);
   white-space: nowrap;
 }
 
-.pending_approval {
+.submitted {
   background: #fef3c7;
   color: #92400e;
 }
@@ -37,6 +38,11 @@ const label = computed(() => labels[props.status] ?? props.status);
 .approved {
   background: #dcfce7;
   color: #166534;
+}
+
+.applied {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .draft {

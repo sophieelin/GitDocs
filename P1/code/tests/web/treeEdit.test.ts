@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { DocumentationFolder } from "../../src/github/documentationTree.ts";
-import { createFolder, folderPaths, move, removeFolder, rename, type Edit } from "../../web/src/tree/edit.ts";
+import { createFile, createFolder, folderPaths, move, removeFolder, rename, type Edit } from "../../web/src/tree/edit.ts";
 
 // Example tree for these tests only.
 function sample(): DocumentationFolder {
@@ -23,6 +23,11 @@ function sample(): DocumentationFolder {
 function tree(edit: Edit): DocumentationFolder {
   if ("error" in edit) throw new Error(`refused: ${edit.error}`);
   return edit.tree;
+}
+
+function operations(edit: Edit) {
+  if ("error" in edit) throw new Error(`refused: ${edit.error}`);
+  return edit.operations;
 }
 
 function refusal(edit: Edit): string {
@@ -55,8 +60,12 @@ describe("rename", () => {
     expect(refusal(rename(sample(), "nowhere.md", "x.md"))).toContain("not in");
   });
 
-  test("the same name changes nothing", () => {
-    expect(tree(rename(sample(), "index.md", "index.md"))).toEqual(sample());
+  test("the same name changes nothing, and records no change", () => {
+    expect(rename(sample(), "index.md", "index.md")).toEqual({ tree: sample(), operations: [] });
+  });
+
+  test("records a rename as a move within its folder", () => {
+    expect(operations(rename(sample(), "docs/setup.md", "install.md"))).toEqual([{ kind: "move", from: "docs/setup.md", to: "docs/install.md" }]);
   });
 });
 
@@ -68,6 +77,7 @@ describe("move", () => {
   });
 
   test("moves a folder with everything in it", () => {
+    expect(operations(move(sample(), "docs/api", "empty"))).toEqual([{ kind: "move", from: "docs/api", to: "empty/api" }]);
     const after = tree(move(sample(), "docs/api", "empty"));
     const empty = after.folders.find((folder) => folder.name === "empty")!;
     expect(empty.folders[0]!.path).toBe("empty/api");
@@ -93,6 +103,21 @@ describe("createFolder", () => {
     expect(refusal(createFolder(sample(), "", "index.md"))).toContain("already");
     expect(refusal(createFolder(sample(), "docs", "api"))).toContain("already");
     expect(refusal(createFolder(sample(), "", ".."))).toContain("not allowed");
+  });
+});
+
+describe("createFile", () => {
+  test("adds an empty Markdown file in sorted order, and records it", () => {
+    const edit = createFile(sample(), "docs", " faq.md ");
+    expect(tree(edit).folders[0]!.files.map((file) => file.path)).toEqual(["docs/faq.md", "docs/setup.md"]);
+    expect(operations(edit)).toEqual([{ kind: "createFile", path: "docs/faq.md" }]);
+  });
+
+  test("refuses a non-Markdown name, a collision, a slashed name, and a missing folder", () => {
+    expect(refusal(createFile(sample(), "", "notes.txt"))).toContain(".md");
+    expect(refusal(createFile(sample(), "", "index.md"))).toContain("already");
+    expect(refusal(createFile(sample(), "", "a/b.md"))).toContain("/");
+    expect(refusal(createFile(sample(), "nowhere", "a.md"))).toContain("not in");
   });
 });
 

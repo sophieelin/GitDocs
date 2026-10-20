@@ -1,26 +1,30 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import DiffView from "../components/DiffView.vue";
 import ErrorBanner from "../components/ErrorBanner.vue";
+import StatusBadge from "../components/StatusBadge.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
-import { gitHubErrorMessages, readCommit, type ChangedFile, type CommitResponse } from "../github.ts";
-import { formatDate, listCommitInvestigations } from "../investigations.ts";
+import { gitHubErrorMessages, readCommit, readTree, type ChangedFile, type CommitResponse } from "../github.ts";
+import { formatDate, listCommitProposals, startProposal } from "../proposals.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
+import { useSession } from "../session.ts";
 
 /**
  * One commit: its message, whether it changes the documentation, every file it
- * changed with its diff, and the investigations already submitted for it.
- * Investigate opens the New investigation page; nothing is saved until Submit there.
+ * changed with its diff, and the proposals made for it. Investigate asks for a
+ * title and starts a draft proposal from the documentation at this commit.
  */
 const route = useRoute();
+const router = useRouter();
 const repository = useCurrentRepository();
+const session = useSession();
 const sha = computed(() => String(route.params.sha));
 
-type Summary = { investigation: string; investigator: string; title: string; submittedAt: string };
+type Summary = { proposal: string; author: string; title: string; status: string; updatedAt: string };
 const result = ref<CommitResponse | null>(null);
-const investigations = ref<Summary[] | null>(null);
+const proposals = ref<Summary[] | null>(null);
 const error = ref<string | null>(null);
 const open = ref(new Set<string>());
 
@@ -36,18 +40,24 @@ async function load() {
   error.value = null;
   result.value = answer;
 
-  const listed = await listCommitInvestigations(repository.value, answer.commit.sha);
+  const listed = await listCommitProposals(repository.value, answer.commit.sha);
   if ("error" in listed) {
-    if (!handleEndedSession(listed.error)) investigations.value = [];
+    if (!handleEndedSession(listed.error)) proposals.value = [];
     return;
   }
-  investigations.value = listed.commit.investigations;
+  // Every submitted proposal, and the user's own drafts, the most recently changed first.
+  const { submitted, drafts } = listed.commit;
+  proposals.value = [
+    ...submitted,
+    ...drafts.map((item) => ({ ...item, author: session.username ?? "", status: "DRAFT" })),
+  ].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 useRefreshOnFocus(load);
 watch([sha, repository], () => {
   result.value = null;
-  investigations.value = null;
+  proposals.value = null;
+  investigating.value = false;
   error.value = null;
   open.value = new Set();
   void load();
@@ -71,14 +81,44 @@ const statusLabel: Record<ChangedFile["status"], string> = {
   copied: "Copied",
 };
 
-const newInvestigationPath = computed(() =>
-  repository.value && result.value
-    ? repositoryPath(repository.value, `/commits/${result.value.commit.sha}/investigations/new`)
-    : "/repositories",
-);
+// Investigate: a draft starts from the documentation structure at this commit.
+const investigating = ref(false);
+const proposalTitle = ref("");
+const startError = ref<string | null>(null);
+const starting = ref(false);
 
-function investigationPath(investigation: string): string {
-  return repository.value ? repositoryPath(repository.value, `/investigations/${investigation}`) : "/repositories";
+async function investigate() {
+  if (!repository.value || !result.value) return;
+  const title = proposalTitle.value.trim();
+  if (title === "") {
+    startError.value = "Give the proposal a title.";
+    return;
+  }
+  starting.value = true;
+  const commit = result.value.commit.sha;
+  const tree = await readTree(repository.value.owner, repository.value.name, commit);
+  if ("error" in tree) {
+    starting.value = false;
+    if (!handleEndedSession(tree.error)) {
+      startError.value = errorMessage(tree.error, { ...gitHubErrorMessages, NOT_FOUND: "This commit was not found on GitHub." });
+    }
+    return;
+  }
+  const started = await startProposal(repository.value, commit, title, tree.tree);
+  starting.value = false;
+  if ("error" in started) {
+    if (!handleEndedSession(started.error)) {
+      startError.value = errorMessage(started.error, { INVALID_REQUEST: "Keep the title to 120 characters." });
+    }
+    return;
+  }
+  await router.push(repositoryPath(repository.value, `/proposals/${started.proposal}/edit`));
+}
+
+function proposalPath(item: Summary): string {
+  if (!repository.value) return "/repositories";
+  const edit = item.status === "DRAFT" ? "/edit" : "";
+  return repositoryPath(repository.value, `/proposals/${item.proposal}${edit}`);
 }
 
 const homePath = computed(() => (repository.value ? repositoryPath(repository.value) : "/repositories"));
@@ -99,8 +139,17 @@ const homePath = computed(() => (repository.value ? repositoryPath(repository.va
             <template v-if="result.commit.date"> · {{ formatDate(result.commit.date) }}</template>
           </p>
         </div>
-        <RouterLink :to="newInvestigationPath" class="button investigate">Investigate</RouterLink>
+        <button v-if="!investigating" type="button" class="button investigate" @click="investigating = true">Investigate</button>
       </div>
+      <form v-if="investigating" class="card start" @submit.prevent="investigate">
+        <label>
+          <span>Proposal title</span>
+          <input v-model="proposalTitle" name="proposal-title" maxlength="120" placeholder="What should change in the documentation?" />
+        </label>
+        <button type="submit" class="button" :disabled="starting">{{ starting ? "Starting…" : "Start proposal" }}</button>
+        <button type="button" class="link" @click="investigating = false">Cancel</button>
+        <ErrorBanner :message="startError" />
+      </form>
       <pre v-if="body" class="body">{{ body }}</pre>
 
       <p class="docs-flag" :class="{ yes: result.changesDocumentation }">
@@ -131,15 +180,15 @@ const homePath = computed(() => (repository.value ? repositoryPath(repository.va
         </ul>
       </div>
 
-      <div class="card investigations">
-        <h2>Investigations of this commit</h2>
-        <p v-if="!investigations" class="muted">Loading…</p>
-        <p v-else-if="investigations.length === 0" class="muted">None yet. Choose "Investigate" to write one.</p>
+      <div class="card proposals">
+        <h2>Proposals for this commit</h2>
+        <p v-if="!proposals" class="muted">Loading…</p>
+        <p v-else-if="proposals.length === 0" class="muted">None yet. Choose "Investigate" to start one.</p>
         <ul v-else>
-          <li v-for="item in investigations" :key="item.investigation">
-            <RouterLink :to="investigationPath(item.investigation)" class="investigation-row">
-              <span class="investigation-title">{{ item.title }}</span>
-              <span class="muted">{{ item.investigator }} · {{ formatDate(item.submittedAt) }}</span>
+          <li v-for="item in proposals" :key="item.proposal">
+            <RouterLink :to="proposalPath(item)" class="proposal-row">
+              <span class="proposal-title">{{ item.title }} <StatusBadge :status="item.status" /></span>
+              <span class="muted">{{ item.author }} · {{ formatDate(item.updatedAt) }}</span>
             </RouterLink>
           </li>
         </ul>
@@ -179,21 +228,54 @@ const homePath = computed(() => (repository.value ? repositoryPath(repository.va
   text-decoration: none;
 }
 
-.investigations {
+.start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.start label {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  min-width: 260px;
+  font-weight: 600;
+}
+
+.start input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: normal;
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.proposals {
   margin-top: 20px;
 }
 
-.investigations ul {
+.proposals ul {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.investigations li + li {
+.proposals li + li {
   margin-top: 8px;
 }
 
-.investigation-row {
+.proposal-row {
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -204,11 +286,14 @@ const homePath = computed(() => (repository.value ? repositoryPath(repository.va
   text-decoration: none;
 }
 
-.investigation-row:hover {
+.proposal-row:hover {
   border-color: var(--accent);
 }
 
-.investigation-title {
+.proposal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
 }
 
