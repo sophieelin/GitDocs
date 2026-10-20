@@ -7,10 +7,11 @@ provides a coherent representation of the system, and record their decision.
 
 ## Principle
 
-After Ari submits proposal `p-1`, Bo opens review `r-1` of it, and the review is
-pending. The review of `p-1` is `r-1`, with Bo as its reviewer. Cy cannot open a
-second review of `p-1`, and cannot approve Bo's review. Bo approves `r-1`, and
-its decision is approved; approving it again is refused.
+After a restructuring is submitted for review, the reviewer records concerns
+and alternative suggestions and approves the restructuring or requests changes.
+If the reviewer thinks of another concern or realizes they made a mistake, they
+edit or remove a comment or suggestion, or reopen a review they already
+decided.
 
 ## Types
 

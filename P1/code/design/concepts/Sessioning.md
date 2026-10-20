@@ -6,10 +6,9 @@ Keep a short-lived opaque session for an external subject, so temporary access
 can end without changing that subject's identity.
 
 ## Principle
-
-Ari starts a session for subject `ari`. Before the session expires, `_active`
-returns a row whose subject is `ari`, and `current` resolves the session to
-`ari`. Ending the session makes it unknown, so another `current` call is
+A user starts a session for their account. Before the session expires, `_active`
+returns a row whose subject is the username, and `current` resolves the session to
+the username. Ending the session makes it unknown, so another `current` call is
 refused. An invented or expired session is refused in the same way, and
 `_active` returns no row for it.
 

@@ -1,0 +1,25 @@
+{
+  "scripts": {
+    "db:up": "podman compose up -d && bun scripts/check-db.ts --wait",
+    "db:down": "podman compose down",
+    "db:reset": "podman compose down -v && bun run db:up",
+    "db:logs": "podman compose logs mongo",
+    "db:shell": "podman compose exec mongo mongosh -u dev -p dev",
+    "db:check": "bun scripts/check-db.ts",
+    "test": "bun test",
+    "test:memory": "TEST_MONGO=memory bun test"
+  },
+  "name": "mongo-practice",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "mongodb-memory-server": "^11.3.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "mongodb": "^7.7.0"
+  }
+}

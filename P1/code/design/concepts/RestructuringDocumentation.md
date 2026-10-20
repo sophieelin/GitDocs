@@ -9,22 +9,11 @@ is made.
 
 ## Principle
 
-Ari starts proposal `p-1`, "Organize the agents docs", from investigation
-`inv-1` of commit `6d4a4c6` in `sophieelin/PaperNet`. The proposal keeps the
-documentation structure as it was at that commit and starts with the same
-structure as its proposal. Ari moves `csail_hack/lib/agents/README.md` to the
-root in the proposed structure and saves; the current structure is unchanged.
-Ari selects text in `README.md` from the 5th character of line 3 to the 12th
-character of line 5 and comments, "This section should move with the agents
-docs"; the proposal lists that comment with its lines and characters, and Ari
-can remove it again. A comment with no text, or with no valid range of text, is
-refused.
-Submitting without a rationale is refused. Ari writes the rationale and submits,
-and the proposal is pending approval. Further edits are refused, as are Bo's
-attempts to edit or submit it. A draft Ari no longer wants can be discarded.
-PaperNet's proposals list `p-1` with its title, author, and status, and its
-proposals pending approval list `p-1` too. Once `p-1` is approved, it is no
-longer pending approval, and approving it again is refused.
+After creating a restructuring, the restructuring preserves the current
+documentation structure and allows the developer to construct and justify an
+alternative structure. If the developer wants to keep working on a submitted
+restructuring, they revise it back into a draft, and a draft they no longer
+want can be discarded.
 
 ## Types
 

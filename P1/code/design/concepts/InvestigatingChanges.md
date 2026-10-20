@@ -8,16 +8,10 @@ restructuring starts from a stated case instead of a hunch.
 
 ## Principle
 
-Ari reads commit `d8ab205` in `sophieelin/PaperNet` and submits investigation
-`inv-1` titled "Agents moved under lib/", with one highlight: lines 12 to 18 of
-`csail_hack/README.md`, commented "Still describes agents/ at the top level;
-they moved under lib/ in this commit". The investigation lists that highlight
-with its lines and comment, and records Ari as its investigator. Bo submits a
-second investigation of the same commit with a different title; both are listed
-for that commit and among PaperNet's investigations, the most recently
-submitted first. Another repository's list includes neither. A submission with
-no title, or with no highlight, or with a highlight that has no comment or no
-valid range of lines, is refused, and nothing is recorded.
+After investigating a set of commits, the investigation records potentially
+affected documentation and evidence connecting the commits to that
+documentation. If a document was flagged by mistake or a piece of evidence does
+not hold up, the investigator removes it before completing the investigation.
 
 ## Types
 

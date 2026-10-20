@@ -6,11 +6,9 @@ Establish a username from a password, so an identity claim alone cannot act as
 proof of identity.
 
 ## Principle
-
-Ari registers username `ari` with a password. `_registered` then reports `ari`
-as registered, and another registration of `ari` is refused.
-Authenticating `ari` with the wrong password is refused. The correct password
-authenticates Ari, returning the account reference, which is the username `ari`.
+A user registers with a username and passsword, `_registered` then reports that user
+as registered, and another registration of the same username is refused.The correct password
+authenticates the user, returning the account reference with its username.
 
 ## Types
 
