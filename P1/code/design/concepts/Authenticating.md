@@ -2,56 +2,52 @@
 
 ## Purpose
 
-Establish a username from a password, so an identity claim alone cannot act as
-proof of identity.
+Establish an account from a GitHub identity, so each GitHub account is exactly
+one account here, and a name alone cannot act as proof of identity.
 
 ## Principle
-A user registers with a username and passsword, `_registered` then reports that user
-as registered, and another registration of the same username is refused.The correct password
-authenticates the user, returning the account reference with its username.
+A user signs in through GitHub, which proves their GitHub id and login. The
+first time, `authenticate` adds an account whose username is that login, and
+`_registered` then reports the username as registered. Signing in again with the
+same GitHub id returns the same account, even after the login changes on
+GitHub, and keeps the newest token. Another GitHub account that now has a login
+already held here is refused, so it never takes over an account's work.
 
 ## Types
 
 ```types
 opaque Secret
-  A password verifier; its representation is the implementer's choice.
+  A sealed GitHub token; its representation is the implementer's choice.
 ```
 
 ## State
 
 ```state
 a set of Accounts with
+  a unique githubId String
   a unique username String
-  a salt String
-  a passwordVerifier Secret
+  a token Secret
 ```
 
 ## Actions
 
 ```actions
-register (username: String, password: String) : returns (account: Account)
-  where username is not 3 to 32 letters, digits, underscores, or hyphens
+authenticate (githubId: String, login: String, token: Secret) : returns (account: Account)
+  where githubId is not 1 to 20 digits, login is not 1 to 39 letters, digits, or hyphens, or token is empty
   then
-    refuses INVALID_USERNAME "A username must contain 3 to 32 letters, numbers, underscores, or hyphens."
-  where password is shorter than 8 characters or longer than 128 characters
+    refuses INVALID_IDENTITY "GitHub did not give a usable identity."
+  where githubId is unknown and login is the username of an account
   then
-    refuses WEAK_PASSWORD "A password must contain 8 to 128 characters."
-  where username is already registered
+    refuses USERNAME_TAKEN "That GitHub name belongs to another account here."
+  where githubId is unknown and login is free
   then
-    refuses USERNAME_TAKEN "That username is already registered."
-  where username and password are accepted
-  then
-    add a new account with username, a fresh salt, and a verifier derived from password and that salt
+    add a new account with githubId, login as its username, and token
     bind account to that account
     returns account
-
-authenticate (username: String, password: String) : returns (account: Account)
-  where username is unknown or password does not verify
+  where githubId is known
   then
-    refuses INVALID_CREDENTIALS "The username or password is incorrect."
-  where password verifies
-  then
-    bind account to the verified account
+    set the account's token to token
+    bind account to that account
     returns account
 ```
 
@@ -60,4 +56,7 @@ authenticate (username: String, password: String) : returns (account: Account)
 ```queries
 _registered (username: String) : one (registered: Flag)
   answers false for an unknown username
+
+_token (username: String) : optional (token: Secret)
+  answers no row for an unknown username
 ```

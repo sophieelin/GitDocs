@@ -76,7 +76,7 @@ async function approve() {
   if ("error" in result) {
     if (!handleEndedSession(result.error)) {
       approveError.value = errorMessage(result.error, {
-        FORBIDDEN: "Only the reviewer the author named can approve this proposal.",
+        FORBIDDEN: "Only the reviewer the author named can approve this proposal, and only with push access to the repository on GitHub.",
         CONFLICT: "This proposal has already been approved.",
         NOT_FOUND: "This review no longer exists.",
       });
@@ -174,7 +174,7 @@ async function markApplied() {
   if ("error" in result) {
     if (!handleEndedSession(result.error)) {
       applyError.value = errorMessage(result.error, {
-        FORBIDDEN: "Only the proposal's author can mark it applied.",
+        FORBIDDEN: "Only the proposal's author can mark it applied, and only with push access to the repository on GitHub.",
         CONFLICT: "Only an approved proposal that is not applied yet can be marked applied.",
         INVALID_REQUEST: "Paste the full 40-character SHA of the commit that made these changes.",
         NOT_FOUND: "This proposal no longer exists.",

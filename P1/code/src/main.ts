@@ -32,6 +32,8 @@ const server = Bun.serve({
   },
 });
 console.log(`GitDocs listening on http://${server.hostname}:${server.port}`);
+const missing = ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "TOKEN_SECRET"].filter((key) => !process.env[key]);
+if (missing.length > 0) console.warn(`Signing in with GitHub is off until .env sets ${missing.join(", ")} (see .env.example).`);
 
 async function shutdown(): Promise<void> {
   await server.stop();

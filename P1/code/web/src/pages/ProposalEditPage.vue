@@ -314,7 +314,7 @@ async function submitForReview() {
       formError.value = errorMessage(result.error, {
         ...proposalErrorMessages,
         CONFLICT: "This proposal needs a change to the structure or a suggestion, and a rationale, and must still be a draft.",
-        INVALID_REQUEST: `There is no other account named "${name}". Check the reviewer's username.`,
+        INVALID_REQUEST: `No one named "${name}" has signed in to GitDocs yet. Check the reviewer's GitHub username, or ask them to sign in once.`,
       });
     }
     return;
@@ -438,7 +438,7 @@ function isEmpty(folder: DocumentationFolder): boolean {
         </label>
         <label class="field">
           <span>Reviewer</span>
-          <input v-model="reviewer" name="reviewer" maxlength="32" autocomplete="off" placeholder="Username of the person who approves it. Needed before you submit." />
+          <input v-model="reviewer" name="reviewer" maxlength="39" autocomplete="off" placeholder="GitHub username of the person who approves it. Needed before you submit." />
         </label>
 
         <ErrorBanner :message="formError" />

@@ -1,48 +1,17 @@
 /**
- * Accounts and sessions: registering, signing in and out, and resolving the
- * current user. Follows the sync-engine message-board example.
+ * Sessions: resolving the current user and signing out. Signing in is GitHub's
+ * OAuth flow, in plain routes (`src/github/signInRoutes.ts`), because it
+ * redirects and calls GitHub; it starts the session there.
  *
  * Authenticating proves an account, represented by its username. Sessioning
  * holds an opaque session for an external subject. Neither names the other;
- * the connection lives here.
+ * the connection lives here and in the sign-in routes.
  */
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { concepts } from "../concepts.ts";
-import {
-  credentialsInput,
-  issuedSessionOutput,
-  sessionOnlyInput,
-  signedOutOutput,
-  usernameOutput,
-} from "./validators.ts";
+import { sessionOnlyInput, signedOutOutput, usernameOutput } from "./validators.ts";
 
-const { Authenticating, Sessioning } = concepts;
-
-const Register = endpoint(
-  "/auth/register",
-  ({ username, password, account, session, expiresAt }) =>
-    receive({ username, password })
-      .then(Authenticating.register({ username, password }).responds({ account }))
-      .then(Sessioning.start({ subject: account }).responds({ session, expiresAt }))
-      .then(respond({ account, session, expiresAt })),
-  {
-    input: { required: ["username", "password"] },
-    validators: { input: credentialsInput, output: issuedSessionOutput },
-  },
-);
-
-const SignIn = endpoint(
-  "/auth/sign-in",
-  ({ username, password, account, session, expiresAt }) =>
-    receive({ username, password })
-      .then(Authenticating.authenticate({ username, password }).responds({ account }))
-      .then(Sessioning.start({ subject: account }).responds({ session, expiresAt }))
-      .then(respond({ account, session, expiresAt })),
-  {
-    input: { required: ["username", "password"] },
-    validators: { input: credentialsInput, output: issuedSessionOutput },
-  },
-);
+const { Sessioning } = concepts;
 
 const CurrentUser = endpoint(
   "/auth/current",
@@ -69,7 +38,6 @@ const SignOut = endpoint(
 );
 
 export const composition = {
-  EnteringApplication: { Register, SignIn },
   CurrentAccount: { CurrentUser },
   LeavingApplication: { SignOut },
 };

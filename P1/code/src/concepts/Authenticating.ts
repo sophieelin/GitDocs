@@ -1,60 +1,69 @@
-import { pbkdf2Sync, timingSafeEqual } from "node:crypto";
-import { Binary, MongoServerError, type Collection, type Db } from "mongodb";
+import { MongoServerError, type Collection, type Db } from "mongodb";
 
-export class InvalidUsername extends Error {}
-export class WeakPassword extends Error {}
+export class InvalidIdentity extends Error {}
 export class UsernameTaken extends Error {}
-export class InvalidCredentials extends Error {}
 
-/** One account per username. The username is the document id, so MongoDB rejects duplicates. */
-type AccountDoc = { _id: string; salt: string; verifier: Binary };
+/**
+ * One account per GitHub account: the GitHub id is the document id, and the
+ * username has a unique index, so MongoDB rejects duplicates of either.
+ */
+type AccountDoc = { _id: string; username: string; token: string };
 
-const USERNAME = /^[A-Za-z0-9_-]{3,32}$/;
+const GITHUB_ID = /^\d{1,20}$/;
+/** GitHub logins are letters, digits, and hyphens, at most 39 characters. */
+const LOGIN = /^[A-Za-z0-9-]{1,39}$/;
 
-function verifier(password: string, salt: string): Buffer {
-  return pbkdf2Sync(password, salt, 10_000, 32, "sha256");
-}
-
-/** Establishes a username from a password. Ported from the sync-engine message-board example to MongoDB. */
+/** Establishes an account from a GitHub identity that the OAuth flow proved. */
 export class AuthenticatingConcept {
   private readonly accounts: Collection<AccountDoc>;
+  #indexed: Promise<unknown> | undefined;
 
-  constructor(
-    db: Db,
-    private readonly freshSalt: () => string = () => crypto.randomUUID(),
-  ) {
+  constructor(db: Db) {
     this.accounts = db.collection<AccountDoc>("Authenticating.accounts");
   }
 
-  async register({ username, password }: { username: string; password: string }) {
-    if (!USERNAME.test(username)) {
-      throw new InvalidUsername("A username must contain 3 to 32 letters, numbers, underscores, or hyphens.");
+  /**
+   * The unique username index, made once before the first write. Accounts from
+   * before GitHub sign-in have no username field and are left out of it.
+   */
+  #index(): Promise<unknown> {
+    this.#indexed ??= this.accounts.createIndex(
+      { username: 1 },
+      { unique: true, partialFilterExpression: { username: { $type: "string" } } },
+    );
+    return this.#indexed;
+  }
+
+  async authenticate({ githubId, login, token }: { githubId: string; login: string; token: string }) {
+    if (typeof githubId !== "string" || !GITHUB_ID.test(githubId) || typeof login !== "string" || !LOGIN.test(login)) {
+      throw new InvalidIdentity("GitHub did not give a usable identity.");
     }
-    if (password.length < 8 || password.length > 128) {
-      throw new WeakPassword("A password must contain 8 to 128 characters.");
-    }
-    const salt = this.freshSalt();
+    if (typeof token !== "string" || token === "") throw new InvalidIdentity("GitHub did not give a usable identity.");
+    await this.#index();
+
+    // The username stays the login of the first sign-in, so a rename on GitHub keeps the account's work together.
+    const known = await this.accounts.findOneAndUpdate({ _id: githubId }, { $set: { token } });
+    if (known !== null) return { account: known.username };
     try {
-      await this.accounts.insertOne({ _id: username, salt, verifier: new Binary(verifier(password, salt)) });
+      await this.accounts.insertOne({ _id: githubId, username: login, token });
     } catch (error) {
       if (error instanceof MongoServerError && error.code === 11000) {
-        throw new UsernameTaken("That username is already registered.");
+        // Signed in twice at once for the first time: the other one added the account.
+        const added = await this.accounts.findOneAndUpdate({ _id: githubId }, { $set: { token } });
+        if (added !== null) return { account: added.username };
+        throw new UsernameTaken("That GitHub name belongs to another account here.");
       }
       throw error;
     }
-    return { account: username };
-  }
-
-  async authenticate({ username, password }: { username: string; password: string }) {
-    const account = await this.accounts.findOne({ _id: username });
-    const supplied = account === null ? undefined : verifier(password, account.salt);
-    if (account === null || supplied === undefined || !timingSafeEqual(Buffer.from(account.verifier.buffer), supplied)) {
-      throw new InvalidCredentials("The username or password is incorrect.");
-    }
-    return { account: username };
+    return { account: login };
   }
 
   async _registered({ username }: { username: string }): Promise<{ registered: boolean }> {
-    return { registered: (await this.accounts.countDocuments({ _id: username }, { limit: 1 })) > 0 };
+    return { registered: (await this.accounts.countDocuments({ username }, { limit: 1 })) > 0 };
+  }
+
+  async _token({ username }: { username: string }): Promise<Array<{ token: string }>> {
+    const account = await this.accounts.findOne({ username });
+    return account === null ? [] : [{ token: account.token }];
   }
 }

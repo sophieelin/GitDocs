@@ -7,6 +7,7 @@ import ProposalsPage from "./pages/ProposalsPage.vue";
 import RepositoriesPage from "./pages/RepositoriesPage.vue";
 import RepositoryHomePage from "./pages/RepositoryHomePage.vue";
 import ReviewsPage from "./pages/ReviewsPage.vue";
+import SignedInPage from "./pages/SignedInPage.vue";
 import SignInPage from "./pages/SignInPage.vue";
 import { restoreSession, useSession } from "./session.ts";
 
@@ -28,6 +29,8 @@ export const router = createRouter({
   routes: [
     { path: "/", redirect: "/repositories" },
     { path: "/sign-in", component: SignInPage, meta: { title: "Sign in", public: true } },
+    // GitHub sign-in comes back here with the session in the URL fragment.
+    { path: "/signed-in", component: SignedInPage, meta: { title: "Signing in", public: true } },
     { path: "/repositories", component: RepositoriesPage, meta: { title: "Repositories" } },
     { path: workspace, component: RepositoryHomePage, meta: { title: "Home" } },
     // A commit's own page, with its changes and the Investigate button, which starts a proposal.

@@ -66,16 +66,20 @@ export async function recheckSession(): Promise<void> {
   if ("error" in result && state.session === session) clearSession();
 }
 
-export async function signIn(username: string, password: string) {
-  const result = await api.auth["sign-in"]({ username, password });
-  if (!("error" in result)) setSession(result.session, result.account);
-  return result;
+/**
+ * Starts signing in with GitHub: the browser leaves for GitHub, and comes back
+ * to `/signed-in` with a session, then goes on to `redirect`.
+ */
+export function signInWithGitHub(redirect: string): void {
+  window.location.assign(`/api/auth/github?${new URLSearchParams({ redirect })}`);
 }
 
-export async function register(username: string, password: string) {
-  const result = await api.auth.register({ username, password });
-  if (!("error" in result)) setSession(result.session, result.account);
-  return result;
+/** Keeps the session GitHub sign-in handed over, once the server confirms it is active. */
+export async function adoptSession(session: string): Promise<boolean> {
+  const result = await api.auth.current({ session });
+  if ("error" in result) return false;
+  setSession(session, result.username);
+  return true;
 }
 
 /** Ends the session on the server, then forgets it here even if the server refused. */

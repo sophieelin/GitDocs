@@ -170,7 +170,8 @@ export function gitHubApiFromEnv(): GitHubApi {
   return new GitHubApi({ token: process.env.GITHUB_TOKEN });
 }
 
-function repoPath({ owner, name }: RepositoryRef): string {
+/** `/repos/owner/name`, or an InvalidRepositoryName for a name GitHub could not have. */
+export function repoPath({ owner, name }: RepositoryRef): string {
   if (!OWNER.test(owner) || !NAME.test(name) || name === "." || name === "..") {
     throw new InvalidRepositoryName(`"${owner}/${name}" is not a valid GitHub repository name.`);
   }

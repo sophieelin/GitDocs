@@ -27,16 +27,6 @@ function hasSession(value: Record<string, unknown>): boolean {
   return typeof value.session === "string" && value.session.length > 0 && value.session.length <= 128;
 }
 
-export const credentialsInput = validator(
-  (value) =>
-    hasOnly(value, ["username", "password"]) &&
-    typeof value.username === "string" &&
-    typeof value.password === "string" &&
-    value.username.length <= 32 &&
-    value.password.length <= 128,
-  "username and password must be bounded strings",
-);
-
 export const sessionOnlyInput = validator(
   (value) => hasOnly(value, ["session"]) && hasSession(value),
   "session must be a non-empty string",
@@ -52,14 +42,6 @@ export const signedOutOutput = validator(
   "response must confirm sign-out",
 );
 
-export const issuedSessionOutput = validator(
-  (value) =>
-    hasOnly(value, ["account", "session", "expiresAt"]) &&
-    typeof value.account === "string" &&
-    typeof value.session === "string" &&
-    value.expiresAt instanceof Date,
-  "response must contain account, session, and Date expiry",
-);
 
 /** A non-empty string no longer than `max`. */
 function text(value: unknown, max: number): boolean {
@@ -158,10 +140,10 @@ export const proposalIdInput = validator(
   "session and proposal must be bounded strings",
 );
 
-/** The reviewer is a username; the composition checks that it is registered. */
+/** The reviewer is a username, a GitHub login of at most 39 characters; the composition checks that it is registered. */
 export const submitProposalInput = validator(
   (value) =>
-    hasOnly(value, ["session", "proposal", "reviewer"]) && hasSession(value) && text(value.proposal, 128) && text(value.reviewer, 32),
+    hasOnly(value, ["session", "proposal", "reviewer"]) && hasSession(value) && text(value.proposal, 128) && text(value.reviewer, 39),
   "session, proposal, and reviewer must be bounded strings",
 );
 

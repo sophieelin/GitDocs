@@ -11,8 +11,11 @@ export default defineConfig({
     strictPort: true,
     // The backend listens on 127.0.0.1:3000 (src/main.ts). Proxying /api keeps
     // the browser on one origin, so the backend needs no CORS setup.
+    // The object form keeps the browser's Host header (the string form rewrites it
+    // to the backend's), so the backend builds GitHub's callback URL on this origin,
+    // where the sign-in state cookie lives.
     proxy: {
-      "/api": "http://127.0.0.1:3000",
+      "/api": { target: "http://127.0.0.1:3000", xfwd: true },
     },
   },
 });

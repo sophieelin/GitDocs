@@ -4,8 +4,8 @@
  * (see `/proposals/submit`).
  *
  * Every endpoint resolves the session first, so the reviewer is always the
- * signed-in account. Approving needs no view: ReviewingDocumentation refuses
- * anyone but the reviewer.
+ * signed-in account. Approving needs push access to the proposal's repository
+ * (RepositoryAccess); ReviewingDocumentation refuses anyone but the reviewer.
  */
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { former, no, now, where } from "@mit-sdg/sync-engine/language";
@@ -13,7 +13,7 @@ import { concepts } from "../concepts.ts";
 import { ProposalDetail } from "./Proposals.ts";
 import { proposalOutput, reviewIdInput, reviewOutput } from "./validators.ts";
 
-const { ReviewingDocumentation, Sessioning } = concepts;
+const { InvestigatingChanges, RepositoryAccess, ReviewingDocumentation, Sessioning } = concepts;
 
 /** One review with its proposal, so a review screen needs only one request. */
 const ReviewDetail = former(
@@ -54,10 +54,22 @@ const GetReview = endpoint(
  */
 const ApproveReview = endpoint(
   "/reviews/approve",
-  ({ session, user, review, at, proposal }) =>
+  ({ session, user, review, at, proposal, owner, name }) =>
     receive({ session, review })
       .then(Sessioning.current({ session }).responds({ subject: user }))
-      .then(where(now(at)).then(ReviewingDocumentation.approve({ review, reviewer: user, at }).responds({})))
+      .then(
+        where(
+          ReviewingDocumentation._get({ review }).is({ proposal }),
+          InvestigatingChanges._get({ investigation: proposal }).is({ owner, name }),
+          now(at),
+        )
+          .then(RepositoryAccess.authorize({ user, owner, name, at }).responds({}))
+          .then(ReviewingDocumentation.approve({ review, reviewer: user, at }).responds({}))
+          .named("found"),
+        where(no(ReviewingDocumentation._get({ review })))
+          .then(respond({ error: "REVIEW_NOT_FOUND" }))
+          .named("missing"),
+      )
       .afterFlowSettles()
       .where(ReviewingDocumentation._get({ review }).is({ proposal }))
       .then(respond({ proposal: ProposalDetail({ proposal }) })),

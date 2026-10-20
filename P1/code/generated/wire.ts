@@ -23,30 +23,6 @@ export type ApplicationWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
-  "/auth/register": {
-    input: {
-      "password": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["register"]>[0], ["password"]>>;
-      "username": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["register"]>[0], ["username"]>>;
-    };
-    output: {
-      "account": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["subject"]>>;
-      "expiresAt": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["expiresAt"]>>;
-      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["session"]>>;
-    };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_USERNAME" | "USERNAME_TAKEN" | "WEAK_PASSWORD" };
-  };
-  "/auth/sign-in": {
-    input: {
-      "password": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["password"]>>;
-      "username": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["username"]>>;
-    };
-    output: {
-      "account": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["subject"]>>;
-      "expiresAt": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["expiresAt"]>>;
-      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["session"]>>;
-    };
-    error: { error: AppWideError | "INVALID_CREDENTIALS" | "INVALID_INPUT" };
-  };
   "/auth/sign-out": {
     input: {
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["end"]>[0], ["session"]>>;
@@ -59,13 +35,13 @@ export type ApplicationWire = {
   "/proposals/apply": {
     input: {
       "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["commit"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["investigation"]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["investigation"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["investigation"]>>;
     };
-    error: { error: AppWideError | "INVALID_COMMIT" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_APPROVED" | "NOT_INVESTIGATOR" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_COMMIT" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_APPROVED" | "NOT_INVESTIGATOR" | "NO_PUSH_ACCESS" | "UNKNOWN_SESSION" };
   };
   "/proposals/discard": {
     input: {
@@ -185,7 +161,7 @@ export type ApplicationWire = {
       "file": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["path"]>>;
       "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["from"]>>;
       "kind": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["kind"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>]>>;
       "replacement": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["replacement"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
       "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["start"]>>;
@@ -196,7 +172,7 @@ export type ApplicationWire = {
       "highlight": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>>, ["highlight"]>>;
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>>;
     };
-    error: { error: AppWideError | "INVALID_HIGHLIGHT" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "SUGGESTIONS_OVERLAP" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_HIGHLIGHT" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "NO_PUSH_ACCESS" | "SUGGESTIONS_OVERLAP" | "UNKNOWN_SESSION" };
   };
   "/proposals/list": {
     input: {
@@ -228,7 +204,7 @@ export type ApplicationWire = {
   "/proposals/modify": {
     input: {
       "operations": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["operations"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["investigation"]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["investigation"]>]>>;
       "rationale": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["rationale"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
       "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["title"]>>;
@@ -236,32 +212,32 @@ export type ApplicationWire = {
     output: {
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["investigation"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_OPERATIONS" | "INVALID_TITLE" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_OPERATIONS" | "INVALID_TITLE" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "NO_PUSH_ACCESS" | "UNKNOWN_SESSION" };
   };
   "/proposals/start": {
     input: {
       "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["commit"]>>;
       "currentStructure": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["currentStructure"]>>;
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["name"]>>;
-      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["owner"]>>;
+      "name": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RepositoryAccess"]["authorize"]>[0], ["name"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["name"]>]>>;
+      "owner": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RepositoryAccess"]["authorize"]>[0], ["owner"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["owner"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
       "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["title"]>>;
     };
     output: {
       "proposal": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>>, ["investigation"]>>;
     };
-    error: { error: AppWideError | "INVALID_COMMIT" | "INVALID_INPUT" | "INVALID_REPOSITORY" | "INVALID_STRUCTURE" | "INVALID_TITLE" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_COMMIT" | "INVALID_INPUT" | "INVALID_REPOSITORY" | "INVALID_STRUCTURE" | "INVALID_TITLE" | "NO_PUSH_ACCESS" | "UNKNOWN_SESSION" };
   };
   "/proposals/submit": {
     input: {
-      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>]>>;
       "reviewer": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["_registered"]>[0], ["username"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["reviewer"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_REVIEWER" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "NO_CHANGES" | "RATIONALE_MISSING" | "REVIEW_EXISTS" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_REVIEWER" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "NO_CHANGES" | "NO_PUSH_ACCESS" | "RATIONALE_MISSING" | "REVIEW_EXISTS" | "UNKNOWN_SESSION" };
   };
   "/proposals/under-review": {
     input: {
@@ -285,17 +261,17 @@ export type ApplicationWire = {
   "/proposals/unhighlight": {
     input: {
       "highlight": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["highlight"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["investigation"]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["investigation"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["investigation"]>>;
     };
-    error: { error: AppWideError | "HIGHLIGHT_NOT_FOUND" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "HIGHLIGHT_NOT_FOUND" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "NO_PUSH_ACCESS" | "UNKNOWN_SESSION" };
   };
   "/reviews/approve": {
     input: {
-      "review": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["approve"]>[0], ["review"]>>;
+      "review": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>[0], ["review"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["approve"]>[0], ["review"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
@@ -332,8 +308,42 @@ export type ApplicationWire = {
         "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
         "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
       };
+    } | {
+      "proposal": {
+        "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
+        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+        "commands": {
+          "command": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_commands"]>>>, ["command"]>>;
+        }[];
+        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["createdAt"]>>;
+        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["currentStructure"]>>;
+        "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
+        "highlights": {
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+          "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "kind": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["kind"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "replacement": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["replacement"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
+        }[];
+        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+        "operations": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["operations"]>>;
+        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["proposal"]>]>>;
+        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["proposedStructure"]>>;
+        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["rationale"]>>;
+        "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
+        "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
+        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["status"]>>;
+        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
+      };
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "INVESTIGATION_NOT_PENDING" | "NOT_REVIEWER" | "REVIEW_NOT_FOUND" | "REVIEW_NOT_PENDING" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "INVESTIGATION_NOT_PENDING" | "NOT_REVIEWER" | "NO_PUSH_ACCESS" | "REVIEW_NOT_FOUND" | "REVIEW_NOT_PENDING" | "UNKNOWN_SESSION" };
   };
   "/reviews/get": {
     input: {
@@ -398,30 +408,6 @@ export type ApplicationWireHttp = {
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
-  "/auth/register": {
-    input: {
-      "password": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["register"]>[0], ["password"]>>;
-      "username": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["register"]>[0], ["username"]>>;
-    };
-    output: {
-      "account": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["subject"]>>;
-      "expiresAt": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["expiresAt"]>>;
-      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["session"]>>;
-    };
-    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" };
-  };
-  "/auth/sign-in": {
-    input: {
-      "password": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["password"]>>;
-      "username": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["authenticate"]>[0], ["username"]>>;
-    };
-    output: {
-      "account": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>[0], ["subject"]>>;
-      "expiresAt": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["expiresAt"]>>;
-      "session": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Sessioning"]["start"]>>, ["session"]>>;
-    };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
-  };
   "/auth/sign-out": {
     input: {
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["end"]>[0], ["session"]>>;
@@ -434,7 +420,7 @@ export type ApplicationWireHttp = {
   "/proposals/apply": {
     input: {
       "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["commit"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["investigation"]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["apply"]>[0], ["investigation"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
@@ -560,7 +546,7 @@ export type ApplicationWireHttp = {
       "file": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["path"]>>;
       "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["from"]>>;
       "kind": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["kind"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>]>>;
       "replacement": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["replacement"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
       "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["start"]>>;
@@ -603,7 +589,7 @@ export type ApplicationWireHttp = {
   "/proposals/modify": {
     input: {
       "operations": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["operations"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["investigation"]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["investigation"]>]>>;
       "rationale": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["rationale"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
       "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["modify"]>[0], ["title"]>>;
@@ -617,19 +603,19 @@ export type ApplicationWireHttp = {
     input: {
       "commit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["commit"]>>;
       "currentStructure": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["currentStructure"]>>;
-      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["name"]>>;
-      "owner": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["owner"]>>;
+      "name": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RepositoryAccess"]["authorize"]>[0], ["name"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["name"]>]>>;
+      "owner": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["RepositoryAccess"]["authorize"]>[0], ["owner"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["owner"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
       "title": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>[0], ["title"]>>;
     };
     output: {
       "proposal": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["start"]>>, ["investigation"]>>;
     };
-    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/proposals/submit": {
     input: {
-      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["submit"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>]>>;
       "reviewer": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Authenticating"]["_registered"]>[0], ["username"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["reviewer"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
@@ -660,7 +646,7 @@ export type ApplicationWireHttp = {
   "/proposals/unhighlight": {
     input: {
       "highlight": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["highlight"]>>;
-      "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["investigation"]>>;
+      "proposal": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["unhighlight"]>[0], ["investigation"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
@@ -670,10 +656,44 @@ export type ApplicationWireHttp = {
   };
   "/reviews/approve": {
     input: {
-      "review": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["approve"]>[0], ["review"]>>;
+      "review": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>[0], ["review"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["approve"]>[0], ["review"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
+      "proposal": {
+        "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
+        "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;
+        "commands": {
+          "command": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_commands"]>>>, ["command"]>>;
+        }[];
+        "commit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["commit"]>>;
+        "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["createdAt"]>>;
+        "currentStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["currentStructure"]>>;
+        "decision": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["decision"]>> | null;
+        "highlights": {
+          "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
+          "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
+          "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "kind": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["kind"]>>;
+          "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "replacement": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["replacement"]>>;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
+          "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
+          "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
+        }[];
+        "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["name"]>>;
+        "operations": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["operations"]>>;
+        "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["owner"]>>;
+        "proposal": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>[0], ["investigation"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>[0], ["proposal"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_get"]>>>, ["proposal"]>]>>;
+        "proposedStructure": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["proposedStructure"]>>;
+        "rationale": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["rationale"]>>;
+        "review": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["review"]>> | null;
+        "reviewer": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["_forProposal"]>>>, ["reviewer"]>> | null;
+        "status": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["status"]>>;
+        "title": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["title"]>>;
+        "updatedAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["updatedAt"]>>;
+      };
+    } | {
       "proposal": {
         "appliedCommit": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["appliedCommit"]>>;
         "author": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_get"]>>>, ["investigator"]>>;

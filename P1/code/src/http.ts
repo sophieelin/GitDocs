@@ -5,6 +5,9 @@ import type { assembleApplication } from "./assembly.ts";
 import { gitHubApiFromEnv } from "./github/GitHubApi.ts";
 import type { GitHubFetcher } from "./github/GitHubFetcher.ts";
 import { createGitHubRoutes } from "./github/routes.ts";
+import { gitHubSignInFromEnv, type GitHubSignIn } from "./github/GitHubSignIn.ts";
+import { createSignInRoutes } from "./github/signInRoutes.ts";
+import { tokenBoxFromEnv, type TokenBox } from "./github/tokenBox.ts";
 
 type Application = ReturnType<typeof assembleApplication>;
 
@@ -16,12 +19,12 @@ type Application = ReturnType<typeof assembleApplication>;
  */
 export const publicErrors = {
   // Authenticating
-  INVALID_USERNAME: "INVALID_REQUEST",
-  WEAK_PASSWORD: "INVALID_REQUEST",
+  INVALID_IDENTITY: "INVALID_REQUEST",
   USERNAME_TAKEN: "CONFLICT",
-  INVALID_CREDENTIALS: "UNAUTHORIZED",
   // Sessioning
   UNKNOWN_SESSION: "UNAUTHORIZED",
+  // RepositoryAccess (INVALID_REPOSITORY is shared with InvestigatingChanges, below)
+  NO_PUSH_ACCESS: "FORBIDDEN",
   // InvestigatingChanges
   INVALID_REPOSITORY: "INVALID_REQUEST",
   INVALID_COMMIT: "INVALID_REQUEST",
@@ -54,23 +57,48 @@ export const basePath = "/api";
 
 export const policy = httpPolicy({ basePath, publicErrors });
 
+export interface SignInOptions {
+  github?: GitHubSignIn;
+  tokens?: TokenBox | undefined;
+  callbackUrl?: string;
+  secureCookies?: boolean;
+}
+
 /**
- * A Fetch handler for the whole API: the plain GitHub routes first, then the
- * application's sync-engine endpoints. Tests pass a stub GitHub fetcher.
+ * A Fetch handler for the whole API: the plain sign-in and GitHub routes first,
+ * then the application's sync-engine endpoints. Tests pass stubs for GitHub.
  */
 export function createHandler(
   application: Application,
   github: GitHubFetcher = gitHubApiFromEnv(),
+  {
+    github: signIn = gitHubSignInFromEnv(),
+    tokens = tokenBoxFromEnv(),
+    callbackUrl = process.env.GITHUB_CALLBACK_URL || undefined,
+    secureCookies = process.env.NODE_ENV === "production",
+  }: SignInOptions = {},
 ): (request: Request) => Promise<Response> {
   const gateway = createGateway({ application });
   const endpoints = createHttpHandler({ application, gateway, policy });
-  const gitHubRoutes = createGitHubRoutes({
-    github,
+  const { Authenticating, RepositoryAccess, Sessioning } = application.concepts;
+  const currentUser = async (session: string) => {
+    const result = await Sessioning.current({ session });
+    return "error" in result ? undefined : result.subject;
+  };
+  const gitHubRoutes = createGitHubRoutes({ github, basePath, currentUser });
+  const signInRoutes = createSignInRoutes({
+    github: signIn,
+    tokens,
     basePath,
-    currentUser: async (session) => {
-      const result = await application.concepts.Sessioning.current({ session });
-      return "error" in result ? undefined : result.subject;
+    callbackUrl,
+    secureCookies,
+    concepts: {
+      authenticate: (input) => Authenticating.authenticate(input),
+      startSession: (input) => Sessioning.start(input),
+      currentUser,
+      token: async (username) => (await Authenticating._token({ username }))[0]?.token,
+      recordAccess: (input) => RepositoryAccess.record(input),
     },
   });
-  return async (request) => (await gitHubRoutes(request)) ?? endpoints(request);
+  return async (request) => (await signInRoutes(request)) ?? (await gitHubRoutes(request)) ?? endpoints(request);
 }

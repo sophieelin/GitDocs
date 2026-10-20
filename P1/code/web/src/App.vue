@@ -1,22 +1,46 @@
 <script setup lang="ts">
+import { computed, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { canPush, checkAccess } from "./access.ts";
 import AppSidebar from "./components/AppSidebar.vue";
 import AppTopBar from "./components/AppTopBar.vue";
+import { handleEndedSession } from "./errors.ts";
 import { useRefreshOnFocus } from "./refresh.ts";
+import { useCurrentRepository } from "./repository.ts";
 import { recheckSession, useSession } from "./session.ts";
 
 const route = useRoute();
 const router = useRouter();
 const session = useSession();
+const repository = useCurrentRepository();
+
+/** Asks GitHub again whether the user can push to the open repository; the server keeps the answer 30 minutes. */
+async function refreshAccess() {
+  const current = repository.value;
+  if (!current || !session.session) return;
+  const answer = await checkAccess(current);
+  if ("error" in answer) handleEndedSession(answer.error);
+}
 
 // Each time the tab is opened again, check the session is still active. If it
 // ended (expired, or signed out in another tab), leave the protected page.
 useRefreshOnFocus(async () => {
+  // Until the first page is resolved, the route is a placeholder `/` that is not public.
+  await router.isReady();
   await recheckSession();
   if (!session.session && !route.meta.public) {
     await router.push({ path: "/sign-in", query: { redirect: route.fullPath } });
+    return;
   }
+  await refreshAccess();
 });
+
+watch(() => (repository.value ? `${repository.value.owner}/${repository.value.name}` : null), refreshAccess);
+// Well within the 30 minutes, so a long edit in one sitting is not refused.
+const timer = setInterval(refreshAccess, 10 * 60 * 1000);
+onUnmounted(() => clearInterval(timer));
+
+const readOnly = computed(() => repository.value !== null && canPush(repository.value) === false);
 </script>
 
 <template>
@@ -25,6 +49,10 @@ useRefreshOnFocus(async () => {
     <AppSidebar />
     <div class="workspace">
       <AppTopBar />
+      <p v-if="readOnly && repository" class="read-only" role="status">
+        You can read <strong>{{ repository.owner }}/{{ repository.name }}</strong>, but not change it here: GitHub says you cannot
+        push to it. Starting, editing, and approving proposals needs push access.
+      </p>
       <main>
         <RouterView />
       </main>
@@ -68,6 +96,15 @@ body {
 
 main {
   padding: 32px 40px;
+}
+
+.read-only {
+  margin: 0;
+  padding: 10px 40px;
+  border-bottom: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 14px;
 }
 
 main.bare {

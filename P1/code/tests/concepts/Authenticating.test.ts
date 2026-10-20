@@ -1,11 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
-import {
-  AuthenticatingConcept,
-  InvalidCredentials,
-  InvalidUsername,
-  UsernameTaken,
-  WeakPassword,
-} from "../../src/concepts/Authenticating.ts";
+import { AuthenticatingConcept, InvalidIdentity, UsernameTaken } from "../../src/concepts/Authenticating.ts";
 import { openTestDb, type TestDb } from "../test-db.ts";
 
 let testDb: TestDb;
@@ -25,51 +19,59 @@ afterAll(async () => {
 });
 
 describe("Authenticating", () => {
-  test("its principle: register, refuse a duplicate and a wrong password, accept the right one", async () => {
-    expect(await authenticating.register({ username: "ari", password: "correct horse" })).toEqual({ account: "ari" });
+  test("its principle: the first sign-in adds the account, the next returns it, and a renamed login keeps it", async () => {
+    expect(await authenticating._registered({ username: "ari" })).toEqual({ registered: false });
+    expect(await authenticating.authenticate({ githubId: "101", login: "ari", token: "sealed-1" })).toEqual({ account: "ari" });
     expect(await authenticating._registered({ username: "ari" })).toEqual({ registered: true });
 
-    const duplicate = authenticating.register({ username: "ari", password: "another password" });
-    await expect(duplicate).rejects.toThrow(UsernameTaken);
-
-    const wrong = authenticating.authenticate({ username: "ari", password: "wrong pass" });
-    await expect(wrong).rejects.toThrow(InvalidCredentials);
-    await expect(authenticating.authenticate({ username: "ari", password: "wrong pass" })).rejects.toThrow(
-      "The username or password is incorrect.",
-    );
-
-    expect(await authenticating.authenticate({ username: "ari", password: "correct horse" })).toEqual({
-      account: "ari",
-    });
+    // Signed in again after renaming on GitHub: the same account, with the newest token.
+    expect(await authenticating.authenticate({ githubId: "101", login: "ari-renamed", token: "sealed-2" })).toEqual({ account: "ari" });
+    expect(await authenticating._token({ username: "ari" })).toEqual([{ token: "sealed-2" }]);
+    expect(await authenticating._registered({ username: "ari-renamed" })).toEqual({ registered: false });
   });
 
-  test("an unknown username gets the same refusal as a wrong password", async () => {
-    await expect(authenticating.authenticate({ username: "nobody", password: "correct horse" })).rejects.toThrow(
-      InvalidCredentials,
-    );
+  test("one GitHub account is one account: another GitHub account with a held login is refused", async () => {
+    await authenticating.authenticate({ githubId: "101", login: "ari", token: "sealed" });
+
+    await expect(authenticating.authenticate({ githubId: "202", login: "ari", token: "other" })).rejects.toThrow(UsernameTaken);
+    expect(await authenticating._token({ username: "ari" })).toEqual([{ token: "sealed" }]);
+    expect(await testDb.db.collection("Authenticating.accounts").countDocuments()).toBe(1);
   });
 
-  test("malformed registration is refused without creating an account", async () => {
-    await expect(authenticating.register({ username: "a!", password: "correct horse" })).rejects.toThrow(InvalidUsername);
-    await expect(authenticating.register({ username: "ari", password: "short" })).rejects.toThrow(WeakPassword);
-    expect(await authenticating._registered({ username: "ari" })).toEqual({ registered: false });
-  });
-
-  test("when two people register the same username at once, only one succeeds", async () => {
-    const results = await Promise.allSettled([
-      authenticating.register({ username: "ari", password: "first password" }),
-      authenticating.register({ username: "ari", password: "second password" }),
+  test("signing in twice at once for the first time makes one account", async () => {
+    const results = await Promise.all([
+      authenticating.authenticate({ githubId: "101", login: "ari", token: "a" }),
+      authenticating.authenticate({ githubId: "101", login: "ari", token: "b" }),
     ]);
 
-    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-    const refused = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
-    expect(refused.reason).toBeInstanceOf(UsernameTaken);
+    expect(results).toEqual([{ account: "ari" }, { account: "ari" }]);
+    expect(await testDb.db.collection("Authenticating.accounts").countDocuments()).toBe(1);
   });
 
-  test("the password itself is never stored", async () => {
-    await authenticating.register({ username: "ari", password: "correct horse" });
-    const stored = await testDb.db.collection("Authenticating.accounts").findOne({ _id: "ari" as never });
+  test("refuses an identity GitHub could not have given", async () => {
+    for (const identity of [
+      { githubId: "", login: "ari", token: "t" },
+      { githubId: "12a", login: "ari", token: "t" },
+      { githubId: "101", login: "", token: "t" },
+      { githubId: "101", login: "a_b", token: "t" },
+      { githubId: "101", login: "x".repeat(40), token: "t" },
+      { githubId: "101", login: "ari", token: "" },
+    ]) {
+      await expect(authenticating.authenticate(identity)).rejects.toThrow(InvalidIdentity);
+    }
+    expect(await testDb.db.collection("Authenticating.accounts").countDocuments()).toBe(0);
+  });
 
-    expect(JSON.stringify(stored)).not.toContain("correct horse");
+  test("an unknown username has no token", async () => {
+    expect(await authenticating._token({ username: "nobody" })).toEqual([]);
+  });
+
+  test("accounts from before GitHub sign-in do not block it", async () => {
+    await testDb.db.collection("Authenticating.accounts").insertMany([
+      { _id: "old-1", salt: "s", verifier: "v" },
+      { _id: "old-2", salt: "s", verifier: "v" },
+    ] as never);
+
+    expect(await authenticating.authenticate({ githubId: "101", login: "ari", token: "t" })).toEqual({ account: "ari" });
   });
 });

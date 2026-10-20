@@ -3,8 +3,8 @@ import { clearSession } from "./session.ts";
 
 /**
  * The API sends only an error category, never the concept's own code, so each
- * call site gives its own sentence per category: `CONFLICT` means "username
- * taken" on register but "already submitted" on a proposal.
+ * call site gives its own sentence per category: `CONFLICT` means "overlaps a
+ * suggestion" on a highlight but "already submitted" on a proposal.
  */
 export type ErrorMessages = Partial<Record<string, string>>;
 

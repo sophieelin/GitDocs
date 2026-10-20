@@ -40,6 +40,9 @@ beforeEach(async () => {
   api = testApi(testDb.db);
   ari = await api.register("ari");
   bob = await api.register("bob");
+  // Both can push to PaperNet on GitHub; tests of the check itself are at the end.
+  await api.grant(ari, paperNet);
+  await api.grant(bob, paperNet);
 });
 
 afterAll(async () => {
@@ -428,5 +431,49 @@ describe("/proposals/list and /proposals/for-commit", () => {
     const other = (await forCommit(ari, "d8ab205" + "a".repeat(33))).body.commit as { submitted: unknown[]; drafts: { title: string }[] };
     expect(other.submitted).toEqual([]);
     expect(other.drafts.map((item) => item.title)).toEqual(["Another commit"]);
+  });
+});
+
+describe("push access on GitHub", () => {
+  const forbidden = { status: 403, body: { error: "FORBIDDEN" } };
+
+  test("without asking GitHub first, nothing can be started", async () => {
+    const cyd = await api.register("cyd");
+
+    expect(await startRequest(cyd)).toEqual(forbidden);
+  });
+
+  test("someone GitHub says cannot push may read proposals but not start, change, submit, or apply them", async () => {
+    const proposal = await start(ari);
+    await modify(ari, proposal);
+    // GitHub takes ari's push access away, and the next check records it.
+    api.oauth.denyPush("ari", paperNet);
+    expect(await api.grant(ari, paperNet)).toEqual({ status: 200, body: { canPush: false } });
+
+    expect(await startRequest(ari)).toEqual(forbidden);
+    expect(await modify(ari, proposal, { title: "Changed" })).toEqual(forbidden);
+    const highlight = { session: ari, proposal, file: readme.path, from: 1, to: 1, start: 0, end: 4, text: "Why", kind: "COMMENT", replacement: "" };
+    expect(await api.post("/proposals/highlight", highlight)).toEqual(forbidden);
+    expect(await submit(ari, proposal)).toEqual(forbidden);
+    expect(await apply(ari, proposal)).toEqual(forbidden);
+    expect((await get(ari, proposal)).body.proposal).toMatchObject({ status: "DRAFT", title: "Organize the agents docs", highlights: [] });
+
+    // Their own draft can still be thrown away.
+    expect((await api.post("/proposals/discard", { session: ari, proposal })).status).toBe(200);
+  });
+
+  test("a reviewer who cannot push cannot approve, and the proposal stays submitted", async () => {
+    const proposal = await submitted();
+    api.oauth.denyPush("bob", paperNet);
+    await api.grant(bob, paperNet);
+    const { review } = (await get(ari, proposal)).body.proposal as { review: string };
+
+    expect(await api.post("/reviews/approve", { session: bob, review })).toEqual(forbidden);
+    expect((await get(ari, proposal)).body.proposal).toMatchObject({ status: "SUBMITTED", decision: "PENDING" });
+  });
+
+  test("a missing proposal is still a 404, not a 403", async () => {
+    expect((await modify(ari, "missing")).status).toBe(404);
+    expect((await api.post("/reviews/approve", { session: bob, review: "missing" })).status).toBe(404);
   });
 });

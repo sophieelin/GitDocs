@@ -31,7 +31,18 @@ import {
   unhighlightProposalInput,
 } from "./validators.ts";
 
-const { Authenticating, InvestigatingChanges, ReviewingDocumentation, Sessioning } = concepts;
+const { Authenticating, InvestigatingChanges, RepositoryAccess, ReviewingDocumentation, Sessioning } = concepts;
+
+/**
+ * The branch for a proposal that does not exist. An endpoint that reads the
+ * proposal's repository first, to check push access, needs it, because then no
+ * action is left to refuse the missing proposal.
+ */
+function Missing<T>({ proposal }: { proposal: T }) {
+  return where(no(InvestigatingChanges._get({ investigation: proposal as never })))
+    .then(respond({ error: "INVESTIGATION_NOT_FOUND" }))
+    .named("missing");
+}
 
 /** Every status after a draft. */
 const SUBMITTED = ["SUBMITTED", "APPROVED", "APPLIED"];
@@ -261,6 +272,7 @@ const StartProposal = endpoint(
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
         where(now(at))
+          .then(RepositoryAccess.authorize({ user, owner, name, at }).responds({}))
           .then(
             InvestigatingChanges.start({ investigator: user, owner, name, commit, title, currentStructure, at }).responds({
               investigation: proposal,
@@ -276,11 +288,12 @@ const StartProposal = endpoint(
 
 const ModifyProposal = endpoint(
   "/proposals/modify",
-  ({ session, user, proposal, title, operations, rationale, at }) =>
+  ({ session, user, proposal, title, operations, rationale, at, owner, name }) =>
     receive({ session, proposal, title, operations, rationale })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
-        where(now(at))
+        where(InvestigatingChanges._get({ investigation: proposal }).is({ owner, name }), now(at))
+          .then(RepositoryAccess.authorize({ user, owner, name, at }).responds({}))
           .then(
             InvestigatingChanges.modify({
               investigation: proposal,
@@ -291,7 +304,9 @@ const ModifyProposal = endpoint(
               at,
             }).responds({}),
           )
-          .then(respond({ proposal })),
+          .then(respond({ proposal }))
+          .named("found"),
+        Missing({ proposal }),
       ),
   {
     input: { required: ["session", "proposal", "title", "operations", "rationale"] },
@@ -302,11 +317,12 @@ const ModifyProposal = endpoint(
 const HighlightProposal = endpoint(
   "/proposals/highlight",
   // The request says `file`, because the boundary owns a request's `path`.
-  ({ session, user, proposal, file, from, to, start, end, text, kind, replacement, at, highlight }) =>
+  ({ session, user, proposal, file, from, to, start, end, text, kind, replacement, at, highlight, owner, name }) =>
     receive({ session, proposal, file, from, to, start, end, text, kind, replacement })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
-        where(now(at))
+        where(InvestigatingChanges._get({ investigation: proposal }).is({ owner, name }), now(at))
+          .then(RepositoryAccess.authorize({ user, owner, name, at }).responds({}))
           .then(
             InvestigatingChanges.highlight({
               investigation: proposal,
@@ -322,7 +338,9 @@ const HighlightProposal = endpoint(
               at,
             }).responds({ highlight }),
           )
-          .then(respond({ proposal, highlight })),
+          .then(respond({ proposal, highlight }))
+          .named("found"),
+        Missing({ proposal }),
       ),
   {
     input: { required: ["session", "proposal", "file", "from", "to", "start", "end", "text", "kind", "replacement"] },
@@ -332,13 +350,16 @@ const HighlightProposal = endpoint(
 
 const UnhighlightProposal = endpoint(
   "/proposals/unhighlight",
-  ({ session, user, proposal, highlight, at }) =>
+  ({ session, user, proposal, highlight, at, owner, name }) =>
     receive({ session, proposal, highlight })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
-        where(now(at))
+        where(InvestigatingChanges._get({ investigation: proposal }).is({ owner, name }), now(at))
+          .then(RepositoryAccess.authorize({ user, owner, name, at }).responds({}))
           .then(InvestigatingChanges.unhighlight({ investigation: proposal, investigator: user, highlight, at }).responds({}))
-          .then(respond({ proposal })),
+          .then(respond({ proposal }))
+          .named("found"),
+        Missing({ proposal }),
       ),
   {
     input: { required: ["session", "proposal", "highlight"] },
@@ -354,15 +375,17 @@ const UnhighlightProposal = endpoint(
  */
 const SubmitProposal = endpoint(
   "/proposals/submit",
-  ({ session, user, proposal, reviewer, at, review }) =>
+  ({ session, user, proposal, reviewer, at, review, owner, name }) =>
     receive({ session, proposal, reviewer })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
         where(
           Authenticating._registered({ username: reviewer }).is({ registered: true }),
           InvestigatingChanges._get({ investigation: proposal }).is.not({ investigator: reviewer }),
+          InvestigatingChanges._get({ investigation: proposal }).is({ owner, name }),
           now(at),
         )
+          .then(RepositoryAccess.authorize({ user, owner, name, at }).responds({}))
           .then(InvestigatingChanges.submit({ investigation: proposal, investigator: user, at }).responds({}))
           .then(ReviewingDocumentation.open({ proposal, reviewer, at }).responds({ review }))
           .then(respond({ proposal }))
@@ -402,13 +425,16 @@ const DiscardProposal = endpoint(
 /** Records the commit that applied an approved proposal. The concept refuses anyone but the author. */
 const ApplyProposal = endpoint(
   "/proposals/apply",
-  ({ session, user, proposal, commit, at }) =>
+  ({ session, user, proposal, commit, at, owner, name }) =>
     receive({ session, proposal, commit })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
-        where(now(at))
+        where(InvestigatingChanges._get({ investigation: proposal }).is({ owner, name }), now(at))
+          .then(RepositoryAccess.authorize({ user, owner, name, at }).responds({}))
           .then(InvestigatingChanges.apply({ investigation: proposal, investigator: user, commit, at }).responds({}))
-          .then(respond({ proposal })),
+          .then(respond({ proposal }))
+          .named("found"),
+        Missing({ proposal }),
       ),
   {
     input: { required: ["session", "proposal", "commit"] },

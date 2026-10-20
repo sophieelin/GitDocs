@@ -26,6 +26,9 @@ beforeEach(async () => {
   api = testApi(testDb.db);
   a = await api.register("a-user");
   b = await api.register("b-user");
+  // Both can push, so what is tested here is who owns the draft or the review.
+  await api.grant(a, { owner: "sophieelin", name: "PaperNet" });
+  await api.grant(b, { owner: "sophieelin", name: "PaperNet" });
   const started = await api.post("/proposals/start", {
     session: a,
     owner: "sophieelin",
@@ -77,6 +80,7 @@ describe("reviews", () => {
 
   beforeEach(async () => {
     c = await api.register("c-user");
+    await api.grant(c, { owner: "sophieelin", name: "PaperNet" });
   });
 
   async function submitFor(reviewer: string) {

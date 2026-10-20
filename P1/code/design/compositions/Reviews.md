@@ -15,9 +15,12 @@ that does not exist answers `REVIEW_NOT_FOUND`.
 Reviews.Reading.GetReview at /reviews/get
 ```
 
-The reviewer may [approve the review](reaction:Reviews.Deciding.ApproveReview).
-This needs no view: ReviewingDocumentation itself refuses anyone but the
+The reviewer may [approve the review](reaction:Reviews.Deciding.ApproveReview),
+if they can push to the proposal's repository on GitHub: RepositoryAccess must
+`authorize` them first, as for changing a proposal (`NO_PUSH_ACCESS`
+otherwise). ReviewingDocumentation itself refuses anyone but the
 reviewer (`NOT_REVIEWER`) and a review already decided (`REVIEW_NOT_PENDING`).
+A review that does not exist answers `REVIEW_NOT_FOUND`.
 Approving the review approves its proposal through
 [the review workflow](ReviewWorkflow.md). The endpoint answers once that has
 run, with the proposal as [reading it](former:Proposals.Reading.ProposalDetail)

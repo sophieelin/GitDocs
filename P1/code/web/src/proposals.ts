@@ -98,7 +98,8 @@ export function approveReview(review: string) {
 /** The messages for a proposal change, by error category. */
 export const proposalErrorMessages = {
   NOT_FOUND: "This proposal no longer exists.",
-  FORBIDDEN: "Only the proposal's author can change it.",
+  // Also sent when the author is not the user; the pages only offer changes to the author.
+  FORBIDDEN: "Changing proposals needs push access to this repository on GitHub.",
   CONFLICT: "This proposal has been submitted and can no longer change.",
   INVALID_REQUEST: "Check the title and the changes to the structure.",
 };

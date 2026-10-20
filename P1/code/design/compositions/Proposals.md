@@ -10,6 +10,17 @@ nothing changes before the proposal is reviewed. A proposal's identity is its
 investigation's. Each request is resolved through
 its active session first, so the author is always the signed-in account.
 
+Only people who can push to the repository on GitHub change its proposals.
+Starting, saving, highlighting, removing a highlight, submitting, and marking
+applied first ask RepositoryAccess to `authorize` the signed-in account for
+the proposal's repository (read from the investigation, or from the request
+when starting), which refuses `NO_PUSH_ACCESS` unless GitHub said in the last
+30 minutes that the account can push. GitHub is asked by the plain route
+`/api/github/access`, with the account's own token, when the repository is
+opened (see [Sessions](Sessions.md)). Reading and discarding one's own draft
+need no push access. A proposal that does not exist still answers
+`INVESTIGATION_NOT_FOUND`.
+
 A current account may [start a proposal of a commit](reaction:Proposals.Writing.StartProposal)
 with a title and the documentation structure it saw at that commit. The
 application supplies the signed-in username as the investigator and the moment

@@ -35,6 +35,7 @@ beforeEach(async () => {
   ari = await api.register("ari");
   bob = await api.register("bob");
   cyd = await api.register("cyd");
+  for (const session of [ari, bob, cyd]) await api.grant(session, paperNet);
 });
 
 afterAll(async () => {
