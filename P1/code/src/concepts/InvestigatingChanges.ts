@@ -12,7 +12,6 @@ export class NotDraft extends Error {}
 export class InvalidOperations extends Error {}
 export class InvalidHighlight extends Error {}
 export class HighlightNotFound extends Error {}
-export class NoChanges extends Error {}
 export class RationaleMissing extends Error {}
 export class InvestigationNotPending extends Error {}
 export class NotApproved extends Error {}
@@ -290,12 +289,11 @@ export class InvestigatingChangesConcept {
   }): Promise<Record<string, never>> {
     // One conditional update, so only one of two simultaneous submits can succeed.
     const { matchedCount } = await this.investigations.updateOne(
-      { _id: investigation, investigator, status: "DRAFT", "operations.0": { $exists: true }, rationale: { $ne: "" } },
+      { _id: investigation, investigator, status: "DRAFT", rationale: { $ne: "" } },
       { $set: { status: "SUBMITTED", updatedAt: at } },
     );
     if (matchedCount === 0) {
       const draft = await this.#investigatorsDraft(investigation, investigator);
-      if (draft.operations.length === 0) throw new NoChanges("Change the documentation structure before submitting.");
       if (draft.rationale === "") throw new RationaleMissing("Explain the proposed structure before submitting it.");
     }
     return {};

@@ -14,7 +14,7 @@ export interface TextRange {
 }
 
 /**
- * A documentation file's Markdown source, as plain text with line numbers, so
+ * A file's source, documentation or code, as plain text with line numbers, so
  * no HTML from a repository reaches the page. Text in `highlights` is shaded
  * yellow, and text in `comments` green.
  *

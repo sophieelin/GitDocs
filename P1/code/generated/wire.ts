@@ -255,7 +255,7 @@ export type ApplicationWire = {
     output: {
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_REVIEWER" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "NO_CHANGES" | "RATIONALE_MISSING" | "REVIEW_EXISTS" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_REVIEWER" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "RATIONALE_MISSING" | "REVIEW_EXISTS" | "UNKNOWN_SESSION" };
   };
   "/proposals/under-review": {
     input: {

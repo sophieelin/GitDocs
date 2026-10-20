@@ -40,8 +40,9 @@ and removing one the proposal does not have is `HIGHLIGHT_NOT_FOUND`. A
 highlight is saved at once, without waiting for the draft to be saved.
 
 The author may [discard the draft](reaction:Proposals.Writing.DiscardProposal)
-or [submit it](reaction:Proposals.Writing.SubmitProposal) once it has at least
-one change (`NO_CHANGES` otherwise) and a rationale (`RATIONALE_MISSING`).
+or [submit it](reaction:Proposals.Writing.SubmitProposal) once it has a
+rationale (`RATIONALE_MISSING` otherwise). It need not change the structure: a
+proposal may only highlight passages to change within a document.
 None of these need a view: InvestigatingChanges itself refuses anyone but the
 author (`NOT_INVESTIGATOR`) and anything but a draft (`NOT_DRAFT`), so a direct
 call cannot skip the check. A missing proposal answers

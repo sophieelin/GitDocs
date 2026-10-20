@@ -158,13 +158,10 @@ submit(investigation: Investigation, investigator: User, at: DateTime) : returns
   where the investigation's status is not DRAFT
   then
     refuses NOT_DRAFT "Only a draft investigation can be changed."
-  where the investigation has no operations
-  then
-    refuses NO_CHANGES "Change the documentation structure before submitting."
   where the investigation's rationale is empty
   then
     refuses RATIONALE_MISSING "Explain the proposed structure before submitting it."
-  where the investigator's draft has changes and a rationale
+  where the investigator's draft has a rationale
   then
     set the investigation's status to SUBMITTED and at as its updatedAt
     returns

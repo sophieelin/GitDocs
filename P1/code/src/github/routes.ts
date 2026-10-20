@@ -36,12 +36,14 @@ export interface TreeResponse {
   truncated: boolean;
 }
 
-/** One documentation file's text at a commit. */
+/** One file's text at a commit. */
 export interface FileResponse {
   path: string;
   text: string;
   /** True when the file was longer than `MAX_FILE_CHARS` and only its start is in `text`. */
   truncated: boolean;
+  /** True when the file is not text (it has a NUL byte, as git decides); `text` is then empty. */
+  binary: boolean;
 }
 
 export interface GitHubRoutesOptions {
@@ -53,7 +55,7 @@ export interface GitHubRoutesOptions {
 
 const MAX_BODY_CHARS = 10_000;
 const MAX_PATH_CHARS = 1_024;
-/** A documentation file longer than this is cut, so one huge file cannot fill the page. */
+/** A file longer than this is cut, so one huge file cannot fill the page. */
 const MAX_FILE_CHARS = 200_000;
 
 /** Answers the GitHub routes, and returns `undefined` for every other path. */
@@ -74,8 +76,8 @@ export function createGitHubRoutes({ github, currentUser, basePath }: GitHubRout
     if (!record(input) || !hasOnly(input, allKeys) || !keys.every((key) => boundedString(input[key]))) {
       return error("INVALID_REQUEST", 400);
     }
-    // Only documentation is read, since only the investigation page asks for a file's text.
-    if (path === filePath && !documentationPath(input.path)) return error("INVALID_REQUEST", 400);
+    // Any file in the repository can be read, by a plain relative path.
+    if (path === filePath && !relativePath(input.path)) return error("INVALID_REQUEST", 400);
 
     if ((await currentUser(input.session as string)) === undefined) return error("UNAUTHORIZED", 401);
 
@@ -96,10 +98,14 @@ export function createGitHubRoutes({ github, currentUser, basePath }: GitHubRout
       }
       if (path === filePath) {
         const text = await github.getFile(repository, input.sha as string, input.path as string);
+        if (text.includes("\u0000")) {
+          return json({ path: input.path as string, text: "", truncated: false, binary: true } satisfies FileResponse);
+        }
         return json({
           path: input.path as string,
           text: text.slice(0, MAX_FILE_CHARS),
           truncated: text.length > MAX_FILE_CHARS,
+          binary: false,
         } satisfies FileResponse);
       }
       const tree = await github.getTree(repository, input.sha as string);
@@ -141,14 +147,13 @@ function boundedString(value: unknown): boolean {
   return typeof value === "string" && value.length > 0 && value.length <= 128;
 }
 
-function documentationPath(value: unknown): boolean {
+function relativePath(value: unknown): boolean {
   return (
     typeof value === "string" &&
     value.length > 0 &&
     value.length <= MAX_PATH_CHARS &&
     !value.startsWith("/") &&
-    !value.split("/").some((segment) => segment === "" || segment === "." || segment === "..") &&
-    isDocumentation(value)
+    !value.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
   );
 }
 

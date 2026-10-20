@@ -7,7 +7,7 @@ import MarkdownPanel from "../components/MarkdownPanel.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import TreeView from "../components/TreeView.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
-import type { DocumentationFolder } from "../github.ts";
+import { readTree, type DocumentationFolder } from "../github.ts";
 import {
   discardProposal,
   formatDate,
@@ -24,9 +24,10 @@ import { useSession } from "../session.ts";
 import { createFile, createFolder, folderPaths, move, removeFolder, rename, type Edit, type Operation } from "../tree/edit.ts";
 
 /**
- * The proposal editor, as in UI sketch 3: the current structure, read-only,
- * next to the proposed structure, which the author reorganizes; the Markdown
- * of a file, where the author highlights what no longer holds; then the title
+ * The proposal editor, as in UI sketch 3: the code structure at the commit,
+ * read-only, next to the proposed documentation structure, which the author
+ * reorganizes; the text of a file, where the author highlights what no longer
+ * holds; then the title
  * and rationale. Only the author of a draft edits it; anyone else, or a
  * submitted proposal, is sent to the proposal's page.
  */
@@ -89,6 +90,12 @@ async function load() {
   }
   loadError.value = null;
   proposal.value = found.proposal;
+  // Every file at the commit can be read and highlighted. Without it, the documentation is shown.
+  if (!code.value) {
+    const tree = await readTree(found.proposal.owner, found.proposal.name, found.proposal.commit);
+    if ("error" in tree) handleEndedSession(tree.error);
+    else code.value = tree.code;
+  }
   // The first highlighted file is shown at once; with none, the root README is.
   const readme = found.proposal.currentStructure.files.find((file) => /^readme\.md$/i.test(file.name));
   reading.value ??= found.proposal.highlights[0]?.path ?? readme?.path ?? null;
@@ -101,8 +108,10 @@ async function load() {
   saved.value = current.value;
 }
 
-/** The current-structure file whose Markdown is shown. */
+/** The file whose text is shown. */
 const reading = ref<string | null>(null);
+/** Every file at the proposal's commit, the Code Structure. */
+const code = ref<DocumentationFolder | null>(null);
 
 const highlightedFiles = computed(() => [...new Set((proposal.value?.highlights ?? []).map((item) => item.path))]);
 const readingHighlights = computed(() => (proposal.value?.highlights ?? []).filter((item) => item.path === reading.value));
@@ -113,9 +122,9 @@ const highlightErrorMessages = {
 };
 
 /** Saves a highlight in the file being read at once, then rereads the proposal to show it. */
-async function addHighlight(highlight: { from: number; to: number; start: number; end: number; text: string }): Promise<string | null> {
+async function addHighlight({ from, to, start, end, text }: { from: number; to: number; start: number; end: number; text: string }): Promise<string | null> {
   if (!reading.value) return null;
-  const result = await highlightProposal(id.value, { file: reading.value, ...highlight });
+  const result = await highlightProposal(id.value, { file: reading.value, from, to, start, end, text });
   if ("error" in result) return handleEndedSession(result.error) ? null : errorMessage(result.error, highlightErrorMessages);
   await load();
   return null;
@@ -134,6 +143,7 @@ async function removeHighlight(highlight: string): Promise<string | null> {
 useRefreshOnFocus(load);
 watch(id, () => {
   reading.value = null;
+  code.value = null;
   proposal.value = null;
   proposed.value = null;
   operations.value = [];
@@ -272,10 +282,6 @@ async function submitForReview() {
     formError.value = "Name someone else as the reviewer. You cannot review your own proposal.";
     return;
   }
-  if (operations.value.length === 0) {
-    formError.value = "Change the proposed structure before submitting it.";
-    return;
-  }
   if (!(await save())) return;
   busy.value = true;
   const result = await submitProposal(id.value, name);
@@ -284,7 +290,7 @@ async function submitForReview() {
     if (!handleEndedSession(result.error)) {
       formError.value = errorMessage(result.error, {
         ...proposalErrorMessages,
-        CONFLICT: "This proposal needs a change to the structure and a rationale, and must still be a draft.",
+        CONFLICT: "This proposal needs a rationale and must still be a draft.",
         INVALID_REQUEST: `There is no other account named "${name}". Check the reviewer's username.`,
       });
     }
@@ -328,12 +334,12 @@ function isEmpty(folder: DocumentationFolder): boolean {
     <template v-if="proposal && proposed && !loadError">
       <div class="structures">
         <div class="card scroll">
-          <h2>Current Structure</h2>
-          <p class="muted hint">Click a file to read its Markdown below and highlight what no longer holds. Highlighted files are shaded.</p>
-          <p v-if="isEmpty(proposal.currentStructure)" class="muted">There are no Markdown files at this commit.</p>
+          <h2>Code Structure</h2>
+          <p class="muted hint">Click a file to read it below and highlight what no longer holds. Highlighted files are shaded.</p>
+          <p v-if="isEmpty(code ?? proposal.currentStructure)" class="muted">There are no files at this commit.</p>
           <TreeView
             v-else
-            :folder="proposal.currentStructure"
+            :folder="code ?? proposal.currentStructure"
             openable
             :active="reading"
             :marked="highlightedFiles"
@@ -341,7 +347,7 @@ function isEmpty(folder: DocumentationFolder): boolean {
           />
         </div>
         <div class="card scroll">
-          <h2>Proposed Structure</h2>
+          <h2>Proposed Documentation Structure</h2>
           <p class="muted hint">Click a file or folder to rename or move it.</p>
           <EditableTree :folder="proposed" :selected="selected" @select="(picked) => (selected = picked)" />
           <p class="muted changes">

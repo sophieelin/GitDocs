@@ -7,12 +7,15 @@ import ErrorBanner from "./ErrorBanner.vue";
 import SourceView, { type TextRange } from "./SourceView.vue";
 
 /**
- * One documentation file's Markdown at a commit, with the proposal's
+ * One file's text at a commit, documentation or code, with the proposal's
  * highlights in it shaded and their comments beside it.
  *
  * With `add`, text can be selected (drag over it, or click a line) and
  * highlighted with a comment; with `remove`, each highlight can be removed.
  * Each answers an error message, or null once it is done.
+ *
+ * With `investigate`, the highlight starts a new proposal: the form also asks
+ * for the proposal's title, which `add` receives as `title`.
  */
 const props = withDefaults(
   defineProps<{
@@ -21,10 +24,11 @@ const props = withDefaults(
     commit: string;
     path: string;
     highlights: Highlight[];
-    add?: (highlight: Required<TextRange> & { text: string }) => Promise<string | null>;
+    add?: (highlight: Required<TextRange> & { text: string; title: string }) => Promise<string | null>;
     remove?: (highlight: string) => Promise<string | null>;
+    investigate?: boolean;
   }>(),
-  { add: undefined, remove: undefined },
+  { add: undefined, remove: undefined, investigate: false },
 );
 
 const text = ref<{ text: string; truncated: boolean } | null>(null);
@@ -33,6 +37,8 @@ const error = ref<string | null>(null);
 /** The text selected but not yet commented on. */
 const selection = ref<Required<TextRange> | null>(null);
 const draft = ref("");
+/** The new proposal's title, with `investigate`. */
+const title = ref("");
 const commentError = ref<string | null>(null);
 const busy = ref(false);
 
@@ -49,6 +55,10 @@ async function load() {
     }
     return;
   }
+  if (answer.binary) {
+    error.value = "This file is not text, so it cannot be shown.";
+    return;
+  }
   text.value = { text: answer.text, truncated: answer.truncated };
 }
 
@@ -61,17 +71,22 @@ watch(() => props.path, cancel);
 function cancel() {
   selection.value = null;
   draft.value = "";
+  title.value = "";
   commentError.value = null;
 }
 
 async function addComment() {
   if (!props.add || !selection.value) return;
+  if (props.investigate && title.value.trim() === "") {
+    commentError.value = "Give the proposal a title.";
+    return;
+  }
   if (draft.value.trim() === "") {
     commentError.value = "Write a comment for the selected lines.";
     return;
   }
   busy.value = true;
-  const failed = await props.add({ ...selection.value, text: draft.value.trim() });
+  const failed = await props.add({ ...selection.value, text: draft.value.trim(), title: title.value.trim() });
   busy.value = false;
   if (failed) {
     commentError.value = failed;
@@ -112,7 +127,7 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
     <div class="body">
       <div>
         <p v-if="error" class="muted">{{ error }}</p>
-        <p v-else-if="!text" class="muted">Loading the Markdown at this commit from GitHub…</p>
+        <p v-else-if="!text" class="muted">Loading the file at this commit from GitHub…</p>
         <template v-else>
           <SourceView
             :text="text.text"
@@ -126,13 +141,17 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
       </div>
       <div v-if="highlights.length > 0 || selection" class="notes">
         <form v-if="selection" class="comment-box" @submit.prevent="addComment">
+          <label v-if="investigate">
+            <span>Proposal title</span>
+            <input v-model="title" name="proposal-title" maxlength="120" placeholder="What should change in the documentation?" />
+          </label>
           <label>
             <span>{{ lineLabel(selection) }}</span>
             <q v-if="excerpt(selection)" class="quote">{{ excerpt(selection) }}</q>
             <textarea v-model="draft" name="comment" rows="3" maxlength="2000" placeholder="What should change here, and why?" />
           </label>
           <div class="actions">
-            <button type="submit" class="button" :disabled="busy">Add highlight</button>
+            <button type="submit" class="button" :disabled="busy">{{ investigate ? "Investigate" : "Add highlight" }}</button>
             <button type="button" class="button secondary" :disabled="busy" @click="cancel">Cancel</button>
           </div>
         </form>
@@ -219,6 +238,7 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
   font-weight: 600;
 }
 
+.comment-box input,
 .comment-box textarea {
   padding: 8px 12px;
   border: 1px solid var(--border);

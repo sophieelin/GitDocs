@@ -10,7 +10,6 @@ import {
   InvestigatingChangesConcept,
   InvestigationNotFound,
   InvestigationNotPending,
-  NoChanges,
   NotApproved,
   NotDraft,
   NotInvestigator,
@@ -225,7 +224,7 @@ describe("InvestigatingChanges", () => {
     const investigating = newConcept();
     await investigating.start({ investigator: "ari", ...valid, at: morning });
 
-    await expect(investigating.submit({ investigation: "i-1", investigator: "ari", at: noon })).rejects.toThrow(NoChanges);
+    await expect(investigating.submit({ investigation: "i-1", investigator: "ari", at: noon })).rejects.toThrow(RationaleMissing);
     await investigating.modify({ ...draftOf("i-1"), rationale: "", at: morning });
     await expect(investigating.submit({ investigation: "i-1", investigator: "ari", at: noon })).rejects.toThrow(RationaleMissing);
     await investigating.modify({ ...draftOf("i-1"), at: morning });
@@ -239,6 +238,15 @@ describe("InvestigatingChanges", () => {
     await expect(investigating.modify({ ...draftOf("i-1"), title: "Again", at: noon })).rejects.toThrow(NotDraft);
     await expect(investigating.discard({ investigation: "i-1", investigator: "ari" })).rejects.toThrow(NotDraft);
     expect(await investigating._get({ investigation: "i-1" })).toEqual([submittedOne!]);
+  });
+
+  test("submit accepts a draft with a rationale and no structure changes", async () => {
+    const investigating = newConcept();
+    await investigating.start({ investigator: "ari", ...valid, at: morning });
+    await investigating.modify({ ...draftOf("i-1"), operations: [], at: morning });
+
+    expect(await investigating.submit({ investigation: "i-1", investigator: "ari", at: noon })).toEqual({});
+    expect((await investigating._get({ investigation: "i-1" }))[0]).toMatchObject({ status: "SUBMITTED", operations: [] });
   });
 
   test("two submits at once: one succeeds and the other is refused", async () => {

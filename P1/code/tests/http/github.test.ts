@@ -139,7 +139,14 @@ describe("/github/file", () => {
     const { status, body } = await api.post("/github/file", { session, ...myRepo, sha: myRepoCommits.refactor, path: "docs/api/user.md" });
 
     expect(status).toBe(200);
-    expect(body).toEqual({ path: "docs/api/user.md", text: "# docs/api/user.md\n", truncated: false });
+    expect(body).toEqual({ path: "docs/api/user.md", text: "# docs/api/user.md\n", truncated: false, binary: false });
+  });
+
+  test("returns a code file's text too", async () => {
+    const { status, body } = await api.post("/github/file", { session, ...myRepo, sha: myRepoCommits.refactor, path: "src/models/user.py" });
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ path: "src/models/user.py", text: "# src/models/user.py\n", truncated: false, binary: false });
   });
 
   test("a file that is not at that commit is a 404", async () => {
@@ -149,9 +156,8 @@ describe("/github/file", () => {
     });
   });
 
-  test("only reads documentation, by a plain relative path", async () => {
+  test("only reads by a plain relative path", async () => {
     const sha = myRepoCommits.refactor;
-    expect((await api.post("/github/file", { session, ...myRepo, sha, path: "src/models/user.py" })).status).toBe(400);
     expect((await api.post("/github/file", { session, ...myRepo, sha, path: "../secrets.md" })).status).toBe(400);
     expect((await api.post("/github/file", { session, ...myRepo, sha, path: "/README.md" })).status).toBe(400);
     expect((await api.post("/github/file", { session, ...myRepo, sha })).status).toBe(400);
