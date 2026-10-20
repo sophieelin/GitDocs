@@ -1,0 +1,14 @@
+{
+  "name": "gittrace",
+  "private": true,
+  "packageManager": "bun@1.4.3",
+  "workspaces": ["P1/code"],
+  "overrides": {
+    "bson": "7.2.0"
+  },
+  "scripts": {
+    "build": "bun run --cwd P1/code build",
+    "start": "bun run --cwd P1/code start",
+    "preview": "bun run --cwd P1/code preview"
+  }
+}
