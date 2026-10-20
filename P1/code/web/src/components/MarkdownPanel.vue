@@ -178,7 +178,7 @@ function excerpt(range: Required<TextRange>): string {
             <textarea v-model="reasons[edit.key]" name="why" rows="2" maxlength="2000" placeholder="Why should the text change? Needed." />
           </label>
           <div class="actions">
-            <button type="submit" class="button" :disabled="busy">{{ investigate ? "Add to investigation" : "Save suggestion" }}</button>
+            <button type="submit" class="button" :disabled="busy">{{ investigate ? "Add" : "Save suggestion" }}</button>
             <button type="button" class="button secondary" :disabled="busy" @click="discard(edit)">Discard</button>
           </div>
         </form>
