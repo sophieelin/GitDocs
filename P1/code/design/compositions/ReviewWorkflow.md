@@ -1,19 +1,23 @@
 # Review Workflow
 
-A review's decision and its proposal's status are kept in step by reactions.
-RestructuringDocumentation stays the authority on a proposal's status; a review
-only asks it to change.
+Restructuring is a reaction, not a concept. A review's decision and its
+proposal's status are kept in step by it, and InvestigatingChanges stays the
+authority on the status; a review only asks it to change. A proposal is
+approved only through its review, so the documentation changes only after
+review.
 
 When a reviewer approves a review,
-[the review's proposal is approved](reaction:ReviewWorkflow.ApprovalApprovesProposal)
-at the same instant, so the proposal's last change matches the review's.
+[the review's investigation is approved](reaction:ReviewWorkflow.ApprovalApprovesInvestigation)
+at the same instant, so the investigation's last change matches the review's.
+From then on, the proposal gives the git commands that carry out its changes.
 
 - **False interval:** between the two actions, the review is approved while
-  the proposal is still pending approval. The approve endpoint waits until the
+  the investigation is still submitted. The approve endpoint waits until the
   flow settles before it answers, so the reviewer never sees this interval.
-- **Failed repair:** if the proposal is no longer pending, RestructuringDocumentation
-  refuses with `PROPOSAL_NOT_PENDING`. The review stays approved and the
-  proposal keeps its status. In the MVP this cannot happen through the
-  endpoints, because a proposal has one review and only that review approves
-  it. Every answer reads the proposal's real status, so no one sees a false
+- **Failed repair:** if the investigation is no longer submitted,
+  InvestigatingChanges refuses with `INVESTIGATION_NOT_PENDING`. The review
+  stays approved and the investigation keeps its status. In the MVP this cannot
+  happen through the endpoints, because a proposal has one review and only that
+  review approves it. Every answer reads the investigation's real status, and
+  commands are shown only for an approved one, so no one sees a false
   *Approved*.

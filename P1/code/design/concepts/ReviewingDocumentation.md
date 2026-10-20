@@ -16,8 +16,8 @@ decided.
 ## Types
 
 ```types
-external Restructuring
-  A proposed documentation structure being evaluated.
+external Proposal
+  An investigation proposing a documentation structure, being evaluated.
 external User
   A developer acting as a reviewer.
 Decision is PENDING or APPROVED
@@ -28,7 +28,7 @@ Decision is PENDING or APPROVED
 
 ```state
 a set of Reviews with
-  a proposal Restructuring
+  a proposal Proposal
   a reviewer User
   a decision Decision
   an openedAt DateTime
@@ -39,7 +39,7 @@ a set of Reviews with
 ## Actions
 
 ```actions
-open(proposal: Restructuring, reviewer: User, at: DateTime) : returns (review: Review)
+open(proposal: Proposal, reviewer: User, at: DateTime) : returns (review: Review)
   where some review has proposal
   then
     refuses REVIEW_EXISTS "This proposal already has a review."
@@ -67,11 +67,11 @@ approve(review: Review, reviewer: User, at: DateTime) : returns ()
 ## Queries
 
 ```queries
-_get(review: Review) : optional (review: Review, proposal: Restructuring, reviewer: User, decision: Decision, openedAt: DateTime, updatedAt: DateTime)
+_get(review: Review) : optional (review: Review, proposal: Proposal, reviewer: User, decision: Decision, openedAt: DateTime, updatedAt: DateTime)
   answers the review's proposal, reviewer, and decision
   answers no row for an unknown review
 
-_forProposal(proposal: Restructuring) : optional (review: Review, reviewer: User, decision: Decision, openedAt: DateTime, updatedAt: DateTime)
+_forProposal(proposal: Proposal) : optional (review: Review, reviewer: User, decision: Decision, openedAt: DateTime, updatedAt: DateTime)
   answers the proposal's review
   answers no row for a proposal that has no review
 ```

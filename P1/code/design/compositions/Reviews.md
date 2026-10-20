@@ -21,7 +21,7 @@ reviewer (`NOT_REVIEWER`) and a review already decided (`REVIEW_NOT_PENDING`).
 Approving the review approves its proposal through
 [the review workflow](ReviewWorkflow.md). The endpoint answers once that has
 run, with the proposal as [reading it](former:Proposals.Reading.ProposalDetail)
-answers, so the reviewer sees the proposal's real status.
+answers, so the reviewer sees the proposal's real status and its git commands.
 
 ```endpoints
 Reviews.Deciding.ApproveReview at /reviews/approve

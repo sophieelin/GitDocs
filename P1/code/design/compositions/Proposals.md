@@ -1,102 +1,131 @@
 # Proposals
 
-A proposal argues for a different documentation structure in response to a
-submitted investigation. Each request is resolved through its active session
-first, so the author is always the signed-in account.
+A proposal argues for a different documentation structure after a commit. It is
+one investigation together with the review that evaluates it. The application
+shows only proposals: InvestigatingChanges holds the proposal and its status,
+and ReviewingDocumentation its review. Restructuring is not a concept: it is
+[the reaction](ReviewWorkflow.md) that approves the investigation when its
+review is approved, and the git commands the proposal gives from then on, so
+nothing changes before the proposal is reviewed. A proposal's identity is its
+investigation's. Each request is resolved through
+its active session first, so the author is always the signed-in account.
 
-A current account may [start a proposal from an investigation](reaction:Proposals.Writing.CreateProposal)
-with a title and the documentation structure it saw at the investigated commit.
-The repository and commit are read from the investigation, so a caller cannot
-name a different commit; an investigation that does not exist answers
-`INVESTIGATION_NOT_FOUND`. The proposal starts as a draft whose proposed
-structure equals the current one.
+A current account may [start a proposal of a commit](reaction:Proposals.Writing.StartProposal)
+with a title and the documentation structure it saw at that commit. The
+application supplies the signed-in username as the investigator and the moment
+of the request as when it was started, so a caller can choose neither. The
+proposal starts as a draft with no highlights and no changes, whose proposed
+structure equals the current one. A commit can have many proposals.
 
 ```endpoints
-Proposals.Writing.CreateProposal at /proposals/create
+Proposals.Writing.StartProposal at /proposals/start
 ```
 
 The author may [save the draft](reaction:Proposals.Writing.ModifyProposal) with
-a new title, proposed structure, and rationale,
-[submit it](reaction:Proposals.Writing.SubmitProposal) once it has a rationale,
-or [discard it](reaction:Proposals.Writing.DiscardProposal). These need no view:
-RestructuringDocumentation itself refuses anyone but the author
-(`NOT_PROPOSAL_AUTHOR`) and anything but a draft (`NOT_DRAFT`), so a direct call
-cannot skip the check. Each answers the proposal's identity.
+a new title, its list of changes to the structure, and a rationale. The changes
+are moves (a rename is a move within its folder), new files, new folders, and
+removed empty folders, in order, and the proposed structure is the current one
+with them applied, so the two can never disagree. A list that does not fit the
+structure is `INVALID_OPERATIONS`.
+
+While the proposal is a draft, its author may also
+[highlight text in a file](reaction:Proposals.Writing.HighlightProposal) at the
+proposal's commit, naming the `file`, the first and last lines (`from` and
+`to`), where the text starts on the first line and ends on the last (`start`
+and `end`, counting characters from 0), and a comment on why it no longer
+holds, and [remove a highlight](reaction:Proposals.Writing.UnhighlightProposal)
+again. The request names the file `file`, because the boundary owns a request's
+`path`. A highlight with no comment or no valid range is `INVALID_HIGHLIGHT`,
+and removing one the proposal does not have is `HIGHLIGHT_NOT_FOUND`. A
+highlight is saved at once, without waiting for the draft to be saved.
+
+The author may [discard the draft](reaction:Proposals.Writing.DiscardProposal)
+or [submit it](reaction:Proposals.Writing.SubmitProposal) once it has at least
+one change (`NO_CHANGES` otherwise) and a rationale (`RATIONALE_MISSING`).
+None of these need a view: InvestigatingChanges itself refuses anyone but the
+author (`NOT_INVESTIGATOR`) and anything but a draft (`NOT_DRAFT`), so a direct
+call cannot skip the check. A missing proposal answers
+`INVESTIGATION_NOT_FOUND`. Saving, highlighting, and the rest answer the
+proposal's identity; highlighting also answers the new highlight's.
 
 Submitting names the proposal's one reviewer, by username. The reviewer must be
 a registered account other than the proposal's author; otherwise the answer is
 `INVALID_REVIEWER` and the draft is not submitted. Once the proposal is
 submitted, a review is opened with that reviewer at the same instant, so it
 shows up in the reviewer's queue below. Submitting and opening are two actions:
-if opening were refused after the submit, the proposal would be pending with no
-review. That cannot happen in the MVP, because only submitting opens a review
-and a proposal is submitted once. A missing proposal answers
-`PROPOSAL_NOT_FOUND`.
+if opening were refused after the submit, the proposal would be submitted with
+no review. That cannot happen in the MVP, because only submitting opens a
+review and a proposal is submitted once.
 
 ```endpoints
 Proposals.Writing.ModifyProposal at /proposals/modify
+Proposals.Writing.HighlightProposal at /proposals/highlight
+Proposals.Writing.UnhighlightProposal at /proposals/unhighlight
 Proposals.Writing.SubmitProposal at /proposals/submit
 Proposals.Writing.DiscardProposal at /proposals/discard
 ```
 
-While the proposal is a draft, its author may
-[comment on text in a file](reaction:Proposals.Writing.CommentOnProposal) at
-the proposal's commit, naming the `file`, the first and last lines (`from` and
-`to`), where the text starts on the first line and ends on the last (`start`
-and `end`, counting characters from 0), and the comment's text, and
-[remove a comment](reaction:Proposals.Writing.UncommentProposal) again. The
-request names the file `file`, because the boundary owns a request's `path`.
-As with saving, RestructuringDocumentation itself refuses anyone but the author
-and anything but a draft. A comment with no text or no valid range of lines is
-`INVALID_COMMENT` (as is no valid range of text), and removing one the proposal does not have is
-`COMMENT_NOT_FOUND`. A comment is saved at once, without waiting for the draft
-to be saved. Commenting answers the proposal's and the new comment's
-identities; removing answers the proposal's.
+Approving the review approves the proposal through
+[the review workflow](ReviewWorkflow.md). An approved proposal gives the git
+commands that make its changes. The author runs them in a clone of the
+repository, writes any new files, pushes, and then
+[marks the proposal applied](reaction:Proposals.Applying.ApplyProposal) with
+the full SHA of the commit that did it. This needs no view: InvestigatingChanges
+itself refuses anyone but the author (`NOT_INVESTIGATOR`), a proposal that is
+not approved or is already applied (`NOT_APPROVED`), and a commit that is not a
+full SHA (`INVALID_COMMIT`). Marking it applied answers the proposal's
+identity.
 
 ```endpoints
-Proposals.Writing.CommentOnProposal at /proposals/comment
-Proposals.Writing.UncommentProposal at /proposals/uncomment
+Proposals.Applying.ApplyProposal at /proposals/apply
 ```
 
 A current account may [read a proposal](reaction:Proposals.Reading.GetProposal).
-The answer is [the proposal with its current and proposed structures](former:Proposals.Reading.ProposalDetail):
-its author, investigation, repository, commit, title, rationale, status, both
-structures, when it was created and last changed, and its comments in the
-order they were added, together with
+The answer is [the proposal with its structures and changes](former:Proposals.Reading.ProposalDetail):
+its author, repository, commit, title, rationale, status, applied commit, both
+structures, its list of changes, when it was started and last changed, and its
+highlights in the order they were added; together with
 [its review](view:Policy.TheReviewOf)'s identity, reviewer, and decision, which
-are empty while it has none. Who may read it follows three views, one per
-branch, because a condition cannot say "or":
+are empty while it has none. Only when
+[the proposal is approved](view:Proposals.Reading.ProposalIsApproved), that is,
+approved or applied, does the answer list its git commands; before that the
+list is empty, so no one acts on a change that has not been reviewed. Who may
+read it follows three views, one per branch, because a condition cannot say
+"or":
 
 - when [the proposal is submitted](view:Proposals.Reading.ProposalIsSubmitted),
-  that is, pending approval or approved, any current account reads it;
+  that is, in any status after a draft, any current account reads it;
 - when [it is a draft by the requester](view:Proposals.Reading.ProposalIsDraftByUser),
   its author reads it;
 - when [it is a draft by someone else](view:Proposals.Reading.ProposalIsDraftByOther),
-  the answer is `PROPOSAL_NOT_FOUND`, the same as for a proposal that does not
-  exist, so others cannot tell that the draft exists.
+  the answer is `INVESTIGATION_NOT_FOUND`, the same as for a proposal that does
+  not exist, so others cannot tell that the draft exists.
 
 ```endpoints
 Proposals.Reading.GetProposal at /proposals/get
 ```
 
-A current account may [list a repository's proposals](reaction:Proposals.Reading.ListProposals).
-The answer follows the same rule as reading one:
-[the proposals of the repository that the requester may see](former:Proposals.Reading.RepositoryProposals)
-are every submitted proposal, with its author and status, and the requester's
-own drafts, each the most recently changed first. Another account's drafts are
-not listed. The two are separate lists, because a condition cannot say "or".
+A current account may [list a repository's proposals](reaction:Proposals.Reading.ListProposals)
+or [list one commit's proposals](reaction:Proposals.Reading.ListCommitProposals).
+Both follow the same rule as reading one:
+[the proposals of the repository](former:Proposals.Reading.RepositoryProposals)
+and [the proposals of the commit](former:Proposals.Reading.CommitProposals)
+that the requester may see are every submitted proposal, with its author,
+status, and review decision, and the requester's own
+drafts, each the most recently changed first. Another account's drafts are not
+listed. The two are separate lists, because a condition cannot say "or".
 
 ```endpoints
 Proposals.Reading.ListProposals at /proposals/list
+Proposals.Reading.ListCommitProposals at /proposals/for-commit
 ```
 
 A current account may [list the proposals waiting for its review](reaction:Proposals.Reading.ListProposalsUnderReview)
 in a repository. The answer is
 [the repository's proposals waiting for the requester's review](former:Proposals.Reading.ReviewQueue):
-each proposal pending approval whose author named the requester as reviewer,
-the longest waiting first, in the same shape as a submitted proposal in the
-list above but without a status. An author never sees their own proposals
-here, because they cannot be their own reviewer.
+each proposal whose status is submitted, not yet approved, and whose author named
+the requester as reviewer, the longest waiting first. An author never sees
+their own proposals here, because they cannot be their own reviewer.
 
 ```endpoints
 Proposals.Reading.ListProposalsUnderReview at /proposals/under-review
