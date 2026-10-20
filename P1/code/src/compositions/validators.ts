@@ -122,15 +122,18 @@ export const modifyProposalInput = validator(
 /** The concept checks the lines and text; this only rejects values a real request should never carry. */
 export const highlightProposalInput = validator(
   (value) =>
-    hasOnly(value, ["session", "proposal", "file", "from", "to", "start", "end", "text"]) &&
+    hasOnly(value, ["session", "proposal", "file", "from", "to", "start", "end", "text", "kind", "replacement"]) &&
     hasSession(value) &&
     text(value.proposal, 128) &&
     typeof value.file === "string" &&
     value.file.length <= 1000 &&
     ["from", "to", "start", "end"].every((key) => typeof value[key] === "number") &&
     typeof value.text === "string" &&
-    value.text.length <= 2000,
-  "session and proposal must be bounded strings, file and text strings, and from, to, start, and end numbers",
+    value.text.length <= 2000 &&
+    (value.kind === "COMMENT" || value.kind === "SUGGESTION") &&
+    typeof value.replacement === "string" &&
+    value.replacement.length <= 20_000,
+  "session and proposal must be bounded strings, file, text, and replacement strings, kind COMMENT or SUGGESTION, and from, to, start, and end numbers",
 );
 
 export const unhighlightProposalInput = validator(
@@ -214,7 +217,7 @@ function isProposalDetail(detail: unknown): boolean {
     detail.highlights.every(
       (item) =>
         record(item) &&
-        ["highlight", "path", "text"].every((key) => typeof item[key] === "string") &&
+        ["highlight", "path", "text", "kind", "replacement"].every((key) => typeof item[key] === "string") &&
         ["from", "to", "start", "end"].every((key) => typeof item[key] === "number"),
     ) &&
     Array.isArray(detail.commands) &&

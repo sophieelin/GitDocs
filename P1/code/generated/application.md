@@ -46,11 +46,12 @@ Defined in [InvestigatingChanges](../design/concepts/InvestigatingChanges.md), l
   - Refuses `NOT_DRAFT`: Only a draft investigation can be changed.
   - Refuses `INVALID_TITLE`: An investigation needs a title of at most 120 characters.
   - Refuses `INVALID_OPERATIONS`: Those changes do not fit the documentation structure.
-- `highlight(investigation: Investigation, investigator: User, path: String, from: Number, to: Number, start: Number, end: Number, text: String, at: DateTime) : returns (highlight: Highlight)`
+- `highlight(investigation: Investigation, investigator: User, path: String, from: Number, to: Number, start: Number, end: Number, text: String, kind: HighlightKind, replacement: String, at: DateTime) : returns (highlight: Highlight)`
   - Refuses `INVESTIGATION_NOT_FOUND`: There is no such investigation.
   - Refuses `NOT_INVESTIGATOR`: Only the investigation's author can change it.
   - Refuses `NOT_DRAFT`: Only a draft investigation can be changed.
   - Refuses `INVALID_HIGHLIGHT`: A highlight needs a file, the text it is on, and a comment.
+  - Refuses `SUGGESTIONS_OVERLAP`: A suggestion cannot overlap another suggestion in the same file.
 - `unhighlight(investigation: Investigation, investigator: User, highlight: Highlight, at: DateTime) : returns ()`
   - Refuses `INVESTIGATION_NOT_FOUND`: There is no such investigation.
   - Refuses `NOT_INVESTIGATOR`: Only the investigation's author can change it.
@@ -60,7 +61,8 @@ Defined in [InvestigatingChanges](../design/concepts/InvestigatingChanges.md), l
   - Refuses `INVESTIGATION_NOT_FOUND`: There is no such investigation.
   - Refuses `NOT_INVESTIGATOR`: Only the investigation's author can change it.
   - Refuses `NOT_DRAFT`: Only a draft investigation can be changed.
-  - Refuses `RATIONALE_MISSING`: Explain the proposed structure before submitting it.
+  - Refuses `NO_CHANGES`: Change the documentation structure or suggest an edit before submitting.
+  - Refuses `RATIONALE_MISSING`: Explain the proposed changes before submitting them.
 - `discard(investigation: Investigation, investigator: User) : returns ()`
   - Refuses `INVESTIGATION_NOT_FOUND`: There is no such investigation.
   - Refuses `NOT_INVESTIGATOR`: Only the investigation's author can change it.
@@ -77,7 +79,7 @@ Defined in [InvestigatingChanges](../design/concepts/InvestigatingChanges.md), l
 #### Queries
 
 - `_get(investigation: Investigation) : optional (investigation: Investigation, investigator: User, owner: String, name: String, commit: String, title: String, rationale: String, status: Status, appliedCommit: String, currentStructure: DocumentationTree, operations: OperationList, proposedStructure: DocumentationTree, createdAt: DateTime, updatedAt: DateTime)`
-- `_highlights(investigation: Investigation) : many (highlight: Highlight, path: String, from: Number, to: Number, start: Number, end: Number, text: String)`
+- `_highlights(investigation: Investigation) : many (highlight: Highlight, path: String, from: Number, to: Number, start: Number, end: Number, text: String, kind: HighlightKind, replacement: String)`
 - `_forRepository(owner: String, name: String) : many (investigation: Investigation, investigator: User, commit: String, title: String, status: Status, updatedAt: DateTime)`
 - `_forCommit(owner: String, name: String, commit: String) : many (investigation: Investigation, investigator: User, title: String, status: Status, updatedAt: DateTime)`
 - `_commands(investigation: Investigation) : many (command: String)`
@@ -139,7 +141,7 @@ _Views name reusable conditions. Multiple `where` blocks are alternatives._
 ### (proposal) is a draft by (user)
 
 Authored path: `Proposals.Reading.ProposalIsDraftByUser`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 99.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 107.
 
 ```view
 (proposal) is a draft by (user) — inputs (proposal, user); outputs (); bindings ()
@@ -149,7 +151,7 @@ Authored path: `Proposals.Reading.ProposalIsDraftByUser`.
 ### (proposal) is a draft by someone other than (user)
 
 Authored path: `Proposals.Reading.ProposalIsDraftByOther`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 101.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 109.
 
 ```view
 (proposal) is a draft by someone other than (user) — inputs (proposal, user); outputs (); bindings ()
@@ -161,7 +163,7 @@ Authored path: `Proposals.Reading.ProposalIsDraftByOther`.
 ### (proposal) is approved
 
 Authored path: `Proposals.Reading.ProposalIsApproved`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 91.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 99.
 
 ```view
 (proposal) is approved — inputs (proposal); outputs (); bindings (status)
@@ -173,7 +175,7 @@ Authored path: `Proposals.Reading.ProposalIsApproved`.
 ### (proposal) is submitted
 
 Authored path: `Proposals.Reading.ProposalIsSubmitted`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 97.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 105.
 
 ```view
 (proposal) is submitted — inputs (proposal); outputs (); bindings (status)
@@ -186,7 +188,7 @@ Authored path: `Proposals.Reading.ProposalIsSubmitted`.
 
 Authored path: `Policy.TheReviewOf`.
 - Covered by [Policy](../design/compositions/Policy.md), line 9.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 89.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 97.
 
 ```view
 the review of (proposal) — inputs (proposal); outputs (review, reviewer, decision); bindings () — answers at most one (review, reviewer, decision)
@@ -201,11 +203,11 @@ _the authored explanation; this section records the generated shape._
 ### a proposal with its current and proposed structures
 
 Authored path: `Proposals.Reading.ProposalDetail`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 85.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 93.
 - Covered by [Reviews](../design/compositions/Reviews.md), line 23.
 
 ```former
-Former "a proposal with its current and proposed structures" — inputs (proposal); bindings (author, owner, name, commit, title, rationale, status, appliedCommit, currentStructure, operations, proposedStructure, createdAt, updatedAt, review, reviewer, decision, highlight, path, from, to, start, end, text, command); promises exactly one record — forms:
+Former "a proposal with its current and proposed structures" — inputs (proposal); bindings (author, owner, name, commit, title, rationale, status, appliedCommit, currentStructure, operations, proposedStructure, createdAt, updatedAt, review, reviewer, decision, highlight, path, from, to, start, end, text, kind, replacement, command); promises exactly one record — forms:
   a record of
     where InvestigatingChanges._get (investigation: proposal) has (appliedCommit, commit, createdAt, currentStructure, investigator: author, name, operations, owner, proposedStructure, rationale, status, title, updatedAt)
     where whether view "the review of (proposal)" with (proposal) has (decision, review, reviewer)
@@ -219,12 +221,14 @@ Former "a proposal with its current and proposed structures" — inputs (proposa
     createdAt
     currentStructure
     decision
-    highlights: each InvestigatingChanges._highlights (investigation: proposal) has (end, from, highlight, path, start, text, to)
+    highlights: each InvestigatingChanges._highlights (investigation: proposal) has (end, from, highlight, kind, path, replacement, start, text, to)
       form a record of
         end
         from
         highlight
+        kind
         path
+        replacement
         start
         text
         to
@@ -261,7 +265,7 @@ Former "a review with its proposal" — inputs (review); bindings (proposal, rev
 ### the review decision of (proposal)
 
 Authored path: `Proposals.Reading.ReviewDecision`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 115.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 123.
 
 ```former
 Former "the review decision of (proposal)" — inputs (proposal); bindings (decision); promises at most one record — forms:
@@ -273,7 +277,7 @@ Former "the review decision of (proposal)" — inputs (proposal); bindings (deci
 ### the proposals of a commit that (user) may see
 
 Authored path: `Proposals.Reading.CommitProposals`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 113.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 121.
 
 ```former
 Former "the proposals of a commit that (user) may see" — inputs (owner, name, commit, user); bindings (proposal, author, title, status, updatedAt); promises exactly one record — forms:
@@ -299,7 +303,7 @@ Former "the proposals of a commit that (user) may see" — inputs (owner, name, 
 ### the proposals of a repository that (user) may see
 
 Authored path: `Proposals.Reading.RepositoryProposals`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 112.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 120.
 
 ```former
 Former "the proposals of a repository that (user) may see" — inputs (owner, name, user); bindings (proposal, author, commit, title, status, updatedAt); promises exactly one record — forms:
@@ -327,7 +331,7 @@ Former "the proposals of a repository that (user) may see" — inputs (owner, na
 ### the proposals of a repository waiting for (user)'s review
 
 Authored path: `Proposals.Reading.ReviewQueue`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 127.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 135.
 
 ```former
 Former "the proposals of a repository waiting for (user)'s review" — inputs (owner, name, user); bindings (proposal, author, commit, title, updatedAt); promises exactly one record — forms:
@@ -368,8 +372,8 @@ then
 ### Proposals.Applying.ApplyProposal
 
 Authored path: `Proposals.Applying.ApplyProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 73.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 81.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 89.
 
 ```reaction
 when RequestBoundary.request (commit, path: "/proposals/apply", proposal, requestId, session)
@@ -380,8 +384,8 @@ then
 ### Proposals.Applying.ApplyProposal#2
 
 Authored path: `Proposals.Applying.ApplyProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 73.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 81.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 89.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Applying.ApplyProposal
@@ -395,8 +399,8 @@ then
 ### Proposals.Applying.ApplyProposal#3
 
 Authored path: `Proposals.Applying.ApplyProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 73.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 81.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 89.
 
 ```reaction
 when InvestigatingChanges.apply (at, commit, investigation: proposal, investigator: user), asked by Proposals.Applying.ApplyProposal#2
@@ -409,8 +413,8 @@ then
 ### Proposals.Reading.GetProposal
 
 Authored path: `Proposals.Reading.GetProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 84.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 106.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 92.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 114.
 
 ```reaction
 when RequestBoundary.request (path: "/proposals/get", proposal, requestId, session)
@@ -421,8 +425,8 @@ then
 ### Proposals.Reading.GetProposal:missing#2
 
 Authored path: `Proposals.Reading.GetProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 84.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 106.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 92.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 114.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
@@ -436,8 +440,8 @@ then
 ### Proposals.Reading.GetProposal:others-draft#2
 
 Authored path: `Proposals.Reading.GetProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 84.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 106.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 92.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 114.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
@@ -451,8 +455,8 @@ then
 ### Proposals.Reading.GetProposal:own-draft#2
 
 Authored path: `Proposals.Reading.GetProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 84.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 106.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 92.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 114.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
@@ -466,8 +470,8 @@ then
 ### Proposals.Reading.GetProposal:submitted#2
 
 Authored path: `Proposals.Reading.GetProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 84.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 106.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 92.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 114.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.GetProposal
@@ -481,8 +485,8 @@ then
 ### Proposals.Reading.ListCommitProposals
 
 Authored path: `Proposals.Reading.ListCommitProposals`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 110.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 122.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 118.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 130.
 
 ```reaction
 when RequestBoundary.request (commit, name, owner, path: "/proposals/for-commit", requestId, session)
@@ -493,8 +497,8 @@ then
 ### Proposals.Reading.ListCommitProposals#2
 
 Authored path: `Proposals.Reading.ListCommitProposals`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 110.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 122.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 118.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 130.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.ListCommitProposals
@@ -507,8 +511,8 @@ then
 ### Proposals.Reading.ListProposals
 
 Authored path: `Proposals.Reading.ListProposals`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 109.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 121.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 117.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 129.
 
 ```reaction
 when RequestBoundary.request (name, owner, path: "/proposals/list", requestId, session)
@@ -519,8 +523,8 @@ then
 ### Proposals.Reading.ListProposals#2
 
 Authored path: `Proposals.Reading.ListProposals`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 109.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 121.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 117.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 129.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.ListProposals
@@ -533,8 +537,8 @@ then
 ### Proposals.Reading.ListProposalsUnderReview
 
 Authored path: `Proposals.Reading.ListProposalsUnderReview`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 125.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 133.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 141.
 
 ```reaction
 when RequestBoundary.request (name, owner, path: "/proposals/under-review", requestId, session)
@@ -545,8 +549,8 @@ then
 ### Proposals.Reading.ListProposalsUnderReview#2
 
 Authored path: `Proposals.Reading.ListProposalsUnderReview`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 125.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 133.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 141.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Reading.ListProposalsUnderReview
@@ -559,8 +563,8 @@ then
 ### Proposals.Writing.DiscardProposal
 
 Authored path: `Proposals.Writing.DiscardProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 42.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 66.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 72.
 
 ```reaction
 when RequestBoundary.request (path: "/proposals/discard", proposal, requestId, session)
@@ -571,8 +575,8 @@ then
 ### Proposals.Writing.DiscardProposal#2
 
 Authored path: `Proposals.Writing.DiscardProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 42.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 66.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 72.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Writing.DiscardProposal
@@ -585,8 +589,8 @@ then
 ### Proposals.Writing.DiscardProposal#3
 
 Authored path: `Proposals.Writing.DiscardProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 42.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 66.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 47.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 72.
 
 ```reaction
 when InvestigatingChanges.discard (investigation: proposal, investigator: user), asked by Proposals.Writing.DiscardProposal#2
@@ -600,10 +604,10 @@ then
 
 Authored path: `Proposals.Writing.HighlightProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 32.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 63.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 69.
 
 ```reaction
-when RequestBoundary.request (end, file, from, path: "/proposals/highlight", proposal, requestId, session, start, text, to)
+when RequestBoundary.request (end, file, from, kind, path: "/proposals/highlight", proposal, replacement, requestId, session, start, text, to)
 then
   Sessioning.current (session)
 ```
@@ -612,27 +616,27 @@ then
 
 Authored path: `Proposals.Writing.HighlightProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 32.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 63.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 69.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Writing.HighlightProposal
 where
   at is the current flow's instant
-  earlier, RequestBoundary.request (end, file, from, path: "/proposals/highlight", proposal, requestId, session, start, text, to)
+  earlier, RequestBoundary.request (end, file, from, kind, path: "/proposals/highlight", proposal, replacement, requestId, session, start, text, to)
 then
-  InvestigatingChanges.highlight (at, end, from, investigation: proposal, investigator: user, path: file, start, text, to)
+  InvestigatingChanges.highlight (at, end, from, investigation: proposal, investigator: user, kind, path: file, replacement, start, text, to)
 ```
 
 ### Proposals.Writing.HighlightProposal#3
 
 Authored path: `Proposals.Writing.HighlightProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 32.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 63.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 69.
 
 ```reaction
-when InvestigatingChanges.highlight (at, end, from, investigation: proposal, investigator: user, path: file, start, text, to, highlight), asked by Proposals.Writing.HighlightProposal#2
+when InvestigatingChanges.highlight (at, end, from, investigation: proposal, investigator: user, kind, path: file, replacement, start, text, to, highlight), asked by Proposals.Writing.HighlightProposal#2
 where
-  earlier, RequestBoundary.request (end, file, from, path: "/proposals/highlight", proposal, requestId, session, start, text, to)
+  earlier, RequestBoundary.request (end, file, from, kind, path: "/proposals/highlight", proposal, replacement, requestId, session, start, text, to)
 then
   RequestBoundary.respond (highlight, proposal, requestId)
 ```
@@ -641,7 +645,7 @@ then
 
 Authored path: `Proposals.Writing.ModifyProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 24.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 62.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 68.
 
 ```reaction
 when RequestBoundary.request (operations, path: "/proposals/modify", proposal, rationale, requestId, session, title)
@@ -653,7 +657,7 @@ then
 
 Authored path: `Proposals.Writing.ModifyProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 24.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 62.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 68.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Writing.ModifyProposal
@@ -668,7 +672,7 @@ then
 
 Authored path: `Proposals.Writing.ModifyProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 24.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 62.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 68.
 
 ```reaction
 when InvestigatingChanges.modify (at, investigation: proposal, investigator: user, operations, rationale, title), asked by Proposals.Writing.ModifyProposal#2
@@ -722,8 +726,8 @@ then
 ### Proposals.Writing.SubmitProposal
 
 Authored path: `Proposals.Writing.SubmitProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 43.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 65.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 48.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 71.
 - Covered by [Reviews](../design/compositions/Reviews.md), line 4.
 
 ```reaction
@@ -735,8 +739,8 @@ then
 ### Proposals.Writing.SubmitProposal:allowed#2
 
 Authored path: `Proposals.Writing.SubmitProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 43.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 65.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 48.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 71.
 - Covered by [Reviews](../design/compositions/Reviews.md), line 4.
 
 ```reaction
@@ -753,8 +757,8 @@ then
 ### Proposals.Writing.SubmitProposal:allowed#3
 
 Authored path: `Proposals.Writing.SubmitProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 43.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 65.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 48.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 71.
 - Covered by [Reviews](../design/compositions/Reviews.md), line 4.
 
 ```reaction
@@ -768,8 +772,8 @@ then
 ### Proposals.Writing.SubmitProposal:allowed#4
 
 Authored path: `Proposals.Writing.SubmitProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 43.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 65.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 48.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 71.
 - Covered by [Reviews](../design/compositions/Reviews.md), line 4.
 
 ```reaction
@@ -783,8 +787,8 @@ then
 ### Proposals.Writing.SubmitProposal:missing#2
 
 Authored path: `Proposals.Writing.SubmitProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 43.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 65.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 48.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 71.
 - Covered by [Reviews](../design/compositions/Reviews.md), line 4.
 
 ```reaction
@@ -799,8 +803,8 @@ then
 ### Proposals.Writing.SubmitProposal:own-reviewer#2
 
 Authored path: `Proposals.Writing.SubmitProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 43.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 65.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 48.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 71.
 - Covered by [Reviews](../design/compositions/Reviews.md), line 4.
 
 ```reaction
@@ -815,8 +819,8 @@ then
 ### Proposals.Writing.SubmitProposal:unknown-reviewer#2
 
 Authored path: `Proposals.Writing.SubmitProposal`.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 43.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 65.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 48.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 71.
 - Covered by [Reviews](../design/compositions/Reviews.md), line 4.
 
 ```reaction
@@ -833,7 +837,7 @@ then
 
 Authored path: `Proposals.Writing.UnhighlightProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 36.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 64.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 70.
 
 ```reaction
 when RequestBoundary.request (highlight, path: "/proposals/unhighlight", proposal, requestId, session)
@@ -845,7 +849,7 @@ then
 
 Authored path: `Proposals.Writing.UnhighlightProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 36.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 64.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 70.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by Proposals.Writing.UnhighlightProposal
@@ -860,7 +864,7 @@ then
 
 Authored path: `Proposals.Writing.UnhighlightProposal`.
 - Covered by [Proposals](../design/compositions/Proposals.md), line 36.
-- Covered by [Proposals](../design/compositions/Proposals.md), line 64.
+- Covered by [Proposals](../design/compositions/Proposals.md), line 70.
 
 ```reaction
 when InvestigatingChanges.unhighlight (at, highlight, investigation: proposal, investigator: user), asked by Proposals.Writing.UnhighlightProposal#2
@@ -1111,7 +1115,7 @@ not listed here have no explicit input contract.
 - `/proposals/discard` — requires `session`, `proposal`
 - `/proposals/for-commit` — requires `session`, `owner`, `name`, `commit`
 - `/proposals/get` — requires `session`, `proposal`
-- `/proposals/highlight` — requires `session`, `proposal`, `file`, `from`, `to`, `start`, `end`, `text`
+- `/proposals/highlight` — requires `session`, `proposal`, `file`, `from`, `to`, `start`, `end`, `text`, `kind`, `replacement`
 - `/proposals/list` — requires `session`, `owner`, `name`
 - `/proposals/modify` — requires `session`, `proposal`, `title`, `operations`, `rationale`
 - `/proposals/start` — requires `session`, `owner`, `name`, `commit`, `title`, `currentStructure`

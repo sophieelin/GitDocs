@@ -104,6 +104,8 @@ const ProposalDetail = former(
       start,
       end,
       text,
+      kind,
+      replacement,
       command,
     },
   ) =>
@@ -143,8 +145,18 @@ const ProposalDetail = former(
       reviewer,
       decision,
       highlights: each(
-        InvestigatingChanges._highlights({ investigation: proposal }).is({ highlight, path, from, to, start, end, text }),
-      ).form({ highlight, path, from, to, start, end, text }),
+        InvestigatingChanges._highlights({ investigation: proposal }).is({
+          highlight,
+          path,
+          from,
+          to,
+          start,
+          end,
+          text,
+          kind,
+          replacement,
+        }),
+      ).form({ highlight, path, from, to, start, end, text, kind, replacement }),
       // Empty until the proposal is approved, so no one acts on a change that has not been reviewed.
       commands: each(InvestigatingChanges._commands({ investigation: proposal }).is({ command }))
         .where(ProposalIsApproved({ proposal }))
@@ -290,8 +302,8 @@ const ModifyProposal = endpoint(
 const HighlightProposal = endpoint(
   "/proposals/highlight",
   // The request says `file`, because the boundary owns a request's `path`.
-  ({ session, user, proposal, file, from, to, start, end, text, at, highlight }) =>
-    receive({ session, proposal, file, from, to, start, end, text })
+  ({ session, user, proposal, file, from, to, start, end, text, kind, replacement, at, highlight }) =>
+    receive({ session, proposal, file, from, to, start, end, text, kind, replacement })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
         where(now(at))
@@ -305,13 +317,15 @@ const HighlightProposal = endpoint(
               start,
               end,
               text,
+              kind,
+              replacement,
               at,
             }).responds({ highlight }),
           )
           .then(respond({ proposal, highlight })),
       ),
   {
-    input: { required: ["session", "proposal", "file", "from", "to", "start", "end", "text"] },
+    input: { required: ["session", "proposal", "file", "from", "to", "start", "end", "text", "kind", "replacement"] },
     validators: { input: highlightProposalInput, output: proposalHighlightOutput },
   },
 );

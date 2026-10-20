@@ -13,10 +13,15 @@ export interface TextRange {
   end?: number;
 }
 
+/** Text to replace a range with, as in a document's suggestion mode. */
+export type SuggestedRange = Required<TextRange> & { replacement: string };
+
 /**
  * A file's source, documentation or code, as plain text with line numbers, so
  * no HTML from a repository reaches the page. Text in `highlights` is shaded
- * yellow, and text in `comments` green.
+ * yellow, and text in `comments` green. Text in `suggestions` is struck
+ * through, with its replacement in green [brackets] after it; one on no text
+ * only adds its replacement there.
  *
  * With `selectable`, dragging the mouse over text selects exactly that text,
  * and clicking a line selects the line (shift-click another to extend it);
@@ -27,21 +32,23 @@ const props = withDefaults(
     text: string;
     highlights?: TextRange[];
     comments?: TextRange[];
+    suggestions?: SuggestedRange[];
     selectable?: boolean;
     selection?: TextRange | null;
   }>(),
-  { highlights: () => [], comments: () => [], selectable: false, selection: null },
+  { highlights: () => [], comments: () => [], suggestions: () => [], selectable: false, selection: null },
 );
 const emit = defineEmits<{ select: [range: Required<TextRange>] }>();
 
 const lines = computed(() => {
   const all = props.text.split("\n");
-  // A file ending in a newline has no empty last line.
-  if (all.length > 1 && all[all.length - 1] === "") all.pop();
+  // A file ending in a newline has no empty last line, unless a suggestion adds text there.
+  const added = props.suggestions.some((suggestion) => suggestion.to === all.length);
+  if (all.length > 1 && all[all.length - 1] === "" && !added) all.pop();
   return all;
 });
 
-type Kind = "highlighted" | "commented" | "selected";
+type Kind = "highlighted" | "commented" | "suggested" | "selected";
 
 /** The characters of `line` a range covers, or null when it does not reach the line. */
 function covered(range: TextRange, line: number, length: number): [number, number] | null {
@@ -53,12 +60,15 @@ function covered(range: TextRange, line: number, length: number): [number, numbe
 
 /**
  * Each line, split into pieces wherever a range starts or ends on it. Ranges of
- * whole lines shade the whole row, so blank lines in them show too.
+ * whole lines shade the whole row, so blank lines in them show too. Where a
+ * suggestion ends, an empty piece carries its replacement, which is drawn by
+ * CSS rather than as text, so it is never part of a selection's columns.
  */
 const rows = computed(() => {
   const ranges: [Kind, TextRange][] = [
     ...props.highlights.map((range): [Kind, TextRange] => ["highlighted", range]),
     ...props.comments.map((range): [Kind, TextRange] => ["commented", range]),
+    ...props.suggestions.map((range): [Kind, TextRange] => ["suggested", range]),
     ...(props.selection ? [["selected", props.selection] as [Kind, TextRange]] : []),
   ];
   return lines.value.map((content, index) => {
@@ -71,11 +81,19 @@ const rows = computed(() => {
       if (range.start === undefined) whole.add(kind);
       else if (part[0] < part[1]) parts.push([kind, part[0], part[1]]);
     }
-    const cuts = [...new Set([0, content.length, ...parts.flatMap(([, start, end]) => [start, end])])].sort((a, b) => a - b);
-    const pieces = cuts.slice(0, -1).map((start, i) => {
+    const inserts = props.suggestions
+      .filter((suggestion) => suggestion.to === line)
+      .map((suggestion) => ({ at: Math.min(suggestion.end, content.length), replacement: suggestion.replacement }));
+    const cuts = [...new Set([0, content.length, ...parts.flatMap(([, start, end]) => [start, end]), ...inserts.map(({ at }) => at)])].sort(
+      (a, b) => a - b,
+    );
+    const pieces: { text: string; kinds: Kind[]; insert?: string }[] = [];
+    for (const [i, start] of cuts.entries()) {
+      for (const { at, replacement } of inserts) if (at === start) pieces.push({ text: "", kinds: [], insert: replacement });
       const end = cuts[i + 1];
-      return { text: content.slice(start, end), kinds: parts.filter(([, s, e]) => s <= start && end <= e).map(([kind]) => kind) };
-    });
+      if (end === undefined) break;
+      pieces.push({ text: content.slice(start, end), kinds: parts.filter(([, s, e]) => s <= start && end <= e).map(([kind]) => kind) });
+    }
     return { line, whole: [...whole], pieces };
   });
 });
@@ -141,7 +159,12 @@ function release(event: MouseEvent) {
   <div ref="root" class="source" :class="{ selectable }" @mouseup="release">
     <div v-for="row in rows" :key="row.line" class="line" :class="row.whole" :data-line="row.line">
       <span class="number">{{ row.line }}</span>
-      <span class="content"><span v-for="(piece, index) in row.pieces" :key="index" :class="piece.kinds">{{ piece.text }}</span></span>
+      <span class="content"><span
+          v-for="(piece, index) in row.pieces"
+          :key="index"
+          :class="[piece.kinds, { inserted: piece.insert !== undefined }]"
+          :data-insert="piece.insert"
+        >{{ piece.text }}</span></span>
     </div>
   </div>
 </template>
@@ -202,6 +225,22 @@ function release(event: MouseEvent) {
 .content .commented {
   background: #bbf7d0;
   border-bottom: 2px solid #16a34a;
+}
+
+/* A suggestion: the old text struck out in red, the new text after it in green. */
+.content .suggested {
+  background: #fee2e2;
+  color: #991b1b;
+  text-decoration: line-through;
+}
+
+.inserted::after {
+  content: "[" attr(data-insert) "]";
+  background: #dcfce7;
+  color: #166534;
+  font-weight: 600;
+  white-space: pre-wrap;
+  user-select: none;
 }
 
 .selected,

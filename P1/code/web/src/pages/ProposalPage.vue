@@ -6,7 +6,8 @@ import MarkdownPanel from "../components/MarkdownPanel.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import TreeView from "../components/TreeView.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
-import type { DocumentationFolder } from "../github.ts";
+import { gitHubErrorMessages, readFile, type DocumentationFolder } from "../github.ts";
+import { pathsToRead, proposalPatch } from "../../../src/github/proposalPatch.ts";
 import { applyProposal, approveReview, formatDate, getProposal } from "../proposals.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
@@ -15,8 +16,9 @@ import { useSession } from "../session.ts";
 /**
  * One proposal, read-only: its status, the rationale, its highlights, and both
  * structures. Its author sees "Continue editing" while it is a draft. Once
- * approved, it shows the git commands that make the changes, and its author
- * marks it applied with the commit that did. Another user never reaches
+ * approved, it offers a patch of every change, suggested edits included, and
+ * the git commands for the structure alone, and its author marks it applied
+ * with the commit that did. Another user never reaches
  * someone else's draft: the server answers it as not found.
  */
 const route = useRoute();
@@ -93,6 +95,53 @@ const readingHighlights = computed(() => (proposal.value?.highlights ?? []).filt
 watch(highlightedFiles, (files) => {
   if (reading.value === null || !files.includes(reading.value)) reading.value = files[0] ?? null;
 });
+
+const approved = computed(() => proposal.value?.status === "APPROVED" || proposal.value?.status === "APPLIED");
+const patchName = computed(() => `proposal-${id.value.slice(0, 8)}.patch`);
+const patchError = ref<string | null>(null);
+const patching = ref(false);
+
+/**
+ * Reads every file with a suggestion at the proposal's commit, builds the patch
+ * of all its changes, and hands it to the browser to save.
+ */
+async function downloadPatch() {
+  const found = proposal.value;
+  if (!found) return;
+  patching.value = true;
+  patchError.value = null;
+  const suggestions = found.highlights.filter((item) => item.kind === "SUGGESTION");
+  const texts = new Map<string, string>();
+  for (const path of pathsToRead(suggestions)) {
+    const answer = await readFile(found.owner, found.name, found.commit, path);
+    if ("error" in answer) {
+      patching.value = false;
+      if (!handleEndedSession(answer.error)) patchError.value = `${path} could not be read: ${errorMessage(answer.error, gitHubErrorMessages)}`;
+      return;
+    }
+    if (answer.binary || answer.truncated) {
+      patching.value = false;
+      patchError.value = `${path} is ${answer.binary ? "not text" : "too long to read whole"}, so the patch cannot edit it. Make that edit by hand.`;
+      return;
+    }
+    texts.set(path, answer.text);
+  }
+  patching.value = false;
+  const built = proposalPatch({ structure: found.currentStructure, operations: found.operations, suggestions, texts });
+  if ("error" in built) {
+    patchError.value = built.error;
+    return;
+  }
+  if (built.patch === "") {
+    patchError.value = "This proposal changes nothing that a patch can carry.";
+    return;
+  }
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([built.patch], { type: "text/x-patch" }));
+  link.download = patchName.value;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
 
 const script = computed(() => (proposal.value?.commands ?? []).map((item) => item.command).join("\n"));
 const copied = ref(false);
@@ -178,16 +227,32 @@ function isEmpty(folder: DocumentationFolder): boolean {
         <p v-else>{{ proposal.rationale }}</p>
       </div>
 
-      <div v-if="proposal.commands.length > 0" class="card commands">
+      <div v-if="approved" class="card commands">
+        <h2>Apply the changes</h2>
         <div class="commands-heading">
-          <h2>Git commands</h2>
-          <button type="button" class="button secondary" @click="copyCommands">{{ copied ? "Copied" : "Copy" }}</button>
+          <h3>Patch</h3>
+          <button type="button" class="button secondary" :disabled="patching" @click="downloadPatch">
+            {{ patching ? "Reading the files…" : "Download patch" }}
+          </button>
         </div>
         <p class="muted hint">
-          Run these from the root of a clone of the repository, at or after commit <code>{{ proposal.commit.slice(0, 7) }}</code>.
-          New files are created empty: write them before you commit and push.
+          Makes every change: the moves and renames, the new files (empty), and the suggested edits. From the root of a clone
+          of the repository at commit <code>{{ proposal.commit.slice(0, 7) }}</code>, run:
         </p>
-        <pre class="script">{{ script }}</pre>
+        <pre class="script">git apply --index {{ patchName }}</pre>
+        <ErrorBanner :message="patchError" />
+
+        <template v-if="proposal.commands.length > 0">
+          <div class="commands-heading">
+            <h3>Or only the structure, as git commands</h3>
+            <button type="button" class="button secondary" @click="copyCommands">{{ copied ? "Copied" : "Copy" }}</button>
+          </div>
+          <p class="muted hint">
+            These move and create files but leave out the suggested edits. Run them from the root of a clone of the repository, at or after commit <code>{{ proposal.commit.slice(0, 7) }}</code>.
+            New files are created empty: write them before you commit and push.
+          </p>
+          <pre class="script">{{ script }}</pre>
+        </template>
         <p v-if="proposal.status === 'APPLIED'" class="applied">
           Applied in commit
           <RouterLink v-if="repository" :to="repositoryPath(repository, `/commits/${proposal.appliedCommit}`)"><code>{{ proposal.appliedCommit.slice(0, 7) }}</code></RouterLink>.
@@ -294,6 +359,11 @@ function isEmpty(folder: DocumentationFolder): boolean {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.commands-heading h3 {
+  margin: 8px 0;
+  font-size: 15px;
 }
 
 .hint {

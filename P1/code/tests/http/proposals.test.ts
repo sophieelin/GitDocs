@@ -107,6 +107,8 @@ test("the whole cycle: start, highlight, save, submit, approve, read the command
     start: 0,
     end: 8,
     text: "Hard to find this deep.",
+    kind: "COMMENT",
+    replacement: "",
   });
   expect(highlighted.status).toBe(200);
   expect(await modify(ari, proposal)).toEqual({ status: 200, body: { proposal } });
@@ -131,7 +133,19 @@ test("the whole cycle: start, highlight, save, submit, approve, read the command
     operations,
     proposedStructure,
     commands,
-    highlights: [{ highlight: highlighted.body.highlight, path: readme.path, from: 1, to: 1, start: 0, end: 8, text: "Hard to find this deep." }],
+    highlights: [
+      {
+        highlight: highlighted.body.highlight,
+        path: readme.path,
+        from: 1,
+        to: 1,
+        start: 0,
+        end: 8,
+        text: "Hard to find this deep.",
+        kind: "COMMENT",
+        replacement: "",
+      },
+    ],
   });
   expect((await apply(ari, proposal)).status).toBe(409);
 });
@@ -249,6 +263,8 @@ describe("/proposals/highlight and /proposals/unhighlight", () => {
       start: 4,
       end: 11,
       text: "This should move with the agents docs.",
+      kind: "COMMENT",
+      replacement: "",
       ...changes,
     });
   }
@@ -261,7 +277,9 @@ describe("/proposals/highlight and /proposals/unhighlight", () => {
     const id = added.body.highlight as string;
     expect(added.body).toEqual({ proposal, highlight: id });
     expect((await get(ari, proposal)).body.proposal).toMatchObject({
-      highlights: [{ highlight: id, path: readme.path, from: 2, to: 3, start: 4, end: 11, text: "This should move with the agents docs." }],
+      highlights: [
+        { highlight: id, path: readme.path, from: 2, to: 3, start: 4, end: 11, text: "This should move with the agents docs.", kind: "COMMENT", replacement: "" },
+      ],
     });
 
     expect(await api.post("/proposals/unhighlight", { session: ari, proposal, highlight: id })).toEqual({ status: 200, body: { proposal } });
@@ -282,11 +300,33 @@ describe("/proposals/highlight and /proposals/unhighlight", () => {
       { from: 3, to: 3, start: 6, end: 6 },
       { start: undefined },
       { path: readme.path },
+      { kind: "EDIT" },
+      { kind: undefined },
+      { replacement: undefined },
+      { replacement: "A comment replaces nothing." },
     ];
     for (const changes of bad) {
       expect((await highlight(ari, proposal, changes)).status).toBe(400);
     }
     expect((await get(ari, proposal)).body.proposal).toMatchObject({ highlights: [] });
+  });
+
+  test("a suggestion is the only change a proposal needs; an overlapping one is a 409", async () => {
+    const proposal = await start(ari);
+    await modify(ari, proposal, { operations: [] });
+    expect((await highlight(ari, proposal)).status).toBe(200);
+    // A comment alone changes nothing.
+    expect(await submit(ari, proposal)).toEqual({ status: 409, body: { error: "CONFLICT" } });
+
+    const suggestion = { kind: "SUGGESTION", replacement: "Lives in AGENTS.md now." };
+    const added = await highlight(ari, proposal, suggestion);
+    expect(added.status).toBe(200);
+    expect(await highlight(ari, proposal, { ...suggestion, from: 3, to: 3, start: 0, end: 2 })).toEqual({ status: 409, body: { error: "CONFLICT" } });
+    expect((await get(ari, proposal)).body.proposal).toMatchObject({
+      highlights: [{ kind: "COMMENT" }, { highlight: added.body.highlight, kind: "SUGGESTION", replacement: "Lives in AGENTS.md now." }],
+    });
+
+    expect(await submit(ari, proposal)).toEqual({ status: 200, body: { proposal } });
   });
 
   test("only the author highlights, and only on a draft", async () => {

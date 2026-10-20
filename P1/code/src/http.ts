@@ -33,7 +33,10 @@ export const publicErrors = {
   INVALID_OPERATIONS: "INVALID_REQUEST",
   INVALID_HIGHLIGHT: "INVALID_REQUEST",
   HIGHLIGHT_NOT_FOUND: "NOT_FOUND",
-  // The request is well formed; the saved draft just has no rationale yet.
+  // The request is well formed; it clashes with a suggestion already saved.
+  SUGGESTIONS_OVERLAP: "CONFLICT",
+  // The request is well formed; the saved draft just has no changes or no rationale yet.
+  NO_CHANGES: "CONFLICT",
   RATIONALE_MISSING: "CONFLICT",
   INVESTIGATION_NOT_PENDING: "CONFLICT",
   NOT_APPROVED: "CONFLICT",

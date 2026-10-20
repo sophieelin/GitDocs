@@ -123,7 +123,9 @@ export type ApplicationWire = {
           "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
           "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
           "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "kind": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["kind"]>>;
           "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "replacement": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["replacement"]>>;
           "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
           "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
           "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
@@ -155,7 +157,9 @@ export type ApplicationWire = {
           "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
           "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
           "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "kind": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["kind"]>>;
           "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "replacement": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["replacement"]>>;
           "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
           "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
           "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
@@ -180,7 +184,9 @@ export type ApplicationWire = {
       "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["end"]>>;
       "file": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["path"]>>;
       "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["from"]>>;
+      "kind": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["kind"]>>;
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>>;
+      "replacement": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["replacement"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
       "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["start"]>>;
       "text": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["text"]>>;
@@ -190,7 +196,7 @@ export type ApplicationWire = {
       "highlight": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>>, ["highlight"]>>;
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>>;
     };
-    error: { error: AppWideError | "INVALID_HIGHLIGHT" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_HIGHLIGHT" | "INVALID_INPUT" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "SUGGESTIONS_OVERLAP" | "UNKNOWN_SESSION" };
   };
   "/proposals/list": {
     input: {
@@ -255,7 +261,7 @@ export type ApplicationWire = {
     output: {
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["ReviewingDocumentation"]["open"]>[0], ["proposal"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_REVIEWER" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "RATIONALE_MISSING" | "REVIEW_EXISTS" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "INVALID_REVIEWER" | "INVESTIGATION_NOT_FOUND" | "NOT_DRAFT" | "NOT_INVESTIGATOR" | "NO_CHANGES" | "RATIONALE_MISSING" | "REVIEW_EXISTS" | "UNKNOWN_SESSION" };
   };
   "/proposals/under-review": {
     input: {
@@ -307,7 +313,9 @@ export type ApplicationWire = {
           "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
           "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
           "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "kind": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["kind"]>>;
           "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "replacement": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["replacement"]>>;
           "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
           "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
           "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
@@ -350,7 +358,9 @@ export type ApplicationWire = {
             "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
             "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
             "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+            "kind": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["kind"]>>;
             "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+            "replacement": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["replacement"]>>;
             "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
             "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
             "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
@@ -488,7 +498,9 @@ export type ApplicationWireHttp = {
           "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
           "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
           "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "kind": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["kind"]>>;
           "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "replacement": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["replacement"]>>;
           "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
           "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
           "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
@@ -520,7 +532,9 @@ export type ApplicationWireHttp = {
           "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
           "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
           "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "kind": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["kind"]>>;
           "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "replacement": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["replacement"]>>;
           "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
           "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
           "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
@@ -545,7 +559,9 @@ export type ApplicationWireHttp = {
       "end": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["end"]>>;
       "file": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["path"]>>;
       "from": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["from"]>>;
+      "kind": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["kind"]>>;
       "proposal": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["investigation"]>>;
+      "replacement": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["replacement"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
       "start": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["start"]>>;
       "text": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["highlight"]>[0], ["text"]>>;
@@ -672,7 +688,9 @@ export type ApplicationWireHttp = {
           "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
           "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
           "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+          "kind": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["kind"]>>;
           "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+          "replacement": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["replacement"]>>;
           "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
           "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
           "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;
@@ -715,7 +733,9 @@ export type ApplicationWireHttp = {
             "end": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["end"]>>;
             "from": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["from"]>>;
             "highlight": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["highlight"]>>;
+            "kind": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["kind"]>>;
             "path": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["path"]>>;
+            "replacement": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["replacement"]>>;
             "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["start"]>>;
             "text": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["text"]>>;
             "to": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["InvestigatingChanges"]["_highlights"]>>>, ["to"]>>;

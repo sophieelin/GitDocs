@@ -7,7 +7,8 @@ import type { Operation } from "./tree/edit.ts";
 /**
  * The proposal's comment on text in one file at its commit: from character
  * `start` of line `from` up to character `end` of line `to`. Lines count from
- * 1, characters from 0.
+ * 1, characters from 0. A suggestion also has the text to put in its place,
+ * empty to delete it.
  */
 export interface Highlight {
   highlight: string;
@@ -17,6 +18,8 @@ export interface Highlight {
   start: number;
   end: number;
   text: string;
+  kind: "COMMENT" | "SUGGESTION";
+  replacement: string;
 }
 
 /**
@@ -38,11 +41,21 @@ export function submitProposal(proposal: string, reviewer: string) {
 
 /**
  * Highlights text in `file` at the proposal's commit, from character `start`
- * of line `from` to character `end` of line `to`; saved at once, not on Save.
+ * of line `from` to character `end` of line `to`, with a comment, or with a
+ * suggested `replacement` too; saved at once, not on Save.
  */
 export function highlightProposal(
   proposal: string,
-  highlight: { file: string; from: number; to: number; start: number; end: number; text: string },
+  highlight: {
+    file: string;
+    from: number;
+    to: number;
+    start: number;
+    end: number;
+    text: string;
+    kind: Highlight["kind"];
+    replacement: string;
+  },
 ) {
   return api.proposals.highlight({ ...sessionInput(), proposal, ...highlight });
 }

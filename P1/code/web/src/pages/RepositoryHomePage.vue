@@ -6,7 +6,7 @@ import MarkdownPanel from "../components/MarkdownPanel.vue";
 import TreeView from "../components/TreeView.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
 import { gitHubErrorMessages, listCommits, readTree, type CommitsResponse, type TreeResponse } from "../github.ts";
-import { highlightProposal, startProposal } from "../proposals.ts";
+import { highlightProposal, startProposal, type Highlight } from "../proposals.ts";
 import { rememberRepository } from "../recentRepositories.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
@@ -14,9 +14,10 @@ import { useSession } from "../session.ts";
 
 /**
  * A repository's Home, laid out like an editor: the Code Structure at the
- * newest commit on the left, and the open file on the right. Selecting text in
- * the file and choosing Investigate starts a proposal with that highlight,
- * without going through a commit's diff. Recent commits are listed below.
+ * newest commit on the left, and the open file on the right. Suggestions typed
+ * in any of the files are added to one investigation, and Investigate starts a
+ * proposal with all of them, without going through a commit's diff. Recent
+ * commits are listed below.
  */
 const repository = useCurrentRepository();
 const session = useSession();
@@ -59,30 +60,68 @@ async function load() {
 const reading = ref<string | null>(null);
 
 useRefreshOnFocus(load);
+/**
+ * The investigation not yet started: the suggestions added to it, and the
+ * commit and documentation they were made at, which stay put if a newer
+ * commit arrives meanwhile.
+ */
+const pending = ref<{ commit: string; tree: TreeResponse["tree"]; added: Highlight[] } | null>(null);
+const title = ref("");
+const investigateError = ref<string | null>(null);
+const investigating = ref(false);
+let nextAdded = 1;
+
+const pendingFiles = computed(() => new Set(pending.value?.added.map((item) => item.path)).size);
+const readingAdded = computed(() => pending.value?.added.filter((item) => item.path === reading.value) ?? []);
+
 watch([owner, name], () => {
   commits.value = null;
   documentation.value = null;
   reading.value = null;
   error.value = null;
+  pending.value = null;
+  title.value = "";
   void load();
 });
 
-/**
- * Starts a proposal at the newest commit from the documentation as it is, saves
- * the selection as its first highlight, and opens the proposal editor.
- */
-async function investigate(highlight: { from: number; to: number; start: number; end: number; text: string; title: string }): Promise<string | null> {
+/** Adds a suggestion in the file being read to the investigation, starting the list at the newest commit. */
+async function add(highlight: Omit<Highlight, "highlight" | "path">): Promise<string | null> {
   const newest = commits.value?.[0];
-  if (!repository.value || !documentation.value || !newest || !reading.value) return null;
-  const started = await startProposal(repository.value, newest.sha, highlight.title, documentation.value.tree);
-  if ("error" in started) {
-    return handleEndedSession(started.error) ? null : errorMessage(started.error, { INVALID_REQUEST: "Keep the title to 120 characters." });
-  }
-  const { title: _title, ...range } = highlight;
-  // The draft exists now; if the highlight is refused, it can be added again in the editor.
-  await highlightProposal(started.proposal, { file: reading.value, ...range });
-  await router.push(repositoryPath(repository.value, `/proposals/${started.proposal}/edit`));
+  if (!documentation.value || !newest || !reading.value) return null;
+  pending.value ??= { commit: newest.sha, tree: documentation.value.tree, added: [] };
+  pending.value.added.push({ ...highlight, highlight: `added-${nextAdded++}`, path: reading.value });
   return null;
+}
+
+async function remove(highlight: string): Promise<string | null> {
+  if (!pending.value) return null;
+  pending.value.added = pending.value.added.filter((item) => item.highlight !== highlight);
+  if (pending.value.added.length === 0) pending.value = null;
+  return null;
+}
+
+/** Starts one proposal with every suggestion added, and opens the proposal editor. */
+async function investigate() {
+  if (!repository.value || !pending.value) return;
+  if (title.value.trim() === "") {
+    investigateError.value = "Give the investigation a title.";
+    return;
+  }
+  investigating.value = true;
+  investigateError.value = null;
+  const started = await startProposal(repository.value, pending.value.commit, title.value.trim(), pending.value.tree);
+  if ("error" in started) {
+    investigating.value = false;
+    if (!handleEndedSession(started.error)) {
+      investigateError.value = errorMessage(started.error, { INVALID_REQUEST: "Keep the title to 120 characters." });
+    }
+    return;
+  }
+  // The draft exists now; a suggestion refused here can be made again in the editor.
+  for (const { highlight: _highlight, path, ...rest } of pending.value.added) {
+    await highlightProposal(started.proposal, { file: path, ...rest });
+  }
+  await router.push(repositoryPath(repository.value, `/proposals/${started.proposal}/edit`));
 }
 
 function firstLine(message: string): string {
@@ -103,8 +142,20 @@ const isCodeEmpty = computed(() => documentation.value !== null && isEmptyFolder
 <template>
   <section>
     <h1 class="page-title">{{ owner }}/{{ name }}</h1>
-    <p class="page-subtitle">The code as it is now, and recent commits. Open a file and select text to investigate it.</p>
+    <p class="page-subtitle">The code as it is now, and recent commits. Open a file and edit it to suggest changes to investigate.</p>
     <ErrorBanner :message="error" />
+
+    <div v-if="pending" class="card investigation">
+      <form @submit.prevent="investigate">
+        <p class="count">
+          {{ pending.added.length }} {{ pending.added.length === 1 ? "suggestion" : "suggestions" }} in {{ pendingFiles }}
+          {{ pendingFiles === 1 ? "file" : "files" }}, at <code>{{ pending.commit.slice(0, 7) }}</code>
+        </p>
+        <input v-model="title" name="investigation-title" maxlength="120" placeholder="Title: what should change in the documentation?" />
+        <button type="submit" class="button" :disabled="investigating">Investigate</button>
+      </form>
+      <ErrorBanner :message="investigateError" />
+    </div>
 
     <p v-if="!error && commits && commits[0]" class="muted at">
       Structures at the newest commit, <code>{{ commits[0].sha.slice(0, 7) }}</code>.
@@ -129,10 +180,11 @@ const isCodeEmpty = computed(() => documentation.value !== null && isEmptyFolder
         class="card"
         :owner="owner"
         :name="name"
-        :commit="commits[0].sha"
+        :commit="pending?.commit ?? commits[0].sha"
         :path="reading"
-        :highlights="[]"
-        :add="investigate"
+        :highlights="readingAdded"
+        :add="add"
+        :remove="remove"
         investigate
       />
       <div v-else-if="documentation" class="card">
@@ -238,6 +290,32 @@ code {
 .at {
   margin-top: -8px;
   font-size: 14px;
+}
+
+/* The investigation being put together, above the files. */
+.investigation {
+  margin-bottom: 20px;
+}
+
+.investigation form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: center;
+}
+
+.investigation .count {
+  margin: 0;
+  font-weight: 600;
+}
+
+.investigation input {
+  flex: 1;
+  min-width: 220px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
 }
 
 .warning {

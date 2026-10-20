@@ -119,12 +119,31 @@ const readingHighlights = computed(() => (proposal.value?.highlights ?? []).filt
 const highlightErrorMessages = {
   ...proposalErrorMessages,
   INVALID_REQUEST: "Select some text in this file, and say why it no longer holds.",
+  CONFLICT: "This suggestion overlaps another suggestion in this file. Remove that one first.",
 };
 
-/** Saves a highlight in the file being read at once, then rereads the proposal to show it. */
-async function addHighlight({ from, to, start, end, text }: { from: number; to: number; start: number; end: number; text: string }): Promise<string | null> {
+const suggestionCount = computed(() => (proposal.value?.highlights ?? []).filter((item) => item.kind === "SUGGESTION").length);
+
+/** Saves a highlight or suggestion in the file being read at once, then rereads the proposal to show it. */
+async function addHighlight({
+  from,
+  to,
+  start,
+  end,
+  text,
+  kind,
+  replacement,
+}: {
+  from: number;
+  to: number;
+  start: number;
+  end: number;
+  text: string;
+  kind: "COMMENT" | "SUGGESTION";
+  replacement: string;
+}): Promise<string | null> {
   if (!reading.value) return null;
-  const result = await highlightProposal(id.value, { file: reading.value, from, to, start, end, text });
+  const result = await highlightProposal(id.value, { file: reading.value, from, to, start, end, text, kind, replacement });
   if ("error" in result) return handleEndedSession(result.error) ? null : errorMessage(result.error, highlightErrorMessages);
   await load();
   return null;
@@ -269,8 +288,12 @@ async function save(): Promise<boolean> {
 }
 
 async function submitForReview() {
+  if (operations.value.length === 0 && suggestionCount.value === 0) {
+    formError.value = "Change the documentation structure or suggest an edit before submitting.";
+    return;
+  }
   if (rationale.value.trim() === "") {
-    formError.value = "Explain the proposed structure before submitting it.";
+    formError.value = "Explain the proposed changes before submitting them.";
     return;
   }
   const name = reviewer.value.trim();
@@ -290,7 +313,7 @@ async function submitForReview() {
     if (!handleEndedSession(result.error)) {
       formError.value = errorMessage(result.error, {
         ...proposalErrorMessages,
-        CONFLICT: "This proposal needs a rationale and must still be a draft.",
+        CONFLICT: "This proposal needs a change to the structure or a suggestion, and a rationale, and must still be a draft.",
         INVALID_REQUEST: `There is no other account named "${name}". Check the reviewer's username.`,
       });
     }
@@ -335,7 +358,7 @@ function isEmpty(folder: DocumentationFolder): boolean {
       <div class="structures">
         <div class="card scroll">
           <h2>Code Structure</h2>
-          <p class="muted hint">Click a file to read it below and highlight what no longer holds. Highlighted files are shaded.</p>
+          <p class="muted hint">Click a file to read it below, highlight what no longer holds, and suggest new text. Highlighted files are shaded.</p>
           <p v-if="isEmpty(code ?? proposal.currentStructure)" class="muted">There are no files at this commit.</p>
           <TreeView
             v-else
@@ -411,7 +434,7 @@ function isEmpty(folder: DocumentationFolder): boolean {
         </label>
         <label class="field">
           <span>Rationale</span>
-          <textarea v-model="rationale" name="rationale" rows="5" placeholder="Why is the proposed structure better? Needed before you submit." />
+          <textarea v-model="rationale" name="rationale" rows="5" placeholder="Why are the proposed changes better? Needed before you submit." />
         </label>
         <label class="field">
           <span>Reviewer</span>

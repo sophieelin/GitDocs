@@ -10,10 +10,12 @@ import {
   InvestigatingChangesConcept,
   InvestigationNotFound,
   InvestigationNotPending,
+  NoChanges,
   NotApproved,
   NotDraft,
   NotInvestigator,
   RationaleMissing,
+  SuggestionsOverlap,
 } from "../../src/concepts/InvestigatingChanges.ts";
 import type { DocumentationFolder } from "../../src/github/documentationTree.ts";
 import { applyOperations, gitCommands, type Operation } from "../../src/github/structureOperations.ts";
@@ -71,6 +73,9 @@ function proposedFrom(tree: DocumentationFolder, changes: Operation[]): Document
 }
 
 const valid = { ...paperNet, commit: c6d4a4c6, title: "Organize the agents docs", currentStructure: current };
+
+/** What a highlight that is only a comment adds. */
+const comment = { kind: "COMMENT" as const, replacement: "" };
 
 function newConcept(freshID = ids("i-1")) {
   return new InvestigatingChangesConcept(testDb.db, freshID);
@@ -183,14 +188,15 @@ describe("InvestigatingChanges", () => {
   test("highlights are kept in the order added, and one can be removed", async () => {
     const investigating = newConcept(ids("i-1", "h-1", "h-2"));
     await investigating.start({ investigator: "ari", ...valid, at: morning });
-    const first = { path: agentsReadme.path, from: 2, to: 3, start: 4, end: 11, text: "  Moved under lib/.  " };
+    const first = { path: agentsReadme.path, from: 2, to: 3, start: 4, end: 11, text: "  Moved under lib/.  ", ...comment };
+    const second = { path: "README.md", from: 1, to: 1, start: 0, end: 5, text: "Stale", kind: "SUGGESTION" as const, replacement: "Fresh\n" };
 
     expect(await investigating.highlight({ investigation: "i-1", investigator: "ari", ...first, at: noon })).toEqual({ highlight: "h-1" });
-    await investigating.highlight({ investigation: "i-1", investigator: "ari", path: "README.md", from: 1, to: 1, start: 0, end: 5, text: "Stale", at: noon });
+    await investigating.highlight({ investigation: "i-1", investigator: "ari", ...second, at: noon });
 
     expect(await investigating._highlights({ investigation: "i-1" })).toEqual([
       { highlight: "h-1", ...first, text: "Moved under lib/." },
-      { highlight: "h-2", path: "README.md", from: 1, to: 1, start: 0, end: 5, text: "Stale" },
+      { highlight: "h-2", ...second },
     ]);
     expect((await investigating._get({ investigation: "i-1" }))[0]?.updatedAt).toEqual(noon);
 
@@ -204,10 +210,24 @@ describe("InvestigatingChanges", () => {
   test("highlight refuses a highlight with no comment or no valid range, another investigator, and a submitted investigation", async () => {
     const investigating = newConcept(ids("i-1", "h-1"));
     await investigating.start({ investigator: "ari", ...valid, at: morning });
-    const highlight = { investigation: "i-1", investigator: "ari", path: "README.md", from: 2, to: 3, start: 4, end: 11, text: "Why", at: noon };
+    const highlight = { investigation: "i-1", investigator: "ari", path: "README.md", from: 2, to: 3, start: 4, end: 11, text: "Why", ...comment, at: noon };
 
-    for (const change of [{ text: " " }, { path: "" }, { from: 0 }, { from: 4, to: 3 }, { to: 2.5 }, { start: -1 }, { from: 3, to: 3, start: 6, end: 6 }]) {
-      await expect(investigating.highlight({ ...highlight, ...change })).rejects.toThrow(InvalidHighlight);
+    for (const change of [
+      { text: " " },
+      { path: "" },
+      { from: 0 },
+      { from: 4, to: 3 },
+      { to: 2.5 },
+      { start: -1 },
+      { from: 3, to: 3, start: 6, end: 6 },
+      { from: 3, to: 3, start: 6, end: 6, kind: "SUGGESTION", replacement: "" },
+      { from: 3, to: 3, start: 7, end: 6, kind: "SUGGESTION", replacement: "new" },
+      { kind: "EDIT" },
+      { replacement: "A comment replaces nothing." },
+      { kind: "SUGGESTION", replacement: "x".repeat(20_001) },
+      { kind: "SUGGESTION", replacement: null },
+    ]) {
+      await expect(investigating.highlight({ ...highlight, ...change } as never)).rejects.toThrow(InvalidHighlight);
     }
     await expect(investigating.highlight({ ...highlight, investigator: "bob" })).rejects.toThrow(NotInvestigator);
     await expect(investigating.highlight({ ...highlight, investigation: "missing" })).rejects.toThrow(InvestigationNotFound);
@@ -224,7 +244,7 @@ describe("InvestigatingChanges", () => {
     const investigating = newConcept();
     await investigating.start({ investigator: "ari", ...valid, at: morning });
 
-    await expect(investigating.submit({ investigation: "i-1", investigator: "ari", at: noon })).rejects.toThrow(RationaleMissing);
+    await expect(investigating.submit({ investigation: "i-1", investigator: "ari", at: noon })).rejects.toThrow(NoChanges);
     await investigating.modify({ ...draftOf("i-1"), rationale: "", at: morning });
     await expect(investigating.submit({ investigation: "i-1", investigator: "ari", at: noon })).rejects.toThrow(RationaleMissing);
     await investigating.modify({ ...draftOf("i-1"), at: morning });
@@ -240,13 +260,89 @@ describe("InvestigatingChanges", () => {
     expect(await investigating._get({ investigation: "i-1" })).toEqual([submittedOne!]);
   });
 
-  test("submit accepts a draft with a rationale and no structure changes", async () => {
-    const investigating = newConcept();
+  test("submit takes a suggestion as the only change, but not a comment", async () => {
+    const investigating = newConcept(ids("i-1", "h-1", "h-2"));
     await investigating.start({ investigator: "ari", ...valid, at: morning });
     await investigating.modify({ ...draftOf("i-1"), operations: [], at: morning });
+    const on = { investigation: "i-1", investigator: "ari", path: "README.md", from: 1, to: 1, start: 0, end: 5, text: "Out of date.", at: noon };
 
+    await investigating.highlight({ ...on, ...comment });
+    await expect(investigating.submit({ investigation: "i-1", investigator: "ari", at: noon })).rejects.toThrow(NoChanges);
+
+    await investigating.highlight({ ...on, kind: "SUGGESTION", replacement: "" });
     expect(await investigating.submit({ investigation: "i-1", investigator: "ari", at: noon })).toEqual({});
     expect((await investigating._get({ investigation: "i-1" }))[0]).toMatchObject({ status: "SUBMITTED", operations: [] });
+  });
+
+  test("suggestions in one file may touch but not overlap; comments may overlap anything", async () => {
+    const investigating = newConcept(ids("i-1", "h-1", "h-2", "h-3", "h-4", "h-5"));
+    await investigating.start({ investigator: "ari", ...valid, at: morning });
+    const suggest = (range: { path?: string; from: number; to: number; start: number; end: number }) =>
+      investigating.highlight({
+        investigation: "i-1",
+        investigator: "ari",
+        path: "README.md",
+        ...range,
+        text: "Why",
+        kind: "SUGGESTION",
+        replacement: "new",
+        at: noon,
+      });
+
+    await suggest({ from: 2, to: 3, start: 4, end: 2 });
+    for (const range of [
+      { from: 2, to: 2, start: 5, end: 6 },
+      { from: 1, to: 2, start: 0, end: 5 },
+      { from: 3, to: 4, start: 1, end: 0 },
+      { from: 1, to: 5, start: 0, end: 0 },
+    ]) {
+      await expect(suggest(range)).rejects.toThrow(SuggestionsOverlap);
+    }
+    // Ending where the first starts, starting where it ends, or in another file is fine.
+    await suggest({ from: 1, to: 2, start: 0, end: 4 });
+    await suggest({ from: 3, to: 3, start: 2, end: 9 });
+    await suggest({ path: "AGENTS.md", from: 2, to: 3, start: 4, end: 2 });
+    await investigating.highlight({ investigation: "i-1", investigator: "ari", path: "README.md", from: 2, to: 3, start: 0, end: 9, text: "Also", ...comment, at: noon });
+    expect((await investigating._highlights({ investigation: "i-1" })).map(({ highlight }) => highlight)).toEqual(["h-1", "h-2", "h-3", "h-4", "h-5"]);
+  });
+
+  test("a suggestion may put new text in at a point, but not twice at the same point", async () => {
+    const investigating = newConcept(ids("i-1", "h-1", "h-2", "h-3", "h-4"));
+    await investigating.start({ investigator: "ari", ...valid, at: morning });
+    const suggest = (range: { from: number; to: number; start: number; end: number }) =>
+      investigating.highlight({ investigation: "i-1", investigator: "ari", path: "README.md", ...range, text: "Why", kind: "SUGGESTION", replacement: "new", at: noon });
+
+    await suggest({ from: 2, to: 2, start: 3, end: 3 });
+    await expect(suggest({ from: 2, to: 2, start: 3, end: 3 })).rejects.toThrow(SuggestionsOverlap);
+    // Inside another suggestion overlaps it; at its edge or elsewhere is fine.
+    await suggest({ from: 1, to: 1, start: 0, end: 4 });
+    await expect(suggest({ from: 1, to: 1, start: 2, end: 2 })).rejects.toThrow(SuggestionsOverlap);
+    await suggest({ from: 1, to: 1, start: 4, end: 4 });
+    await suggest({ from: 2, to: 2, start: 4, end: 4 });
+    expect(await investigating._highlights({ investigation: "i-1" })).toHaveLength(4);
+  });
+
+  test("two overlapping suggestions at once: one is saved and the other is refused", async () => {
+    const investigating = newConcept(ids("i-1", "h-1", "h-2", "h-3"));
+    await investigating.start({ investigator: "ari", ...valid, at: morning });
+    const suggestion = { investigation: "i-1", investigator: "ari", path: "README.md", from: 1, to: 1, start: 0, end: 5, text: "Why", kind: "SUGGESTION" as const, at: noon };
+
+    const results = await Promise.allSettled([
+      investigating.highlight({ ...suggestion, replacement: "one" }),
+      investigating.highlight({ ...suggestion, replacement: "two" }),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled").length).toBe(1);
+    expect((results.find((r) => r.status === "rejected") as PromiseRejectedResult).reason).toBeInstanceOf(SuggestionsOverlap);
+    expect(await investigating._highlights({ investigation: "i-1" })).toHaveLength(1);
+  });
+
+  test("a highlight saved before suggestions existed reads as a comment", async () => {
+    const investigating = newConcept();
+    await investigating.start({ investigator: "ari", ...valid, at: morning });
+    const old = { highlight: "h-0", path: "README.md", from: 1, to: 1, start: 0, end: 5, text: "Old" };
+    await testDb.db.collection("InvestigatingChanges.investigations").updateOne({ _id: "i-1" as never }, { $push: { highlights: old } as never });
+
+    expect(await investigating._highlights({ investigation: "i-1" })).toEqual([{ ...old, ...comment }]);
   });
 
   test("two submits at once: one succeeds and the other is refused", async () => {
@@ -267,7 +363,7 @@ describe("InvestigatingChanges", () => {
     const investigating = newConcept(ids("i-1", "i-2", "h-1"));
     await investigating.start({ investigator: "ari", ...valid, at: morning });
     await investigating.start({ investigator: "ari", ...valid, title: "Another idea", at: morning });
-    await investigating.highlight({ investigation: "i-1", investigator: "ari", path: "README.md", from: 1, to: 1, start: 0, end: 5, text: "Why", at: noon });
+    await investigating.highlight({ investigation: "i-1", investigator: "ari", path: "README.md", from: 1, to: 1, start: 0, end: 5, text: "Why", ...comment, at: noon });
 
     await expect(investigating.discard({ investigation: "i-1", investigator: "bob" })).rejects.toThrow(NotInvestigator);
     await expect(investigating.discard({ investigation: "missing", investigator: "ari" })).rejects.toThrow(InvestigationNotFound);

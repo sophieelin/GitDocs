@@ -12,16 +12,23 @@ export class NotDraft extends Error {}
 export class InvalidOperations extends Error {}
 export class InvalidHighlight extends Error {}
 export class HighlightNotFound extends Error {}
+export class SuggestionsOverlap extends Error {}
+export class NoChanges extends Error {}
 export class RationaleMissing extends Error {}
 export class InvestigationNotPending extends Error {}
 export class NotApproved extends Error {}
 
 export type Status = "DRAFT" | "SUBMITTED" | "APPROVED" | "APPLIED";
 
+/** A comment only, or a comment with text to put in place of what is highlighted. */
+export type HighlightKind = "COMMENT" | "SUGGESTION";
+
 /**
  * The investigator's comment on text in one file at the investigation's commit:
  * from character `start` of line `from` up to, not including, character `end`
- * of line `to`. Lines count from 1, characters from 0.
+ * of line `to`. Lines count from 1, characters from 0. A suggestion also has
+ * the `replacement` for that text, which may be empty to delete it; a comment's
+ * is always empty.
  */
 export interface Highlight {
   highlight: string;
@@ -31,6 +38,8 @@ export interface Highlight {
   start: number;
   end: number;
   text: string;
+  kind: HighlightKind;
+  replacement: string;
 }
 
 type InvestigationDoc = {
@@ -51,14 +60,15 @@ type InvestigationDoc = {
   appliedCommit: string;
   createdAt: Date;
   updatedAt: Date;
-  /** In the order added. */
-  highlights: Highlight[];
+  /** In the order added. Highlights saved before suggestions existed have no `kind` or `replacement`. */
+  highlights: Array<Omit<Highlight, "kind" | "replacement"> & Partial<Pick<Highlight, "kind" | "replacement">>>;
 };
 
 const SHA = /^[0-9a-f]{40}$/i;
 const MAX_TITLE = 120;
 const MAX_HIGHLIGHT = 2000;
 const MAX_HIGHLIGHTS = 200;
+const MAX_REPLACEMENT = 20_000;
 const MAX_LINE = 1_000_000;
 /** The most folders and files a structure may hold, so one investigation stays well under Mongo's document limit. */
 const MAX_ENTRIES = 10_000;
@@ -77,6 +87,20 @@ function isLine(value: unknown): value is number {
 
 function isColumn(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= MAX_LINE;
+}
+
+type Range = { from: number; to: number; start: number; end: number };
+
+/**
+ * Whether two ranges share a character; ranges that only touch do not. Two
+ * empty ranges at the same point do, since both would put text there.
+ */
+function overlaps(a: Range, b: Range): boolean {
+  const before = (line: number, column: number, otherLine: number, otherColumn: number) =>
+    line < otherLine || (line === otherLine && column < otherColumn);
+  const empty = (range: Range) => range.from === range.to && range.start === range.end;
+  if (empty(a) && empty(b)) return a.from === b.from && a.start === b.start;
+  return before(a.from, a.start, b.to, b.end) && before(b.from, b.start, a.to, a.end);
 }
 
 /**
@@ -110,8 +134,9 @@ function documentationTree(value: unknown): DocumentationFolder | undefined {
 
 /**
  * Proposals for a different documentation structure, each an investigation of
- * one commit. The investigator highlights passages that no longer hold and
- * plans changes to the structure, then submits the draft with a rationale. A
+ * one commit. The investigator highlights passages that no longer hold,
+ * suggests new text for some of them, and plans changes to the structure, then
+ * submits the draft with a rationale. A
  * submitted investigation no longer changes; once approved, it gives the git
  * commands that make its changes, and its author records the commit that
  * applied them.
@@ -220,6 +245,8 @@ export class InvestigatingChangesConcept {
     start,
     end,
     text,
+    kind,
+    replacement,
     at,
   }: {
     investigation: string;
@@ -230,6 +257,8 @@ export class InvestigatingChangesConcept {
     start: number;
     end: number;
     text: string;
+    kind: HighlightKind;
+    replacement: string;
     at: Date;
   }): Promise<{ highlight: string }> {
     const draft = await this.#investigatorsDraft(investigation, investigator);
@@ -241,17 +270,43 @@ export class InvestigatingChangesConcept {
       from > to ||
       !isColumn(start) ||
       !isColumn(end) ||
-      (from === to && start >= end) ||
+      (from === to && start > end) ||
+      // Only a suggestion of new text may be on no text: it is put in at that point.
+      (from === to && start === end && (kind !== "SUGGESTION" || replacement === "")) ||
+      (kind !== "COMMENT" && kind !== "SUGGESTION") ||
+      typeof replacement !== "string" ||
+      replacement.length > MAX_REPLACEMENT ||
+      (kind === "COMMENT" && replacement !== "") ||
       draft.highlights.length >= MAX_HIGHLIGHTS
     ) {
       throw new InvalidHighlight("A highlight needs a file, the text it is on, and a comment.");
     }
+    const range = { from, to, start, end };
+    // Two suggestions on the same text could not both be made.
+    const clash = (other: InvestigationDoc["highlights"][number]) =>
+      other.kind === "SUGGESTION" && other.path === path && overlaps(other, range);
+    if (kind === "SUGGESTION" && draft.highlights.some(clash)) {
+      throw new SuggestionsOverlap("A suggestion cannot overlap another suggestion in the same file.");
+    }
+    // A suggestion is added only if the highlights are still the ones just checked;
+    // if another was added or removed meanwhile, it is checked again against them.
+    const checked = draft.highlights.map((other) => other.highlight);
+    const unchanged =
+      kind === "SUGGESTION"
+        ? { highlights: { $size: checked.length }, ...(checked.length > 0 && { "highlights.highlight": { $all: checked } }) }
+        : {};
     const highlight = this.freshID();
+    const added = { highlight, path, ...range, text: text.trim(), kind, replacement };
     const { matchedCount } = await this.investigations.updateOne(
-      { _id: investigation, investigator, status: "DRAFT" },
-      { $push: { highlights: { highlight, path, from, to, start, end, text: text.trim() } }, $set: { updatedAt: at } },
+      { _id: investigation, investigator, status: "DRAFT", ...unchanged },
+      { $push: { highlights: added }, $set: { updatedAt: at } },
     );
-    if (matchedCount === 0) await this.#investigatorsDraft(investigation, investigator);
+    if (matchedCount === 0) {
+      await this.#investigatorsDraft(investigation, investigator);
+      if (kind === "SUGGESTION") {
+        return this.highlight({ investigation, investigator, path, from, to, start, end, text, kind, replacement, at });
+      }
+    }
     return { highlight };
   }
 
@@ -289,12 +344,21 @@ export class InvestigatingChangesConcept {
   }): Promise<Record<string, never>> {
     // One conditional update, so only one of two simultaneous submits can succeed.
     const { matchedCount } = await this.investigations.updateOne(
-      { _id: investigation, investigator, status: "DRAFT", rationale: { $ne: "" } },
+      {
+        _id: investigation,
+        investigator,
+        status: "DRAFT",
+        $or: [{ "operations.0": { $exists: true } }, { "highlights.kind": "SUGGESTION" }],
+        rationale: { $ne: "" },
+      },
       { $set: { status: "SUBMITTED", updatedAt: at } },
     );
     if (matchedCount === 0) {
       const draft = await this.#investigatorsDraft(investigation, investigator);
-      if (draft.rationale === "") throw new RationaleMissing("Explain the proposed structure before submitting it.");
+      if (draft.operations.length === 0 && !draft.highlights.some((item) => item.kind === "SUGGESTION")) {
+        throw new NoChanges("Change the documentation structure or suggest an edit before submitting.");
+      }
+      if (draft.rationale === "") throw new RationaleMissing("Explain the proposed changes before submitting them.");
     }
     return {};
   }
@@ -372,7 +436,7 @@ export class InvestigatingChangesConcept {
 
   async _highlights({ investigation }: { investigation: string }): Promise<Highlight[]> {
     const found = await this.investigations.findOne({ _id: investigation }, { projection: { highlights: 1 } });
-    return (found?.highlights ?? []).map(({ highlight, path, from, to, start, end, text }) => ({
+    return (found?.highlights ?? []).map(({ highlight, path, from, to, start, end, text, kind, replacement }) => ({
       highlight,
       path,
       from,
@@ -380,6 +444,8 @@ export class InvestigatingChangesConcept {
       start,
       end,
       text,
+      kind: kind ?? "COMMENT",
+      replacement: replacement ?? "",
     }));
   }
 

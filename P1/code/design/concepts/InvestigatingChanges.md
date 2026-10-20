@@ -11,10 +11,13 @@ argued for, and approved, before anything in the repository changes.
 ## Principle
 
 After starting an investigation of a commit, the investigator highlights the
-passages that no longer hold, each with a comment, and plans changes to the
-documentation structure: moving or renaming files and folders, creating files
-and folders, and removing empty folders. Once the plan has a rationale, they
-submit it, and it no longer changes. If a passage was highlighted by mistake,
+passages that no longer hold, each with a comment, and for some of them
+suggests the text that should replace them, as in a document's suggestion
+mode. They may also plan changes to the documentation structure: moving or
+renaming files and folders, creating files and folders, and removing empty
+folders. Once the plan changes something, by a suggestion or a change to the
+structure, and has a rationale, they submit it, and it no longer changes. If a
+passage was highlighted by mistake,
 the investigator removes it before submitting, and a draft they no longer want
 can be discarded. Once a submitted investigation is approved, it gives the git
 commands that make its changes; the investigator runs them in a clone of the
@@ -32,6 +35,8 @@ opaque OperationList
   Changes to a documentation structure, in order: each moves a file or folder from one path to another (a rename is a move within its folder), creates a file or an empty folder at a path, or removes an empty folder.
 Status is DRAFT or SUBMITTED or APPROVED or APPLIED
   The lifecycle states an investigation may occupy.
+HighlightKind is COMMENT or SUGGESTION
+  A comment on the text only, or a comment together with text to replace it.
 ```
 
 ## State
@@ -64,8 +69,12 @@ a seq of Highlights with
   a start Number
   an end Number
   a text String
+  a kind HighlightKind
+  a replacement String
   Rule: from and to are line numbers in the file at the investigation's commit, counted from 1, and from is at most to.
-  Rule: the highlight is on the text from character start of line from up to, but not including, character end of line to, counting characters from 0; on one line, start is less than end.
+  Rule: the highlight is on the text from character start of line from up to, but not including, character end of line to, counting characters from 0; on one line, start is less than end, except that a SUGGESTION with a non-empty replacement may have start equal to end, putting new text in at that point.
+  Rule: text is the comment saying why; a COMMENT's replacement is empty, and a SUGGESTION's replacement is the text to put in place of the highlighted text, empty to delete it.
+  Rule: no two SUGGESTION highlights in the same file share a character, and no two put new text in at the same point.
 ```
 
 ## Actions
@@ -110,7 +119,7 @@ modify(investigation: Investigation, investigator: User, title: String, operatio
     set the investigation's title, operations, rationale, currentStructure with operations applied as its proposedStructure, and at as its updatedAt
     returns
 
-highlight(investigation: Investigation, investigator: User, path: String, from: Number, to: Number, start: Number, end: Number, text: String, at: DateTime) : returns (highlight: Highlight)
+highlight(investigation: Investigation, investigator: User, path: String, from: Number, to: Number, start: Number, end: Number, text: String, kind: HighlightKind, replacement: String, at: DateTime) : returns (highlight: Highlight)
   where investigation is not in Investigations
   then
     refuses INVESTIGATION_NOT_FOUND "There is no such investigation."
@@ -120,12 +129,15 @@ highlight(investigation: Investigation, investigator: User, path: String, from: 
   where the investigation's status is not DRAFT
   then
     refuses NOT_DRAFT "Only a draft investigation can be changed."
-  where path or text is empty, from and to are not whole numbers from 1 with from at most to, start and end are not whole numbers from 0, or the highlight is on one line and start is not less than end
+  where path or text is empty, from and to are not whole numbers from 1 with from at most to, start and end are not whole numbers from 0, the highlight is on one line and start is greater than end, the highlight is on one line with start equal to end and it is not a SUGGESTION with a non-empty replacement, replacement is longer than 20000 characters, or kind is COMMENT and replacement is not empty
   then
     refuses INVALID_HIGHLIGHT "A highlight needs a file, the text it is on, and a comment."
+  where kind is SUGGESTION and the text shares a character with another SUGGESTION highlight on the same path of the investigation, or both put new text in at the same point
+  then
+    refuses SUGGESTIONS_OVERLAP "A suggestion cannot overlap another suggestion in the same file."
   where the investigator's highlight is valid
   then
-    add a new highlight on investigation with path, from, to, start, end, and text
+    add a new highlight on investigation with path, from, to, start, end, text, kind, and replacement
     set at as the investigation's updatedAt
     returns highlight
 
@@ -158,10 +170,13 @@ submit(investigation: Investigation, investigator: User, at: DateTime) : returns
   where the investigation's status is not DRAFT
   then
     refuses NOT_DRAFT "Only a draft investigation can be changed."
+  where the investigation has no operations and no SUGGESTION highlights
+  then
+    refuses NO_CHANGES "Change the documentation structure or suggest an edit before submitting."
   where the investigation's rationale is empty
   then
-    refuses RATIONALE_MISSING "Explain the proposed structure before submitting it."
-  where the investigator's draft has a rationale
+    refuses RATIONALE_MISSING "Explain the proposed changes before submitting them."
+  where the investigator's draft has changes and a rationale
   then
     set the investigation's status to SUBMITTED and at as its updatedAt
     returns
@@ -219,7 +234,7 @@ _get(investigation: Investigation) : optional (investigation: Investigation, inv
   answers the investigation with both of its structures and its changes
   answers no row for an unknown or discarded investigation
 
-_highlights(investigation: Investigation) : many (highlight: Highlight, path: String, from: Number, to: Number, start: Number, end: Number, text: String)
+_highlights(investigation: Investigation) : many (highlight: Highlight, path: String, from: Number, to: Number, start: Number, end: Number, text: String, kind: HighlightKind, replacement: String)
   answers the investigation's highlights in the order they were added
   answers no rows for an unknown or discarded investigation
 

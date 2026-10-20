@@ -1,21 +1,27 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
 import { gitHubErrorMessages, readFile } from "../github.ts";
 import type { Highlight } from "../proposals.ts";
 import ErrorBanner from "./ErrorBanner.vue";
 import SourceView, { type TextRange } from "./SourceView.vue";
+import type { Draft } from "./SuggestionEditor.vue";
+
+/** The editor is loaded only when suggesting first starts, so pages that only read stay small. */
+const SuggestionEditor = defineAsyncComponent(() => import("./SuggestionEditor.vue"));
 
 /**
  * One file's text at a commit, documentation or code, with the proposal's
- * highlights in it shaded and their comments beside it.
+ * highlights in it shaded, its suggestions struck through with their new text
+ * after them in [brackets], and their comments beside it.
  *
- * With `add`, text can be selected (drag over it, or click a line) and
- * highlighted with a comment; with `remove`, each highlight can be removed.
- * Each answers an error message, or null once it is done.
+ * With `add`, the file itself is edited, as in a document's suggesting mode,
+ * and each run of edits is saved as a suggestion with a comment saying why.
+ * With `remove`, each highlight can be removed. Each answers an error message,
+ * or null once it is done.
  *
- * With `investigate`, the highlight starts a new proposal: the form also asks
- * for the proposal's title, which `add` receives as `title`.
+ * With `investigate`, saving adds the suggestion to an investigation not yet
+ * started, rather than to a proposal.
  */
 const props = withDefaults(
   defineProps<{
@@ -24,7 +30,7 @@ const props = withDefaults(
     commit: string;
     path: string;
     highlights: Highlight[];
-    add?: (highlight: Required<TextRange> & { text: string; title: string }) => Promise<string | null>;
+    add?: (highlight: Required<TextRange> & { text: string; kind: Highlight["kind"]; replacement: string }) => Promise<string | null>;
     remove?: (highlight: string) => Promise<string | null>;
     investigate?: boolean;
   }>(),
@@ -34,13 +40,18 @@ const props = withDefaults(
 const text = ref<{ text: string; truncated: boolean } | null>(null);
 const error = ref<string | null>(null);
 
-/** The text selected but not yet commented on. */
-const selection = ref<Required<TextRange> | null>(null);
-const draft = ref("");
-/** The new proposal's title, with `investigate`. */
-const title = ref("");
+const comments = computed(() => props.highlights.filter((item) => item.kind === "COMMENT"));
+const suggestions = computed(() => props.highlights.filter((item) => item.kind === "SUGGESTION"));
+
+/** Edits not yet saved as suggestions, and the reason written for each. */
+const drafts = ref<Draft[]>([]);
+const reasons = ref<Record<number, string>>({});
+const editor = ref<{ discard: (key: number) => void } | null>(null);
 const commentError = ref<string | null>(null);
 const busy = ref(false);
+
+/** A file too long to read whole cannot be edited, since its end is not known. */
+const canSuggest = computed(() => props.add !== undefined && text.value !== null && !text.value.truncated);
 
 async function load() {
   const { owner, name, commit, path } = props;
@@ -65,34 +76,35 @@ async function load() {
 // One string, so the file is read again only when it is another file, not on every new array.
 watch(() => `${props.owner}/${props.name}@${props.commit}:${props.path}`, load, { immediate: true });
 
-// A selection belongs to the file it was made in.
-watch(() => props.path, cancel);
+// The edits belong to the file they were made in.
+watch(
+  () => props.path,
+  () => {
+    drafts.value = [];
+    reasons.value = {};
+    commentError.value = null;
+  },
+);
 
-function cancel() {
-  selection.value = null;
-  draft.value = "";
-  title.value = "";
-  commentError.value = null;
-}
-
-async function addComment() {
-  if (!props.add || !selection.value) return;
-  if (props.investigate && title.value.trim() === "") {
-    commentError.value = "Give the proposal a title.";
-    return;
-  }
-  if (draft.value.trim() === "") {
-    commentError.value = "Write a comment for the selected lines.";
+/** Saves a run of edits as a suggestion; the editor then shows it as saved. */
+async function saveDraft(edit: Draft) {
+  if (!props.add) return;
+  const reason = (reasons.value[edit.key] ?? "").trim();
+  if (reason === "") {
+    commentError.value = "Say why the text should change.";
     return;
   }
   busy.value = true;
-  const failed = await props.add({ ...selection.value, text: draft.value.trim(), title: title.value.trim() });
+  const failed = await props.add({ ...edit.range, text: reason, kind: "SUGGESTION", replacement: edit.replacement });
   busy.value = false;
-  if (failed) {
-    commentError.value = failed;
-    return;
-  }
-  cancel();
+  commentError.value = failed;
+  if (!failed) delete reasons.value[edit.key];
+}
+
+function discard(edit: Draft) {
+  editor.value?.discard(edit.key);
+  delete reasons.value[edit.key];
+  commentError.value = null;
 }
 
 async function removeHighlight(highlight: string) {
@@ -106,60 +118,79 @@ function lineLabel({ from, to }: { from: number; to: number }): string {
   return from === to ? `Line ${from}` : `Lines ${from}–${to}`;
 }
 
-/** The words a comment is on, shortened to fit beside the Markdown. */
-function excerpt({ from, to, start, end }: Required<TextRange>): string {
+/** Exactly the text a range is on. */
+function selected({ from, to, start, end }: Required<TextRange>): string {
   if (!text.value) return "";
-  const words = text.value.text
+  return text.value.text
     .split("\n")
     .slice(from - 1, to)
     .map((line, index, all) => line.slice(index === 0 ? start : 0, index === all.length - 1 ? end : undefined))
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return words.length > 80 ? `${words.slice(0, 79)}…` : words;
+    .join("\n");
+}
+
+/** Words, shortened to fit beside the file. */
+function shorten(words: string): string {
+  const flat = words.replace(/\s+/g, " ").trim();
+  return flat.length > 80 ? `${flat.slice(0, 79)}…` : flat;
+}
+
+/** The words a highlight is on, shortened to fit beside the file. */
+function excerpt(range: Required<TextRange>): string {
+  return shorten(selected(range));
 }
 </script>
 
 <template>
   <div class="panel">
     <h2><code>{{ path }}</code></h2>
-    <p v-if="add && text" class="muted hint">Select any text to highlight it, or click a line to highlight the whole line, and say why it no longer holds.</p>
+    <p v-if="canSuggest" class="muted hint">
+      Type in the file to suggest new text. Your edits show in <span class="new">[brackets]</span> beside the struck-through text they replace;
+      {{ investigate ? "add each one to the investigation with a reason" : "save each one with a reason" }}. Saved suggestions are locked:
+      remove one to change it.
+    </p>
+    <p v-else-if="add && text" class="muted hint">This file is too long to edit here.</p>
     <div class="body">
       <div>
         <p v-if="error" class="muted">{{ error }}</p>
         <p v-else-if="!text" class="muted">Loading the file at this commit from GitHub…</p>
         <template v-else>
-          <SourceView
+          <SuggestionEditor
+            v-if="canSuggest"
+            ref="editor"
+            :key="path"
             :text="text.text"
-            :highlights="highlights"
-            :selectable="add !== undefined"
-            :selection="selection"
-            @select="(range) => (selection = range)"
+            :suggestions="suggestions"
+            @drafts="(list) => (drafts = list)"
           />
+          <SourceView v-else :text="text.text" :highlights="comments" :suggestions="suggestions" />
           <p v-if="text.truncated" class="muted">This file is very long; only its beginning is shown.</p>
         </template>
       </div>
-      <div v-if="highlights.length > 0 || selection" class="notes">
-        <form v-if="selection" class="comment-box" @submit.prevent="addComment">
-          <label v-if="investigate">
-            <span>Proposal title</span>
-            <input v-model="title" name="proposal-title" maxlength="120" placeholder="What should change in the documentation?" />
-          </label>
+      <div v-if="highlights.length > 0 || drafts.length > 0" class="notes">
+        <form v-for="(edit, index) in drafts" :key="edit.key" class="comment-box draft" @submit.prevent="saveDraft(edit)">
+          <div class="field">
+            <span><span class="number">{{ index + 1 }}</span> {{ lineLabel(edit.range) }} · not saved</span>
+            <del v-if="edit.original" class="quote">{{ shorten(edit.original) }}</del>
+            <ins class="quote">{{ edit.replacement === "" ? "(delete)" : `[${shorten(edit.replacement)}]` }}</ins>
+          </div>
           <label>
-            <span>{{ lineLabel(selection) }}</span>
-            <q v-if="excerpt(selection)" class="quote">{{ excerpt(selection) }}</q>
-            <textarea v-model="draft" name="comment" rows="3" maxlength="2000" placeholder="What should change here, and why?" />
+            <span>Why</span>
+            <textarea v-model="reasons[edit.key]" name="why" rows="2" maxlength="2000" placeholder="Why should the text change? Needed." />
           </label>
           <div class="actions">
-            <button type="submit" class="button" :disabled="busy">{{ investigate ? "Investigate" : "Add highlight" }}</button>
-            <button type="button" class="button secondary" :disabled="busy" @click="cancel">Cancel</button>
+            <button type="submit" class="button" :disabled="busy">{{ investigate ? "Add to investigation" : "Save suggestion" }}</button>
+            <button type="button" class="button secondary" :disabled="busy" @click="discard(edit)">Discard</button>
           </div>
         </form>
         <ErrorBanner :message="commentError" />
         <ul class="list">
-          <li v-for="item in highlights" :key="item.highlight" class="highlight">
-            <strong>{{ lineLabel(item) }}</strong>
-            <q v-if="excerpt(item)" class="quote">{{ excerpt(item) }}</q>
+          <li v-for="item in highlights" :key="item.highlight" :class="item.kind === 'SUGGESTION' ? 'suggestion' : 'highlight'">
+            <strong>{{ item.kind === "SUGGESTION" ? "Suggestion · " : "" }}{{ lineLabel(item) }}</strong>
+            <template v-if="item.kind === 'SUGGESTION'">
+              <del v-if="excerpt(item)" class="quote">{{ excerpt(item) }}</del>
+              <ins class="quote">{{ item.replacement === "" ? "(delete)" : `[${shorten(item.replacement)}]` }}</ins>
+            </template>
+            <q v-else-if="excerpt(item)" class="quote">{{ excerpt(item) }}</q>
             <p>{{ item.text }}</p>
             <button v-if="remove" type="button" class="link" :disabled="busy" @click="removeHighlight(item.highlight)">Remove</button>
           </li>
@@ -179,6 +210,11 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
   font-size: 14px;
 }
 
+.hint .new {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
 /* The Markdown, with its comments beside it. */
 .body {
   display: grid;
@@ -191,6 +227,27 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
   display: grid;
   gap: 10px;
   width: 260px;
+}
+
+/* An edit not yet saved, numbered as in the file. */
+.draft {
+  padding: 8px 12px;
+  border-left: 3px solid #2563eb;
+  background: #eff6ff;
+}
+
+.draft ins.quote {
+  color: #1e3a8a;
+}
+
+.number {
+  display: inline-block;
+  min-width: 1.4em;
+  border-radius: 999px;
+  background: #2563eb;
+  color: white;
+  font-size: 12px;
+  text-align: center;
 }
 
 .list {
@@ -208,6 +265,27 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
 .highlight {
   border-left: 3px solid #f59e0b;
   background: #fffbeb;
+}
+
+.suggestion {
+  border-left: 3px solid #16a34a;
+  background: #f0fdf4;
+}
+
+del.quote {
+  color: #991b1b;
+}
+
+ins.quote {
+  color: #166534;
+  font-style: normal;
+  text-decoration: none;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
 }
 
 .list p {
@@ -238,7 +316,6 @@ function excerpt({ from, to, start, end }: Required<TextRange>): string {
   font-weight: 600;
 }
 
-.comment-box input,
 .comment-box textarea {
   padding: 8px 12px;
   border: 1px solid var(--border);

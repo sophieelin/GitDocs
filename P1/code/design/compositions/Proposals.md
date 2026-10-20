@@ -34,15 +34,21 @@ proposal's commit, naming the `file`, the first and last lines (`from` and
 `to`), where the text starts on the first line and ends on the last (`start`
 and `end`, counting characters from 0), and a comment on why it no longer
 holds, and [remove a highlight](reaction:Proposals.Writing.UnhighlightProposal)
-again. The request names the file `file`, because the boundary owns a request's
-`path`. A highlight with no comment or no valid range is `INVALID_HIGHLIGHT`,
-and removing one the proposal does not have is `HIGHLIGHT_NOT_FOUND`. A
-highlight is saved at once, without waiting for the draft to be saved.
+again. Its `kind` is `COMMENT` for a comment only, or `SUGGESTION` for a
+suggested edit, whose `replacement` is the text to put in place of the
+highlighted text (empty to delete it); a comment's `replacement` is empty. The
+request names the file `file`, because the boundary owns a request's `path`. A
+highlight with no comment or no valid range is `INVALID_HIGHLIGHT`, a
+suggestion on text another suggestion in the file already covers is
+`SUGGESTIONS_OVERLAP`, and removing one the proposal does not have is
+`HIGHLIGHT_NOT_FOUND`. A highlight is saved at once, without waiting for the
+draft to be saved.
 
 The author may [discard the draft](reaction:Proposals.Writing.DiscardProposal)
-or [submit it](reaction:Proposals.Writing.SubmitProposal) once it has a
-rationale (`RATIONALE_MISSING` otherwise). It need not change the structure: a
-proposal may only highlight passages to change within a document.
+or [submit it](reaction:Proposals.Writing.SubmitProposal) once it changes
+something, by a change to the structure or a suggestion (`NO_CHANGES`
+otherwise), and has a rationale (`RATIONALE_MISSING`). A proposal may change
+only text within a document.
 None of these need a view: InvestigatingChanges itself refuses anyone but the
 author (`NOT_INVESTIGATOR`) and anything but a draft (`NOT_DRAFT`), so a direct
 call cannot skip the check. A missing proposal answers
@@ -68,8 +74,10 @@ Proposals.Writing.DiscardProposal at /proposals/discard
 
 Approving the review approves the proposal through
 [the review workflow](ReviewWorkflow.md). An approved proposal gives the git
-commands that make its changes. The author runs them in a clone of the
-repository, writes any new files, pushes, and then
+commands that make its changes to the structure; the editor also offers a
+patch, built in the browser from the files at the commit, that makes both
+those changes and the suggested edits. The author runs the commands or applies
+the patch in a clone of the repository, pushes, and then
 [marks the proposal applied](reaction:Proposals.Applying.ApplyProposal) with
 the full SHA of the commit that did it. This needs no view: InvestigatingChanges
 itself refuses anyone but the author (`NOT_INVESTIGATOR`), a proposal that is

@@ -13,8 +13,10 @@ import {
   InvestigationNotPending,
   NotApproved,
   NotDraft,
+  NoChanges,
   NotInvestigator,
   RationaleMissing,
+  SuggestionsOverlap,
 } from "./InvestigatingChanges.ts";
 import spec from "@design/concepts/InvestigatingChanges.md" with { type: "text" };
 
@@ -32,6 +34,8 @@ export const investigatingChanges = registerConcept({
     INVALID_OPERATIONS: InvalidOperations,
     INVALID_HIGHLIGHT: InvalidHighlight,
     HIGHLIGHT_NOT_FOUND: HighlightNotFound,
+    SUGGESTIONS_OVERLAP: SuggestionsOverlap,
+    NO_CHANGES: NoChanges,
     RATIONALE_MISSING: RationaleMissing,
     INVESTIGATION_NOT_PENDING: InvestigationNotPending,
     NOT_APPROVED: NotApproved,

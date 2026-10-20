@@ -112,7 +112,7 @@ describe("no session or an ended session", () => {
         withSession({ owner: "sophieelin", name: "PaperNet", commit: "6d4a4c6" + "b".repeat(33), title: "Another", currentStructure: structure }),
       ],
       ["/proposals/modify", withSession({ proposal: draft, ...draftChanges, title: "Changed" })],
-      ["/proposals/highlight", withSession({ proposal: draft, file: "README.md", from: 1, to: 1, start: 0, end: 3, text: "Why" })],
+      ["/proposals/highlight", withSession({ proposal: draft, file: "README.md", from: 1, to: 1, start: 0, end: 3, text: "Why", kind: "COMMENT", replacement: "" })],
       ["/proposals/unhighlight", withSession({ proposal: draft, highlight: "any" })],
       ["/proposals/submit", withSession({ proposal: draft, reviewer: "b-user" })],
       ["/proposals/discard", withSession({ proposal: draft })],
