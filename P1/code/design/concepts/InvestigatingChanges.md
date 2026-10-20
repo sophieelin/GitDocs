@@ -238,9 +238,9 @@ _forCommit(owner: String, name: String, commit: String) : many (investigation: I
 
 _commands(investigation: Investigation) : many (command: String)
   answers, in order, the shell commands that make the investigation's changes in a clone of the repository at its root
-  a move is `git mv` from its path to its new path, after `mkdir -p` for the new parent folder when it is not the root
-  a new file is `mkdir -p` for its parent folder when it is not the root, then `touch` and `git add` for the file
-  a new folder is `mkdir -p`, and a removed folder is `rmdir`
+  a moved file is `git mv` from its path to its new path; a moved folder is `git mv` for each documentation file in it, so code in the folder stays where it is
+  a new file is `touch` and then `git add` for the file, and a removed folder is `rmdir`
+  a folder that a change needs is made with `mkdir -p` just before it, only when neither the structure nor an earlier command has it
   quotes every path in single quotes, so a path with spaces or other special characters is passed as it is
   answers no rows for an unknown investigation or one with no changes
 ```
