@@ -1,5 +1,12 @@
 # GitDocs 
 
+## P2
+- [Website](https://gitdocs.mit-sdg.dev/sign-in?redirect=/repositories)
+- [Visual Design Study](P1/p1-docs/design-study.pdf)
+- [Updated User Journey](P1/p1-docs/user-journey-beta.md)
+- [Demo Video](https://youtu.be/m7VTPr7YKdk)
+- [Design Document]()
+
 ## P1
 - Project MVP code in P1/code
 - User journey in P1/p1-docs
@@ -12,3 +19,6 @@
 - [Concept specifications](docs/concept-specifications.md)
 - [UI sketches](docs/ui-sketches.md)
 - [User journey](docs/user-journey.md)
+
+
+
