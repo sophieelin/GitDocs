@@ -5,7 +5,7 @@
 - [Visual Design Study](P1/p1-docs/design-study.pdf)
 - [Updated User Journey](P1/p1-docs/user-journey-beta.md)
 - [Demo Video](https://youtu.be/m7VTPr7YKdk)
-- [Design Document]()
+- [Design Document](https://github.com/sophieelin/6.1040/blob/main/design-notebook)
 
 ## P1
 - Project MVP code in P1/code
