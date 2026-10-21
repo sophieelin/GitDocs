@@ -49,5 +49,23 @@ describe("RepositoryAccess", () => {
   test("record refuses a repository with no owner or name", async () => {
     await expect(access.record({ user: "ari", owner: "", name: "PaperNet", canPush: true, at: noon })).rejects.toThrow(InvalidRepository);
     await expect(access.record({ user: "ari", owner: "sophieelin", name: " ", canPush: true, at: noon })).rejects.toThrow(InvalidRepository);
+    expect(await testDb.db.collection("RepositoryAccess.grants").countDocuments()).toBe(0);
+  });
+
+  test("a recorded refusal does not authorize, and a refused authorize records nothing", async () => {
+    await access.record({ user: "ari", ...paperNet, canPush: false, at: noon });
+
+    await expect(access.authorize({ user: "ari", ...paperNet, at: noon })).rejects.toThrow(NoPushAccess);
+    await expect(access.authorize({ user: "bob", ...paperNet, at: noon })).rejects.toThrow(NoPushAccess);
+    expect(await access._canPush({ user: "ari", ...paperNet, at: noon })).toEqual({ canPush: false });
+    expect(await testDb.db.collection("RepositoryAccess.grants").countDocuments()).toBe(1);
+  });
+
+  test("grants for different users of one repository are separate", async () => {
+    await access.record({ user: "ari", ...paperNet, canPush: true, at: noon });
+    await access.record({ user: "bob", ...paperNet, canPush: false, at: noon });
+
+    expect(await access.authorize({ user: "ari", ...paperNet, at: noon })).toEqual({});
+    await expect(access.authorize({ user: "bob", ...paperNet, at: noon })).rejects.toThrow(NoPushAccess);
   });
 });

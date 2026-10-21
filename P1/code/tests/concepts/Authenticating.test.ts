@@ -62,6 +62,21 @@ describe("Authenticating", () => {
     expect(await testDb.db.collection("Authenticating.accounts").countDocuments()).toBe(0);
   });
 
+  test("a refused sign-in leaves an existing account's token alone", async () => {
+    await authenticating.authenticate({ githubId: "101", login: "ari", token: "sealed" });
+
+    await expect(authenticating.authenticate({ githubId: "101", login: "ari", token: "" })).rejects.toThrow(InvalidIdentity);
+    expect(await authenticating._token({ username: "ari" })).toEqual([{ token: "sealed" }]);
+  });
+
+  test("different GitHub accounts get separate accounts and tokens", async () => {
+    expect(await authenticating.authenticate({ githubId: "101", login: "ari", token: "a" })).toEqual({ account: "ari" });
+    expect(await authenticating.authenticate({ githubId: "202", login: "bo", token: "b" })).toEqual({ account: "bo" });
+
+    expect(await authenticating._token({ username: "ari" })).toEqual([{ token: "a" }]);
+    expect(await authenticating._token({ username: "bo" })).toEqual([{ token: "b" }]);
+  });
+
   test("an unknown username has no token", async () => {
     expect(await authenticating._token({ username: "nobody" })).toEqual([]);
   });

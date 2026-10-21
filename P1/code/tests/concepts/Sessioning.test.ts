@@ -63,6 +63,25 @@ describe("Sessioning", () => {
     expect(stored.map((s) => s._id)).toEqual(["session-2"]);
   });
 
+  test("ending a session that never existed is refused and ends no other session", async () => {
+    const sessioning = new SessioningConcept(testDb.db, () => new Date("2099-07-20T12:00:00.000Z"), ids("session-1"));
+    await sessioning.start({ subject: "ari" });
+
+    await expect(sessioning.end({ session: "invented" })).rejects.toThrow(UnknownSession);
+    expect(await sessioning.current({ session: "session-1" })).toEqual({ subject: "ari" });
+  });
+
+  test("one subject may hold several sessions, and ending one leaves the others", async () => {
+    const sessioning = new SessioningConcept(testDb.db, () => new Date("2099-07-20T12:00:00.000Z"), ids("session-1", "session-2"));
+    await sessioning.start({ subject: "ari" });
+    await sessioning.start({ subject: "ari" });
+
+    await sessioning.end({ session: "session-1" });
+    expect(await sessioning._active({ session: "session-1" })).toEqual([]);
+    expect(await sessioning.current({ session: "session-2" })).toEqual({ subject: "ari" });
+    await expect(sessioning.end({ session: "session-1" })).rejects.toThrow(UnknownSession);
+  });
+
   test("ending the same session twice at once succeeds only once", async () => {
     const sessioning = new SessioningConcept(testDb.db, () => new Date("2099-07-20T12:00:00.000Z"), ids("session-1"));
     await sessioning.start({ subject: "ari" });

@@ -260,6 +260,83 @@ describe("InvestigatingChanges", () => {
     expect(await investigating._get({ investigation: "i-1" })).toEqual([submittedOne!]);
   });
 
+  test("its principle, end to end: highlight, plan, submit, approve, then apply with the commit that made the changes", async () => {
+    const investigating = newConcept(ids("i-1", "h-1"));
+    expect(await investigating.start({ investigator: "ari", ...valid, at: morning })).toEqual({ investigation: "i-1" });
+
+    const passage = { path: agentsReadme.path, from: 1, to: 1, start: 0, end: 9, text: "Buried three folders deep.", ...comment };
+    expect(await investigating.highlight({ investigation: "i-1", investigator: "ari", ...passage, at: morning })).toEqual({ highlight: "h-1" });
+    await investigating.modify({ ...draftOf("i-1"), at: morning });
+    await investigating.submit({ investigation: "i-1", investigator: "ari", at: morning });
+    await investigating.approve({ investigation: "i-1", at: noon });
+
+    // Once approved, it gives the git commands that make its changes.
+    expect(await investigating._commands({ investigation: "i-1" })).toEqual(gitCommands(current, operations).map((command) => ({ command })));
+    expect(await investigating.apply({ investigation: "i-1", investigator: "ari", commit: applied, at: noon })).toEqual({});
+
+    expect((await investigating._get({ investigation: "i-1" }))[0]).toMatchObject({
+      status: "APPLIED",
+      appliedCommit: applied,
+      operations,
+      proposedStructure: proposedFrom(current, operations),
+    });
+    expect(await investigating._highlights({ investigation: "i-1" })).toEqual([{ highlight: "h-1", ...passage }]);
+    await expect(investigating.approve({ investigation: "i-1", at: noon })).rejects.toThrow(InvestigationNotPending);
+  });
+
+  test("modifying again replaces the earlier changes rather than adding to them", async () => {
+    const investigating = newConcept();
+    await investigating.start({ investigator: "ari", ...valid, at: morning });
+    await investigating.modify({ ...draftOf("i-1"), operations: [{ kind: "move", from: "README.md", to: "OVERVIEW.md" }], at: morning });
+    await investigating.modify({ ...draftOf("i-1"), operations, at: noon });
+    expect((await investigating._get({ investigation: "i-1" }))[0]).toMatchObject({ operations, updatedAt: noon });
+
+    // Taking every change back leaves the current structure as the proposal.
+    await investigating.modify({ ...draftOf("i-1"), operations: [], at: noon });
+    expect((await investigating._get({ investigation: "i-1" }))[0]).toMatchObject({ operations: [], proposedStructure: current });
+    await expect(investigating.submit({ investigation: "i-1", investigator: "ari", at: noon })).rejects.toThrow(NoChanges);
+    expect((await investigating._get({ investigation: "i-1" }))[0]?.status).toBe("DRAFT");
+  });
+
+  test("unhighlight refuses another investigator and a missing investigation, and keeps the highlight", async () => {
+    const investigating = newConcept(ids("i-1", "h-1"));
+    await investigating.start({ investigator: "ari", ...valid, at: morning });
+    await investigating.highlight({ investigation: "i-1", investigator: "ari", path: "README.md", from: 1, to: 1, start: 0, end: 5, text: "Why", ...comment, at: morning });
+    const before = await investigating._get({ investigation: "i-1" });
+
+    await expect(investigating.unhighlight({ investigation: "i-1", investigator: "bob", highlight: "h-1", at: noon })).rejects.toThrow(NotInvestigator);
+    await expect(investigating.unhighlight({ investigation: "missing", investigator: "ari", highlight: "h-1", at: noon })).rejects.toThrow(
+      InvestigationNotFound,
+    );
+    await expect(investigating.unhighlight({ investigation: "i-1", investigator: "ari", highlight: "h-9", at: noon })).rejects.toThrow(
+      HighlightNotFound,
+    );
+
+    expect((await investigating._highlights({ investigation: "i-1" })).map(({ highlight }) => highlight)).toEqual(["h-1"]);
+    expect(await investigating._get({ investigation: "i-1" })).toEqual(before);
+  });
+
+  test("a submitted investigation cannot be discarded, and is still there", async () => {
+    const investigating = newConcept();
+    await submitted(investigating, "ari", morning);
+
+    await expect(investigating.discard({ investigation: "i-1", investigator: "ari" })).rejects.toThrow(NotDraft);
+    expect((await investigating._get({ investigation: "i-1" }))[0]).toMatchObject({ status: "SUBMITTED" });
+  });
+
+  test("a refused apply records no commit and leaves the investigation approved", async () => {
+    const investigating = newConcept();
+    await submitted(investigating, "ari", morning);
+    await investigating.approve({ investigation: "i-1", at: morning });
+    const before = await investigating._get({ investigation: "i-1" });
+
+    await expect(investigating.apply({ investigation: "i-1", investigator: "bob", commit: applied, at: noon })).rejects.toThrow(NotInvestigator);
+    await expect(investigating.apply({ investigation: "i-1", investigator: "ari", commit: "not-a-sha", at: noon })).rejects.toThrow(InvalidCommit);
+
+    expect(await investigating._get({ investigation: "i-1" })).toEqual(before);
+    expect(before[0]).toMatchObject({ status: "APPROVED", appliedCommit: "" });
+  });
+
   test("submit takes a suggestion as the only change, but not a comment", async () => {
     const investigating = newConcept(ids("i-1", "h-1", "h-2"));
     await investigating.start({ investigator: "ari", ...valid, at: morning });

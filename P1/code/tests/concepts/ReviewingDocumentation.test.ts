@@ -85,8 +85,22 @@ describe("ReviewingDocumentation", () => {
     expect((await reviews._get({ review: "r-2" }))[0]).toMatchObject({ proposal: "p-2", decision: "PENDING" });
   });
 
-  test("approve refuses a missing review", async () => {
-    await expect(newConcept().approve({ review: "missing", reviewer: "bo", at: noon })).rejects.toThrow(ReviewNotFound);
+  test("approve refuses a missing review, and creates none", async () => {
+    const reviews = newConcept();
+    await expect(reviews.approve({ review: "missing", reviewer: "bo", at: noon })).rejects.toThrow(ReviewNotFound);
+    expect(await reviews._get({ review: "missing" })).toEqual([]);
+    expect(await testDb.db.collection("ReviewingDocumentation.reviews").countDocuments()).toBe(0);
+  });
+
+  test("a refused second open leaves exactly the first review", async () => {
+    const reviews = newConcept();
+    await reviews.open({ proposal: "p-1", reviewer: "bo", at: morning });
+    await expect(reviews.open({ proposal: "p-1", reviewer: "cy", at: noon })).rejects.toThrow(ReviewExists);
+
+    expect(await testDb.db.collection("ReviewingDocumentation.reviews").countDocuments()).toBe(1);
+    expect(await reviews._forProposal({ proposal: "p-1" })).toEqual([
+      { review: "r-1", reviewer: "bo", decision: "PENDING", openedAt: morning, updatedAt: morning },
+    ]);
   });
 
   test("two approvals at once: one succeeds and the other is refused", async () => {
