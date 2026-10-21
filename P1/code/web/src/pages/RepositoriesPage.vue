@@ -158,7 +158,7 @@ input {
   padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--card);
   color: var(--ink-faint);
   font: inherit;
   font-size: 14px;

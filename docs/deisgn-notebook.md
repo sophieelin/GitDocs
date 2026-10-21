@@ -146,3 +146,23 @@ For the documentation and code trees, I wanted folders to be easy to navigate. F
 I kept saved investigations in the MVP, but the more advanced investigation features were still out of scope. The MVP would not include the full agent investigation workflow, evidence collection, Copilot-style questions, or automatically identifying affected documentation.
 
 There are many user interactions I want to fix in Beta, which includes the investigation and proposal front end and user flow. Additionally, there are so many moving parts and they seem redundant, which would be easier if I simplified some parts. In particular, I realized it isn't intuitive how investigations and proposals differ. It might be better to consolidate them into one, and just have the same page for investigating code (looking to see if there are any unconsistencies), as well as sending a proposal. 
+
+# October 19 
+
+I refactored my concepts. The main one was 
+
+# October 20
+got rid of commenting and had like a suggestion one 
+I decided to add a notification feature that shows recent 
+
+Option A: "Connect GitHub" (keep passwords). People register and sign in as they do now, then click Connect GitHub once. GitHub sends them back with a token, and we save their GitHub user ID and token on their account.
+- One account each: a unique index on the GitHub user ID means one GitHub account can't be linked to two app accounts. We'd also allow only one link per app account.
+- Good: it keeps the existing Authenticating concept, its tests, and the "Register and sign in" phase in your MVP doc.
+- Costs: two credentials per person, plus cases to handle: disconnecting, a GitHub account already linked elsewhere, and a signed-in user who hasn't connected yet.
+
+Option B: "Sign in with GitHub" only. The account is the GitHub user, so there's no password and nothing to link.
+
+My take: the push-access check needs a GitHub token for every edit, review and approval. So under A everyone who does anything must connect anyway, which makes the password mostly redundant, and B is simpler. Go with A instead if your assignment needs the password-based Authenticating concept, which the MVP doc's "Register and sign in" phase suggests. Neither stops one person with two GitHub accounts from making two app accounts; nothing short of identity checks can.
+
+How we use MongoDB now:
+- Where it runs: a local MongoDB in a container (compose.yaml) for development, and a tem

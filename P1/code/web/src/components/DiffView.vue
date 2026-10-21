@@ -23,7 +23,7 @@ const lines = computed(() =>
   max-height: 420px;
   overflow: auto;
   border-top: 1px solid var(--border);
-  background: #fbfcfd;
+  background: var(--surface);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -45,7 +45,7 @@ const lines = computed(() =>
 }
 
 .hunk {
-  background: #eef2ff;
+  background: var(--accent-soft);
   color: var(--ink-faint);
 }
 </style>

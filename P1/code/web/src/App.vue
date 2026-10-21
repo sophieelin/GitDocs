@@ -65,14 +65,17 @@ const readOnly = computed(() => repository.value !== null && canPush(repository.
 
 <style>
 :root {
-  --ink: #1e293b;
-  --ink-soft: #475569;
-  --ink-faint: #64748b;
-  --border: #e2e8f0;
-  --sidebar: #f8fafc;
-  --accent: #4263eb;
-  --accent-soft: #e7edff;
+  --ink: #3a352b;
+  --ink-soft: #5e5748;
+  --ink-faint: #8c8574;
+  --strong: #201412;
+  --border: #e1e5f9;
+  --sidebar: #e1e4f2;
+  --hover: #d3d7eb;
+  --accent: #6a75b0;
+  --accent-soft: #e1e5f9;
   --surface: #fff;
+  --card: #fff;
 }
 
 body {
@@ -109,7 +112,18 @@ main {
 
 main.bare {
   min-height: 100vh;
-  background: var(--sidebar);
+  background: var(--surface);
+}
+
+h1,
+h2,
+h3,
+strong {
+  color: var(--strong);
+}
+
+::placeholder {
+  color: var(--ink-faint);
 }
 
 /* Shared pieces from the UI sketches. */
@@ -127,7 +141,7 @@ h1.page-title {
   padding: 22px 24px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--card);
 }
 
 .card > h2 {
@@ -147,7 +161,7 @@ h1.page-title {
 }
 
 .button.secondary {
-  background: #fff;
+  background: var(--card);
   color: var(--accent);
 }
 

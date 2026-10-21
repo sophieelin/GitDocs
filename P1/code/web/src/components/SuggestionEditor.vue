@@ -344,7 +344,7 @@ defineExpose({ discard });
   line-height: 1.5;
 }
 
-/* Removed text struck through in red, new text in brackets: green once saved, blue until then. */
+/* Removed text struck through in red, new text in brackets in the accent color; unsaved ones are numbered. */
 .editor :deep(.cm-edge del) {
   background: #fee2e2;
   color: #991b1b;
@@ -353,25 +353,8 @@ defineExpose({ discard });
 
 .editor :deep(.cm-edge),
 .editor :deep(.cm-inserted) {
+  color: var(--accent);
   font-weight: 600;
-}
-
-.editor :deep(.cm-saved.cm-edge) {
-  color: #15803d;
-}
-
-.editor :deep(.cm-saved.cm-inserted) {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.editor :deep(.cm-draft.cm-edge) {
-  color: #1d4ed8;
-}
-
-.editor :deep(.cm-draft.cm-inserted) {
-  background: #dbeafe;
-  color: #1e3a8a;
 }
 
 .editor :deep(.cm-edge sup) {

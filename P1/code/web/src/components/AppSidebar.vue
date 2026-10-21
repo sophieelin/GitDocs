@@ -63,7 +63,7 @@ const links = computed(() => {
 
 .brand {
   padding: 0 12px;
-  color: var(--ink);
+  color: var(--strong);
   font-size: 24px;
   font-weight: 700;
   text-decoration: none;
@@ -85,11 +85,11 @@ nav {
 }
 
 .link:hover {
-  background: #eef2ff;
+  background: var(--hover);
 }
 
 .link.current {
-  background: var(--accent-soft);
+  background: var(--hover);
   color: var(--ink);
   font-weight: 600;
 }

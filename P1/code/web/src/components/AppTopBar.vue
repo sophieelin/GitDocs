@@ -62,7 +62,7 @@ async function leave() {
   justify-content: space-between;
   padding: 18px 40px;
   border-bottom: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
 }
 
 .breadcrumb {
@@ -114,7 +114,7 @@ svg {
   padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--card);
   color: var(--ink-soft);
   font: inherit;
   cursor: pointer;

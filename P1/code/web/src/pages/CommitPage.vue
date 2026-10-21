@@ -342,7 +342,7 @@ const homePath = computed(() => (repository.value ? repositoryPath(repository.va
   width: 100%;
   padding: 10px 14px;
   border: none;
-  background: #fff;
+  background: var(--card);
   color: var(--ink);
   font: inherit;
   text-align: left;
@@ -350,7 +350,7 @@ const homePath = computed(() => (repository.value ? repositoryPath(repository.va
 }
 
 .file-row:hover {
-  background: var(--sidebar);
+  background: var(--hover);
 }
 
 .caret {

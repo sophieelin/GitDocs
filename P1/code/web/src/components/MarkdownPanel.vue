@@ -211,7 +211,7 @@ function excerpt(range: Required<TextRange>): string {
 }
 
 .hint .new {
-  color: #1d4ed8;
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -232,19 +232,19 @@ function excerpt(range: Required<TextRange>): string {
 /* An edit not yet saved, numbered as in the file. */
 .draft {
   padding: 8px 12px;
-  border-left: 3px solid #2563eb;
-  background: #eff6ff;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
 }
 
 .draft ins.quote {
-  color: #1e3a8a;
+  color: var(--accent);
 }
 
 .number {
   display: inline-block;
   min-width: 1.4em;
   border-radius: 999px;
-  background: #2563eb;
+  background: var(--accent);
   color: white;
   font-size: 12px;
   text-align: center;

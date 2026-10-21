@@ -252,10 +252,10 @@ const isCodeEmpty = computed(() => documentation.value !== null && isEmptyFolder
   align-items: center;
   gap: 6px;
   padding: 10px 14px;
-  border: 1px solid #bfdbfe;
+  border: 1px solid var(--accent-soft);
   border-radius: 8px;
-  background: #eff6ff;
-  color: #1e40af;
+  background: var(--accent-soft);
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -317,7 +317,7 @@ const isCodeEmpty = computed(() => documentation.value !== null && isEmptyFolder
 }
 
 .commit:hover {
-  background: var(--sidebar);
+  background: var(--hover);
 }
 
 .open {

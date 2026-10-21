@@ -189,7 +189,7 @@ function release(event: MouseEvent) {
 }
 
 .selectable .line:hover {
-  background: var(--accent-soft);
+  background: var(--hover);
 }
 
 /* Line numbers are not part of the text a drag selects. */
@@ -227,7 +227,7 @@ function release(event: MouseEvent) {
   border-bottom: 2px solid #16a34a;
 }
 
-/* A suggestion: the old text struck out in red, the new text after it in green. */
+/* A suggestion: the old text struck out in red, the new text after it in the accent color. */
 .content .suggested {
   background: #fee2e2;
   color: #991b1b;
@@ -236,8 +236,7 @@ function release(event: MouseEvent) {
 
 .inserted::after {
   content: "[" attr(data-insert) "]";
-  background: #dcfce7;
-  color: #166534;
+  color: var(--accent);
   font-weight: 600;
   white-space: pre-wrap;
   user-select: none;
@@ -246,6 +245,6 @@ function release(event: MouseEvent) {
 .selected,
 .selectable .selected:hover,
 .content .selected {
-  background: #bfdbfe;
+  background: var(--accent-soft);
 }
 </style>
