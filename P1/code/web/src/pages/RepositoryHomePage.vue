@@ -6,7 +6,7 @@ import MarkdownPanel from "../components/MarkdownPanel.vue";
 import TreeView from "../components/TreeView.vue";
 import { errorMessage, handleEndedSession } from "../errors.ts";
 import { gitHubErrorMessages, listCommits, readTree, type CommitsResponse, type TreeResponse } from "../github.ts";
-import { highlightProposal, startProposal, type Highlight } from "../proposals.ts";
+import { highlightProposal, listReviewQueue, startProposal, type Highlight } from "../proposals.ts";
 import { rememberRepository } from "../recentRepositories.ts";
 import { useRefreshOnFocus } from "../refresh.ts";
 import { repositoryPath, useCurrentRepository } from "../repository.ts";
@@ -30,7 +30,22 @@ const error = ref<string | null>(null);
 const owner = computed(() => repository.value?.owner ?? "");
 const name = computed(() => repository.value?.name ?? "");
 
+/** Proposals whose author asked the signed-in user to review them, shown as notices at the top. */
+const reviewRequests = ref<{ proposal: string; author: string; title: string }[]>([]);
+
+async function loadReviewRequests() {
+  if (!repository.value) return;
+  const result = await listReviewQueue(repository.value);
+  // A failed check leaves the notices as they were; the Reviews page shows the error.
+  if ("error" in result) {
+    handleEndedSession(result.error);
+    return;
+  }
+  reviewRequests.value = result.repository.proposals;
+}
+
 async function load() {
+  void loadReviewRequests();
   const listed = await listCommits(owner.value, name.value);
   if ("error" in listed) {
     if (!handleEndedSession(listed.error)) error.value = errorMessage(listed.error, gitHubErrorMessages);
@@ -79,6 +94,7 @@ watch([owner, name], () => {
   documentation.value = null;
   reading.value = null;
   error.value = null;
+  reviewRequests.value = [];
   pending.value = null;
   title.value = "";
   void load();
@@ -141,6 +157,15 @@ const isCodeEmpty = computed(() => documentation.value !== null && isEmptyFolder
 
 <template>
   <section>
+    <ul v-if="repository && reviewRequests.length > 0" class="review-requests" role="status">
+      <li v-for="request in reviewRequests" :key="request.proposal">
+        <RouterLink :to="repositoryPath(repository, `/proposals/${request.proposal}`)">
+          <strong>{{ request.author }}</strong> requested your review on “{{ request.title }}”
+          <span aria-hidden="true">›</span>
+        </RouterLink>
+      </li>
+    </ul>
+
     <h1 class="page-title">{{ owner }}/{{ name }}</h1>
     <p class="page-subtitle">The code as it is now, and recent commits. Open a file and edit it to suggest changes to investigate.</p>
     <ErrorBanner :message="error" />
@@ -213,6 +238,35 @@ const isCodeEmpty = computed(() => documentation.value !== null && isEmptyFolder
 </template>
 
 <style scoped>
+/* Requests for the signed-in user's review, above everything else. */
+.review-requests {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.review-requests a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e40af;
+  text-decoration: none;
+}
+
+.review-requests a:hover {
+  border-color: var(--accent);
+}
+
+.review-requests span {
+  margin-left: auto;
+}
+
 .ide {
   display: grid;
   grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
