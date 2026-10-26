@@ -14,8 +14,8 @@ const reasons: Record<string, string> = {
   state: "That sign-in expired or was started in another tab. Try again.",
   taken: "Another GitDocs account already uses this GitHub name. Ask the person who runs GitDocs for help.",
   github: "GitHub could not be reached. Try again later.",
-  "not-configured":
-    "GitHub sign-in is not set up on this server yet. Add GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, and TOKEN_SECRET to P1/code/.env (see .env.example), then restart the backend.",
+  // Setup details are for whoever runs the server, so they go only to the backend's log.
+  "not-configured": GENERAL_ERROR,
   failed: GENERAL_ERROR,
 };
 

@@ -115,6 +115,12 @@ main.bare {
   background: var(--surface);
 }
 
+@media (max-width: 640px) {
+  main {
+    padding: 24px 16px;
+  }
+}
+
 h1,
 h2,
 h3,

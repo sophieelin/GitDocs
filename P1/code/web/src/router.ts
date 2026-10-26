@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import CommitPage from "./pages/CommitPage.vue";
+import HomePage from "./pages/HomePage.vue";
 import PlaceholderPage from "./pages/PlaceholderPage.vue";
 import ProposalEditPage from "./pages/ProposalEditPage.vue";
 import ProposalPage from "./pages/ProposalPage.vue";
@@ -27,7 +28,8 @@ const workspace = "/repositories/:owner/:name";
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", redirect: "/repositories" },
+    // What GitDocs is, for visitors who are not signed in. Signed-in users go on to their repositories.
+    { path: "/", component: HomePage, meta: { title: "GitDocs", public: true } },
     { path: "/sign-in", component: SignInPage, meta: { title: "Sign in", public: true } },
     // GitHub sign-in comes back here with the session in the URL fragment.
     { path: "/signed-in", component: SignedInPage, meta: { title: "Signing in", public: true } },
@@ -50,6 +52,6 @@ router.beforeEach(async (to) => {
   await restoreSession();
   const signedIn = useSession().session !== null;
   if (!to.meta.public && !signedIn) return { path: "/sign-in", query: { redirect: to.fullPath } };
-  if (to.path === "/sign-in" && signedIn) return "/repositories";
+  if ((to.path === "/" || to.path === "/sign-in") && signedIn) return "/repositories";
   return true;
 });
