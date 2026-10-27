@@ -64,27 +64,7 @@ const readOnly = computed(() => repository.value !== null && canPush(repository.
 </template>
 
 <style>
-:root {
-  --ink: #3a352b;
-  --ink-soft: #5e5748;
-  --ink-faint: #8c8574;
-  --strong: #201412;
-  --border: #e1e5f9;
-  --sidebar: #e1e4f2;
-  --hover: #d3d7eb;
-  --accent: #6a75b0;
-  --accent-soft: #e1e5f9;
-  --surface: #fff;
-  --card: #fff;
-}
-
-body {
-  margin: 0;
-  font-family: Inter, system-ui, sans-serif;
-  color: var(--ink);
-  background: var(--surface);
-}
-
+/* The shell's layout. Colors, fonts, and shared classes are in styles/theme.css. */
 .shell {
   display: grid;
   grid-template-columns: 250px 1fr;
@@ -104,9 +84,9 @@ main {
 .read-only {
   margin: 0;
   padding: 10px 40px;
-  border-bottom: 1px solid #fde68a;
-  background: #fffbeb;
-  color: #92400e;
+  border-bottom: 1px solid var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-ink);
   font-size: 14px;
 }
 
@@ -119,64 +99,5 @@ main.bare {
   main {
     padding: 24px 16px;
   }
-}
-
-h1,
-h2,
-h3,
-strong {
-  color: var(--strong);
-}
-
-::placeholder {
-  color: var(--ink-faint);
-}
-
-/* Shared pieces from the UI sketches. */
-h1.page-title {
-  margin: 0 0 6px;
-  font-size: 28px;
-}
-
-.page-subtitle {
-  margin: 0 0 28px;
-  color: var(--ink-faint);
-}
-
-.card {
-  padding: 22px 24px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card);
-}
-
-.card > h2 {
-  margin: 0 0 16px;
-  font-size: 17px;
-}
-
-.button {
-  padding: 10px 18px;
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  background: var(--accent);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.button.secondary {
-  background: var(--card);
-  color: var(--accent);
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.muted {
-  color: var(--ink-faint);
 }
 </style>

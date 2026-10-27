@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SiteHeader from "../components/SiteHeader.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 
 /** One line of the example tree: `-` was removed, `+` was added, `" "` is unchanged. */
@@ -48,10 +49,9 @@ const steps = [
 
 <template>
   <div class="home">
-    <header class="top">
-      <RouterLink to="/" class="wordmark">GitDocs</RouterLink>
-      <RouterLink to="/sign-in" class="sign-in">Sign in</RouterLink>
-    </header>
+    <SiteHeader>
+      <RouterLink to="/sign-in" class="button secondary small">Sign in</RouterLink>
+    </SiteHeader>
 
     <section class="intro">
       <div class="pitch">
@@ -123,39 +123,8 @@ const steps = [
 
 <style scoped>
 .home {
-  --serif: "Iowan Old Style", "Charter", "Palatino Linotype", Georgia, serif;
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   max-width: 1080px;
   margin: 0 auto;
-}
-
-.top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.wordmark {
-  color: var(--strong);
-  font-size: 18px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.sign-in {
-  padding: 7px 14px;
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  color: var(--accent);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.sign-in:hover {
-  background: var(--accent-soft);
 }
 
 .intro {
@@ -187,12 +156,6 @@ h1 {
   flex-wrap: wrap;
   gap: 20px;
   align-items: center;
-}
-
-.actions .button,
-.why .button {
-  display: inline-block;
-  text-decoration: none;
 }
 
 .how-link {
@@ -241,14 +204,9 @@ h1 {
   font-weight: 600;
 }
 
-code,
-.tree,
-.commands {
-  font-family: var(--mono);
-}
-
 .tree {
   margin: 0;
+  font-family: var(--mono);
   padding: 12px 0;
   list-style: none;
   font-size: 13.5px;
@@ -267,18 +225,17 @@ code,
 }
 
 .removed {
-  background: #fbeeec;
-  color: #8a3324;
+  background: var(--removed-bg);
+  color: var(--removed-ink);
 }
 
 .removed span:nth-child(2) {
   text-decoration: line-through;
-  text-decoration-color: #d9a59b;
 }
 
 .added {
-  background: #edf5ee;
-  color: #2f5f37;
+  background: var(--added-bg);
+  color: var(--added-ink);
 }
 
 .removed .mark,
@@ -289,7 +246,7 @@ code,
 .note {
   margin-left: auto;
   color: var(--ink-faint);
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--sans);
   font-size: 12px;
 }
 
@@ -304,8 +261,8 @@ code,
 .commands {
   margin: 0;
   padding: 14px 20px;
-  background: #23201b;
-  color: #e9e4d8;
+  background: var(--code-bg);
+  color: var(--code-ink);
   font-size: 12.5px;
   line-height: 1.7;
   overflow-x: auto;

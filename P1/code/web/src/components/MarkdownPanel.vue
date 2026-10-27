@@ -46,6 +46,9 @@ const suggestions = computed(() => props.highlights.filter((item) => item.kind =
 /** Edits not yet saved as suggestions, and the reason written for each. */
 const drafts = ref<Draft[]>([]);
 const reasons = ref<Record<number, string>>({});
+/** The text selected in the editor, which a comment box opens on at once, and the comment being written. */
+const picked = ref<Required<TextRange> | null>(null);
+const note = ref("");
 const editor = ref<{ discard: (key: number) => void } | null>(null);
 const commentError = ref<string | null>(null);
 const busy = ref(false);
@@ -82,9 +85,36 @@ watch(
   () => {
     drafts.value = [];
     reasons.value = {};
+    picked.value = null;
+    note.value = "";
     commentError.value = null;
   },
 );
+
+/** A new selection moves the comment box; an empty one closes it, unless a comment is being written. */
+function pick(range: Required<TextRange> | null) {
+  if (range || note.value.trim() === "") picked.value = range;
+}
+
+async function saveComment() {
+  if (!props.add || !picked.value) return;
+  const comment = note.value.trim();
+  if (comment === "") {
+    commentError.value = "Write a comment first.";
+    return;
+  }
+  busy.value = true;
+  const failed = await props.add({ ...picked.value, text: comment, kind: "COMMENT", replacement: "" });
+  busy.value = false;
+  commentError.value = failed;
+  if (!failed) cancelComment();
+}
+
+function cancelComment() {
+  picked.value = null;
+  note.value = "";
+  commentError.value = null;
+}
 
 /** Saves a run of edits as a suggestion; the editor then shows it as saved. */
 async function saveDraft(edit: Draft) {
@@ -144,9 +174,7 @@ function excerpt(range: Required<TextRange>): string {
   <div class="panel">
     <h2><code>{{ path }}</code></h2>
     <p v-if="canSuggest" class="muted hint">
-      Type in the file to suggest new text. Your edits show in <span class="new">[brackets]</span> beside the struck-through text they replace;
-      {{ investigate ? "add each one to the investigation with a reason" : "save each one with a reason" }}. Saved suggestions are locked:
-      remove one to change it.
+      Select text to comment on it, or type in the file to suggest new text.
     </p>
     <p v-else-if="add && text" class="muted hint">This file is too long to edit here.</p>
     <div class="body">
@@ -161,12 +189,27 @@ function excerpt(range: Required<TextRange>): string {
             :text="text.text"
             :suggestions="suggestions"
             @drafts="(list) => (drafts = list)"
+            @select="pick"
           />
           <SourceView v-else :text="text.text" :highlights="comments" :suggestions="suggestions" />
           <p v-if="text.truncated" class="muted">This file is very long; only its beginning is shown.</p>
         </template>
       </div>
-      <div v-if="highlights.length > 0 || drafts.length > 0" class="notes">
+      <div v-if="highlights.length > 0 || drafts.length > 0 || picked" class="notes">
+        <form v-if="picked" class="comment-box draft" @submit.prevent="saveComment">
+          <div class="field">
+            <span>{{ lineLabel(picked) }} · comment</span>
+            <q v-if="excerpt(picked)" class="quote">{{ excerpt(picked) }}</q>
+          </div>
+          <label>
+            <span>Comment</span>
+            <textarea v-model="note" name="comment" rows="2" maxlength="2000" placeholder="What about this text?" />
+          </label>
+          <div class="actions">
+            <button type="submit" class="button" :disabled="busy">Comment</button>
+            <button type="button" class="button secondary" :disabled="busy" @click="cancelComment">Cancel</button>
+          </div>
+        </form>
         <form v-for="(edit, index) in drafts" :key="edit.key" class="comment-box draft" @submit.prevent="saveDraft(edit)">
           <div class="field">
             <span><span class="number">{{ index + 1 }}</span> {{ lineLabel(edit.range) }} · not saved</span>
@@ -208,11 +251,6 @@ function excerpt(range: Required<TextRange>): string {
 .hint {
   margin: -8px 0 12px;
   font-size: 14px;
-}
-
-.hint .new {
-  color: var(--accent);
-  font-weight: 600;
 }
 
 /* The Markdown, with its comments beside it. */

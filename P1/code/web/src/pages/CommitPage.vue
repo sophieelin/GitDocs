@@ -384,7 +384,7 @@ const homePath = computed(() => (repository.value ? repositoryPath(repository.va
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 14px;
 }
 

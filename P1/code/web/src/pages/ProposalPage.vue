@@ -376,9 +376,11 @@ function isEmpty(folder: DocumentationFolder): boolean {
   padding: 12px 14px;
   overflow-x: auto;
   border-radius: 8px;
-  background: var(--sidebar);
-  font-family: ui-monospace, monospace;
-  font-size: 14px;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .applied {
@@ -423,7 +425,7 @@ function isEmpty(folder: DocumentationFolder): boolean {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: none;
-  font-family: ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 13px;
   cursor: pointer;
 }

@@ -8,7 +8,7 @@ A developer refactors a codebase and realizes that the documentation no longer m
 2. **Open a repository:** The developer enters a public GitHub repository, such as `owner/name`. GitDocs checks with GitHub whether they have push access to it; without push access they can browse, but cannot start, edit, or approve proposals.
 3. **Select a code change:** The developer opens a commit associated with a refactor and sees its message, its changed files and their diffs, and whether it already touched the documentation.
 4. **Start a proposal:** The developer starts a proposal from the commit with a title. GitDocs shows the documentation as it was at that commit.
-5. **Restructure the documentation:** The developer moves, renames, creates, and removes documentation files and folders.
+5. **Restructure the documentation:** The developer moves, renames, creates, and removes documentation files and folders. 
 6. **Suggest edits in the files:** The developer types directly into a documentation file, as in an editor. Each edit appears inline, with the removed text struck through and the new text in brackets, like suggestions in Google Docs. Every suggestion needs a short "why" before it is saved. The developer can also highlight passages that need attention.
 7. **Request a review:** The developer writes a rationale for the whole proposal, names a reviewer who has a GitDocs account, and submits the proposal. Its status changes to *Pending Approval*.
 8. **Get notified:** The reviewer sees a notice on the repository's home page that the author requested their review, and finds the proposal in their review queue.
@@ -31,7 +31,7 @@ The prototype will demonstrate
 - A review notice and review queue for the named reviewer.
 - A reviewer view with an approval action and a visible *Approved* status.
 - A downloadable patch and git commands for an approved proposal.
-- An *Applied* status that links to the commit that made the change.
+- An Applied status that links to the commit that made the change.
 
 ## Scope: changes from the MVP
 

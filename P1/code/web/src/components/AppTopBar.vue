@@ -50,7 +50,7 @@ async function leave() {
         </svg>
         <span class="username">{{ session.username }}</span>
       </RouterLink>
-      <button type="button" @click="leave">Sign out</button>
+      <button type="button" class="button secondary small" @click="leave">Sign out</button>
     </div>
   </header>
 </template>
@@ -68,7 +68,7 @@ async function leave() {
 .breadcrumb {
   margin: 0;
   color: var(--ink-faint);
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .breadcrumb a {
@@ -108,15 +108,5 @@ svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.6;
-}
-
-.account button {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--card);
-  color: var(--ink-soft);
-  font: inherit;
-  cursor: pointer;
 }
 </style>

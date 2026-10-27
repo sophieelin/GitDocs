@@ -22,10 +22,13 @@ export interface Draft {
  * change. A suggestion added to `suggestions` takes the place of its draft;
  * one taken out of it puts the file's text back.
  *
+ * Whenever the selection changes, `select` is emitted with the text of the
+ * file it is on, or null when it is empty or on an edit.
+ *
  * The file's text must not change while this is open; give it a `key`.
  */
 const props = defineProps<{ text: string; suggestions: (SuggestedRange & { highlight: string })[] }>();
-const emit = defineEmits<{ drafts: [drafts: Draft[]] }>();
+const emit = defineEmits<{ drafts: [drafts: Draft[]]; select: [range: Required<TextRange> | null] }>();
 
 const original = props.text;
 const lineStarts = [0];
@@ -210,6 +213,16 @@ function draftsOf(state: EditorState): Draft[] {
     }));
 }
 
+/** The text of the file the selection is on, or null when it is empty or touches a region's text. */
+function selectionOf(state: EditorState): Required<TextRange> | null {
+  const { from, to } = state.selection.main;
+  if (from === to) return null;
+  const list = state.field(regions);
+  if (list.some((region) => region.from < to && from < region.to)) return null;
+  const shift = list.filter((region) => region.to <= from).reduce((sum, region) => sum + growth(region), 0);
+  return rangeOf(from - shift, to - shift);
+}
+
 const host = ref<HTMLElement | null>(null);
 let view: EditorView | null = null;
 
@@ -226,6 +239,7 @@ function stateOf(doc: string | Text, list: Region[], selection?: EditorSelection
       locked,
       EditorView.updateListener.of((update) => {
         if (update.startState.field(regions) !== update.state.field(regions)) emit("drafts", draftsOf(update.state));
+        if (update.selectionSet || update.docChanged) emit("select", selectionOf(update.state));
       }),
     ],
   });
@@ -340,7 +354,7 @@ defineExpose({ discard });
 }
 
 .editor :deep(.cm-scroller) {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--mono);
   line-height: 1.5;
 }
 

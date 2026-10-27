@@ -175,7 +175,7 @@ function release(event: MouseEvent) {
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--mono);
   font-size: 13px;
   line-height: 1.5;
 }

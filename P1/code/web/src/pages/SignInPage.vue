@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import ErrorBanner from "../components/ErrorBanner.vue";
+import SiteHeader from "../components/SiteHeader.vue";
 import { GENERAL_ERROR } from "../errors.ts";
 import { signInWithGitHub } from "../session.ts";
 
@@ -31,9 +32,11 @@ function start() {
 </script>
 
 <template>
-  <section class="sign-in">
-    <p class="brand">GitDocs</p>
-    <div class="card">
+  <div class="page">
+    <SiteHeader>
+      <RouterLink to="/" class="about">What is GitDocs?</RouterLink>
+    </SiteHeader>
+    <section class="sign-in card">
       <h1>Sign in</h1>
       <p class="muted">
         GitDocs uses your GitHub account. To start, edit, or approve a repository's proposals, you need push access to it on GitHub.
@@ -47,35 +50,37 @@ function start() {
         </svg>
         Sign in with GitHub
       </button>
-    </div>
-  </section>
+    </section>
+  </div>
 </template>
 
 <style scoped>
-.sign-in {
-  max-width: 380px;
+.page {
+  max-width: 1080px;
   margin: 0 auto;
-  padding-top: 80px;
 }
 
-.brand {
-  margin: 0 0 20px;
-  font-size: 28px;
-  font-weight: 700;
-  text-align: center;
+.about {
+  color: var(--ink-soft);
+  font-size: 14px;
+  text-underline-offset: 4px;
 }
 
-.card {
+.sign-in {
   display: grid;
   gap: 16px;
+  max-width: 380px;
+  margin: 80px auto 0;
 }
 
 h1 {
   margin: 0;
-  font-size: 22px;
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 600;
 }
 
-.card p {
+.sign-in p {
   margin: 0;
   font-size: 14px;
 }

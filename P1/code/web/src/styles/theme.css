@@ -1,0 +1,124 @@
+/*
+ * The look every page shares: colors, fonts, and the pieces from the UI sketches
+ * (page titles, cards, buttons). Pages style their own layout, and use these
+ * tokens and classes instead of their own values.
+ */
+:root {
+  --ink: #3a352b;
+  --ink-soft: #5e5748;
+  --ink-faint: #8c8574;
+  --strong: #201412;
+  --border: #e7e3da;
+  --sidebar: #f8f6f1;
+  --hover: #efebe2;
+  --accent: #6a75b0;
+  --accent-soft: #e6e8f6;
+  --surface: #fff;
+  --card: #fff;
+
+  --sans: Inter, system-ui, sans-serif;
+  --serif: "Iowan Old Style", "Charter", "Palatino Linotype", Georgia, serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Lines a change adds or removes, in trees and diffs. */
+  --added-ink: #2f5f37;
+  --added-bg: #edf5ee;
+  --removed-ink: #8a3324;
+  --removed-bg: #fbeeec;
+
+  /* Commands to copy and run. */
+  --code-bg: #23201b;
+  --code-ink: #e9e4d8;
+
+  --warning-ink: #92400e;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--surface);
+}
+
+h1,
+h2,
+h3,
+strong {
+  color: var(--strong);
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--mono);
+}
+
+::placeholder {
+  color: var(--ink-faint);
+}
+
+h1.page-title {
+  margin: 0 0 6px;
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.page-subtitle {
+  margin: 0 0 28px;
+  color: var(--ink-faint);
+}
+
+.card {
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+}
+
+.card > h2 {
+  margin: 0 0 16px;
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.button {
+  display: inline-block;
+  padding: 10px 18px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button.secondary {
+  background: var(--card);
+  color: var(--accent);
+}
+
+.button.secondary:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.button.small {
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.muted {
+  color: var(--ink-faint);
+}

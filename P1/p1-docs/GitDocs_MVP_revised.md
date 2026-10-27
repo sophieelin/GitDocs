@@ -9,7 +9,7 @@
 3. Submit an investigation for a commit.
 4. Create and submit a documentation restructuring proposal.
 5. A second user reviews the proposal and approves it or requests changes.
-
+m1
 The investigation agent, Copilot, evidence collection, and GitHub pull-request creation are not part of this MVP.
 
 I used `sophieelin/PaperNet` for the real-repository checks.

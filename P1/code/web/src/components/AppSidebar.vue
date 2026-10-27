@@ -62,9 +62,9 @@ const links = computed(() => {
 }
 
 .brand {
-  padding: 0 12px;
+  padding: 4px 12px 0;
   color: var(--strong);
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   text-decoration: none;
 }
@@ -90,7 +90,7 @@ nav {
 
 .link.current {
   background: var(--hover);
-  color: var(--ink);
+  color: var(--strong);
   font-weight: 600;
 }
 
