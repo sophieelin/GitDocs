@@ -52,16 +52,45 @@ GitDocs is written entirely in TypeScript.
 
 ## Running locally
 
-The app is in `P1/code`. It uses [Bun](https://bun.sh), a Vue frontend built with Vite, and MongoDB, which runs in a container through [Podman](https://podman.io).
+### Prerequisites
 
-```sh
-cd P1/code
-bun install
-cp .env.example .env   # then fill in the values below
-bun run dev            # starts MongoDB, the backend, and the frontend
-```
+- [Bun](https://bun.sh) (tested with 1.4)
+- [Podman](https://podman.io) with Compose support. On macOS, `podman compose` also needs a Compose provider such as `docker-compose` (`brew install docker-compose`)
+- A GitHub account, to create the OAuth App used for sign-in
 
-Then open http://127.0.0.1:5173.
+### Setup
+
+1. **Start Podman.** On macOS, Podman runs inside a virtual machine, which must be running before MongoDB can start:
+   ```sh
+   podman machine init    # first time only
+   podman machine start
+   ```
+2. **Install dependencies:**
+   ```sh
+   cd P1/code
+   bun install
+   ```
+3. **Create your `.env`:**
+   ```sh
+   cp .env.example .env
+   ```
+   `MONGODB_URL` already points at the local MongoDB, so leave it as it is.
+4. **Generate a token secret** and paste it into `.env` as `TOKEN_SECRET`:
+   ```sh
+   openssl rand -base64 32
+   ```
+5. **Create a GitHub OAuth App** at [github.com/settings/developers](https://github.com/settings/developers) → *New OAuth App*:
+   - Homepage URL: `http://127.0.0.1:5173`
+   - Authorization callback URL: `http://127.0.0.1:5173/api/auth/github/callback`
+
+   Copy the client ID and a new client secret into `.env` as `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`.
+6. **Optional: add a GitHub token.** A [personal access token](https://github.com/settings/tokens) in `GITHUB_TOKEN` raises the API limit above 60 requests an hour.
+7. **Start the app:**
+   ```sh
+   bun run dev    # starts MongoDB, the backend (port 3000), and the frontend (port 5173)
+   ```
+   Then open http://127.0.0.1:5173. Use `127.0.0.1`, not `localhost`, so that it matches the OAuth callback URL.
+8. **Check that it works:** `bun run check` should pass, and `bun run test:memory` runs the tests without a container.
 
 ### Environment variables (`P1/code/.env`)
 
