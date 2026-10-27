@@ -19,15 +19,16 @@ GitDocs generates a patch and the Git commands needed to apply the approved chan
 
 ### P4
 - [Design document](docs/design-document.md)
+- [Demo video](https://youtu.be/dGqxqWIdIBs)
 
-### P2
+### P3
 - Website: [https://gitdocs.mit-sdg.dev](https://gitdocs.mit-sdg.dev)
 - [Visual design study](P1/p1-docs/design-study.pdf)
 - [Updated user journey](P1/p1-docs/user-journey-beta.md)
 - [Demo video](https://youtu.be/m7VTPr7YKdk)
 - [Design notebook](https://github.com/sophieelin/6.1040/blob/main/design-notebook)
 
-### P1
+### P2
 - MVP code: [`P1/code`](P1/code)
 - User journey: [`P1/p1-docs`](P1/p1-docs)
 - [Demo video](https://youtu.be/BXuCtekfzwA)
