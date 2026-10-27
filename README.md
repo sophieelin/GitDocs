@@ -17,6 +17,9 @@ GitDocs generates a patch and the Git commands needed to apply the approved chan
 
 ## Deliverables
 
+### P4
+- [Design document](docs/design-document.md)
+
 ### P2
 - Website: [https://gitdocs.mit-sdg.dev](https://gitdocs.mit-sdg.dev)
 - [Visual design study](P1/p1-docs/design-study.pdf)
